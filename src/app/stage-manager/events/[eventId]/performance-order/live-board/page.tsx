@@ -51,6 +51,8 @@ import {
 	X,
 	Camera,
 	Send,
+	Sun,
+	Moon,
 } from "lucide-react";
 import {
 	Dialog,
@@ -252,6 +254,7 @@ export default function LivePerformanceBoard() {
 	const [isShowOrderConfirmed, setIsShowOrderConfirmed] =
 		useState<boolean>(false);
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+	const [isLightMode, setIsLightMode] = useState(false);
 
 	// Organiser message popup state
 	const [activeOrganiserMessage, setActiveOrganiserMessage] = useState<any | null>(null);
@@ -1704,8 +1707,27 @@ export default function LivePerformanceBoard() {
 	};
 
 	// Removed loading state to prevent interruption during auto-refresh
+
+	// Theme helpers — swap between dark (default) and light mode
+	const tm = {
+		page:    isLightMode ? "min-h-screen bg-gray-50 text-gray-900 overflow-hidden"           : "min-h-screen bg-[#0a0e1a] text-white overflow-hidden",
+		header:  isLightMode ? "sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm" : "sticky top-0 z-50 border-b border-[#2a1f4f] bg-[#0a0e1a]/95 backdrop-blur-md shadow-lg",
+		title:   isLightMode ? "text-2xl font-bold text-gray-900 tracking-wide"                  : "text-2xl font-bold text-white tracking-wide",
+		sub:     isLightMode ? "text-xs text-purple-600/70 uppercase tracking-widest"             : "text-xs text-purple-300/70 uppercase tracking-widest",
+		card:    isLightMode ? "bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"        : "bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl p-6 shadow-2xl",
+		cardLabel: isLightMode ? "text-xs uppercase tracking-[0.3em] text-purple-600 font-semibold" : "text-xs uppercase tracking-[0.3em] text-purple-400 font-semibold",
+		cardVal: isLightMode ? "text-xl font-bold font-mono text-purple-700"                     : "text-xl font-bold font-mono text-[#d4af37]",
+		tabList: isLightMode ? "grid w-full max-w-3xl mx-auto grid-cols-4 mb-6 p-1 bg-gray-100 border border-gray-200 rounded-xl" : "grid w-full max-w-3xl mx-auto grid-cols-4 mb-6 p-1 bg-[#1a1147] border border-[#2a1f4f] rounded-xl",
+		tabTrigger: isLightMode ? "flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white hover:bg-gray-200 text-gray-600" : "flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white hover:bg-[#0f0a2e] text-purple-300",
+		divider: isLightMode ? "h-px bg-gray-200"                                                 : "h-px bg-gradient-to-r from-transparent via-purple-700/50 to-transparent",
+		muted:   isLightMode ? "text-xs uppercase tracking-widest text-gray-500"                  : "text-xs uppercase tracking-widest text-purple-400",
+		toggleBtn: isLightMode
+			? "rounded-full p-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+			: "rounded-full p-1.5 bg-purple-900/40 text-yellow-400 hover:bg-purple-800/60 transition-colors",
+	};
+
 	return (
-		<div className="min-h-screen bg-[#0a0e1a] text-white overflow-hidden">
+		<div className={tm.page}>
 			{/* Fullscreen indicator */}
 			{isFullscreen && (
 				<div className="fixed top-4 right-4 z-50 bg-black/80 text-white px-3 py-2 rounded-lg text-sm font-medium backdrop-blur-sm">
@@ -1714,55 +1736,47 @@ export default function LivePerformanceBoard() {
 			)}
 
 			{/* Modern Compact Header */}
-			<header className="sticky top-0 z-50 border-b border-[#2a1f4f] bg-[#0a0e1a]/95 backdrop-blur-md shadow-lg">
-				<div className="container mx-auto px-6 py-4">
-					<div className="flex justify-between items-center">
-						<div className="flex items-center gap-4">
-							<FameLogo width={45} height={45} />
-							<div>
-								<h1 className="text-2xl font-bold text-white tracking-wide">
-									LIVE BOARD
-								</h1>
-								<p className="text-xs text-purple-300/70 uppercase tracking-widest">
-									Live Show in Progress
-								</p>
+			<header className={tm.header}>
+				<div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+					<div className="flex justify-between items-center gap-3">
+						<div className="flex items-center gap-3 sm:gap-4 min-w-0">
+							<FameLogo width={38} height={38} />
+							<div className="min-w-0">
+								<h1 className={tm.title}>LIVE BOARD</h1>
+								<p className={tm.sub}>Live Show in Progress</p>
 							</div>
 						</div>
-						<div className="flex items-center gap-4">
+						<div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+							{/* Light / Dark mode toggle */}
+							<button
+								onClick={() => setIsLightMode(m => !m)}
+								className={tm.toggleBtn}
+								title={isLightMode ? "Switch to Dark Mode" : "Switch to Light Mode"}
+							>
+								{isLightMode
+									? <Moon className="h-4 w-4" />
+									: <Sun className="h-4 w-4" />}
+							</button>
 							<Button
 								variant="ghost"
 								size="sm"
 								onClick={toggleFullscreen}
-								className="text-sm text-purple-300 hover:text-white hover:bg-purple-900/30 transition-all"
-								title={
-									isFullscreen
-										? "Exit Fullscreen (ESC)"
-										: "Enter Fullscreen (F11)"
-								}
+								className={`text-sm transition-all ${isLightMode ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100" : "text-purple-300 hover:text-white hover:bg-purple-900/30"}`}
+								title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen (F11)"}
 							>
-								{isFullscreen ? (
-									<Minimize className="h-4 w-4" />
-								) : (
-									<Maximize className="h-4 w-4" />
-								)}
+								{isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
 							</Button>
-							<div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-900/20 border border-purple-700/30">
-								<div
-									className={`w-2.5 h-2.5 rounded-full ${
-										wsConnected
-											? "bg-green-400 animate-pulse shadow-glow-green"
-											: "bg-red-400"
-									}`}
-								></div>
-								<span className="text-xs text-purple-200 font-semibold uppercase tracking-wider">
+							<div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isLightMode ? "bg-gray-100 border border-gray-200" : "bg-purple-900/20 border border-purple-700/30"}`}>
+								<div className={`w-2.5 h-2.5 rounded-full ${wsConnected ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
+								<span className={`text-xs font-semibold uppercase tracking-wider ${isLightMode ? "text-gray-600" : "text-purple-200"}`}>
 									{wsConnected ? "LIVE" : "OFFLINE"}
 								</span>
 							</div>
 							<Button
-								onClick={() => { fetchData(); setRefreshTrigger((prev) => prev + 1); setRehearsalRefreshTrigger((prev) => prev + 1); }}
+								onClick={() => { fetchData(); setRefreshTrigger(p => p + 1); setRehearsalRefreshTrigger(p => p + 1); }}
 								variant="ghost"
 								size="sm"
-								className="text-sm bg-purple-900/30 text-purple-300 hover:bg-purple-800/50 hover:text-white transition-all"
+								className={`text-sm transition-all ${isLightMode ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-purple-900/30 text-purple-300 hover:bg-purple-800/50 hover:text-white"}`}
 							>
 								<RefreshCw className="h-4 w-4" />
 							</Button>
@@ -1800,7 +1814,7 @@ export default function LivePerformanceBoard() {
 			)}
 			{/* Date Selection */}
 			{availableDates.length > 1 && (
-				<div className="sticky top-[100px] sm:top-[73px] z-40 border-b border-border bg-white shadow-sm">
+				<div className={`sticky top-[100px] sm:top-[73px] z-40 border-b ${isLightMode ? "border-gray-200 bg-white shadow-sm" : "border-gray-700 bg-[#0a0e1a]/95"}`}>
 					<div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
 						<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
 							<div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -1868,31 +1882,31 @@ export default function LivePerformanceBoard() {
 					onValueChange={setActiveTab}
 					className="w-full"
 				>
-					<TabsList className="grid w-full max-w-3xl mx-auto grid-cols-4 mb-6 p-1 bg-[#1a1147] border border-[#2a1f4f] rounded-xl">
+					<TabsList className={tm.tabList}>
 						<TabsTrigger
 							value="live-board"
-							className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white hover:bg-[#0f0a2e] text-purple-300"
+							className={tm.tabTrigger}
 						>
 							<Play className="h-4 w-4" />
 							<span>Live Board</span>
 						</TabsTrigger>
 						<TabsTrigger
 							value="live-board-2"
-							className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white hover:bg-[#0f0a2e] text-purple-300"
+							className={tm.tabTrigger}
 						>
 							<Sparkles className="h-4 w-4" />
 							<span>Live Board 2</span>
 						</TabsTrigger>
 						<TabsTrigger
 							value="live-board-3"
-							className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white hover:bg-[#0f0a2e] text-purple-300"
+							className={tm.tabTrigger}
 						>
 							<ListTodo className="h-4 w-4" />
 							<span>Live Board 3</span>
 						</TabsTrigger>
 						<TabsTrigger
 							value="rehearsal-schedule"
-							className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white hover:bg-[#0f0a2e] text-purple-300"
+							className={tm.tabTrigger}
 						>
 							<Calendar className="h-4 w-4" />
 							<span>Rehearsal Schedule</span>
@@ -1904,8 +1918,8 @@ export default function LivePerformanceBoard() {
 						{/* Modern Top Section - Current Time & Status */}
 						<div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 							{/* Current Time Display */}
-							<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl p-6 shadow-2xl">
-								<span className="text-xs uppercase tracking-[0.3em] text-purple-400 font-semibold">
+							<div className={tm.card}>
+								<span className={tm.cardLabel}>
 									Current Time
 								</span>
 								<div className="flex items-baseline gap-2 mt-3">
@@ -1938,9 +1952,9 @@ export default function LivePerformanceBoard() {
 							</div>
 
 							{/* Live Status Badge */}
-							<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl p-6 shadow-2xl flex flex-col items-center justify-center">
-								<div className="px-6 py-2 bg-[#1a1147] border border-[#d4af37]/30 rounded-lg mb-3">
-									<span className="text-sm uppercase tracking-[0.3em] text-[#d4af37] font-semibold">
+							<div className={`${tm.card} flex flex-col items-center justify-center`}>
+								<div className={isLightMode ? "px-6 py-2 bg-purple-50 border border-purple-200 rounded-lg mb-3" : "px-6 py-2 bg-[#1a1147] border border-[#d4af37]/30 rounded-lg mb-3"}>
+									<span className={`text-sm uppercase tracking-[0.3em] font-semibold ${isLightMode ? "text-purple-700" : "text-purple-700"}`}>
 										Live Show in Progress
 									</span>
 								</div>
@@ -1950,32 +1964,32 @@ export default function LivePerformanceBoard() {
 							</div>
 
 							{/* Timing Info */}
-							<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl p-6 shadow-2xl">
+							<div className={tm.card}>
 								<div className="space-y-3">
 									<div className="flex items-center justify-between">
-										<span className="text-xs uppercase tracking-widest text-purple-400">
+										<span className={tm.muted}>
 											Total Show Time
 										</span>
-										<span className="text-xl font-bold font-mono text-[#d4af37]">
+										<span className={tm.cardVal}>
 											{getFormattedTotalShowTime()}
 										</span>
 									</div>
-									<div className="h-px bg-gradient-to-r from-transparent via-purple-700/50 to-transparent"></div>
+									<div className={tm.divider}></div>
 									<div className="flex items-center justify-between">
-										<span className="text-xs uppercase tracking-widest text-purple-400">
+										<span className={tm.muted}>
 											Backstage Ready
 										</span>
-										<span className="text-xl font-bold font-mono text-[#d4af37]">
+										<span className={tm.cardVal}>
 											{eventTimings.backstage_ready_time ||
 												"--:--"}
 										</span>
 									</div>
-									<div className="h-px bg-gradient-to-r from-transparent via-purple-700/50 to-transparent"></div>
+									<div className={tm.divider}></div>
 									<div className="flex items-center justify-between">
-										<span className="text-xs uppercase tracking-widest text-purple-400">
+										<span className={tm.muted}>
 											Show Start
 										</span>
-										<span className="text-xl font-bold font-mono text-[#d4af37]">
+										<span className={tm.cardVal}>
 											{eventTimings.show_start_time ||
 												"--:--"}
 										</span>
@@ -1989,8 +2003,8 @@ export default function LivePerformanceBoard() {
 							{/* Left Column - Now on Stage + Queue (2 columns) */}
 							<div className="lg:col-span-2 flex flex-col gap-6">
 								{/* Now on Stage */}
-								<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl p-6 shadow-2xl">
-									<span className="text-xs uppercase tracking-[0.3em] text-purple-400 font-semibold">
+								<div className={tm.card}>
+									<span className={tm.cardLabel}>
 										Now on Stage
 									</span>
 									{currentItem ? (
@@ -2114,7 +2128,7 @@ export default function LivePerformanceBoard() {
 																</>
 															)}
 														</div>
-														<span className="text-lg text-[#d4af37] mt-1 block">
+														<span className={`text-lg mt-1 block ${isLightMode ? "text-purple-700" : "text-purple-700"}`}>
 															{
 																currentItem
 																	.artist
@@ -2132,7 +2146,7 @@ export default function LivePerformanceBoard() {
 																	.title
 															}
 														</h2>
-														<span className="text-lg text-[#d4af37] mt-1 block">
+														<span className={`text-lg mt-1 block ${isLightMode ? "text-purple-700" : "text-purple-700"}`}>
 															{currentItem.cue.type
 																.replace(
 																	"_",
@@ -2224,24 +2238,24 @@ export default function LivePerformanceBoard() {
 															getCurrentPerformerRemainingTime(),
 														)}
 													</span>
-													<span className="text-xs uppercase tracking-widest text-purple-400">
+													<span className={tm.muted}>
 														Remaining
 													</span>
 												</div>
 											</div>
 										</div>
 									) : (
-										<div className="text-center py-8 text-purple-400">
+										<div className={`text-center py-8 ${isLightMode ? "text-purple-600" : "text-purple-600"}`}>
 											No performance currently on stage
 										</div>
 									)}
 								</div>
 
 								{/* Backstage Alert */}
-								<div className="flex items-center justify-center gap-3 py-3 border-t border-b border-[#2a1f4f] bg-[#1a1147]/30">
+								<div className={isLightMode ? "flex items-center justify-center gap-3 py-3 border-t border-b border-[#2a1f4f]bg-gray-100/30" : "flex items-center justify-center gap-3 py-3 border-t border-b border-[#2a1f4f] bg-[#1a1147]/30"}>
 									<div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent" />
 									<div className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse shadow-glow-gold" />
-									<span className="text-sm text-[#d4af37] font-medium uppercase tracking-wider">
+									<span className={`text-sm font-medium uppercase tracking-wider ${isLightMode ? "text-purple-700" : "text-purple-700"}`}>
 										Be Ready Backstage:{" "}
 										{eventTimings.backstage_ready_time ||
 											"--:--"}{" "}
@@ -2250,10 +2264,10 @@ export default function LivePerformanceBoard() {
 								</div>
 
 								{/* Performance Queue */}
-								<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl overflow-hidden shadow-2xl">
+								<div className={isLightMode ? "bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm" : "bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl overflow-hidden shadow-2xl"}>
 									{/* Header */}
-									<div className="flex items-center gap-3 px-6 py-4 border-b border-[#2a1f4f] bg-[#0f0a2e]/50">
-										<span className="text-purple-400">
+									<div className={isLightMode ? "flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-[#0f0a2e]/50" : "flex items-center gap-3 px-6 py-4 border-b border-[#2a1f4f] bg-[#0f0a2e]/50"}>
+										<span className={isLightMode ? "text-purple-600" : "text-purple-600"}>
 											#
 										</span>
 										<div className="flex items-center gap-2">
@@ -2316,9 +2330,9 @@ export default function LivePerformanceBoard() {
 													return (
 														<div
 															key={item.id}
-															className="flex items-center px-6 py-4 gap-4 hover:bg-[#1a1147]/50 transition-colors"
+															className={`flex items-center px-6 py-4 gap-4 transition-colors ${isLightMode ? "hover:bg-gray-50" : "hover:bg-[#1a1147]/50"}`}
 														>
-															<span className="w-6 text-lg font-bold text-purple-400">
+															<span className={`w-6 text-lg font-bold ${isLightMode ? "text-purple-600" : "text-purple-600"}`}>
 																{index + 1}
 															</span>
 
@@ -2333,7 +2347,7 @@ export default function LivePerformanceBoard() {
 																			? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
 																			: timing.isActual
 																				? "bg-green-500/20 text-green-400 border border-green-500/30"
-																				: "bg-[#2a1f4f] text-purple-300 border border-[#2a1f4f]"
+																				: "bg-gray-100 text-purple-600 border border-gray-200"
 																	}`}
 																>
 																	{
@@ -2366,7 +2380,7 @@ export default function LivePerformanceBoard() {
 																					"",
 																			);
 																		return (
-																			<IconComponent className="h-5 w-5 text-purple-400" />
+																			<IconComponent className={`h-5 w-5 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 																		);
 																	})()}
 																</div>
@@ -2407,7 +2421,7 @@ export default function LivePerformanceBoard() {
 																	)}
 																	{item.status ===
 																		"next_on_stage" && (
-																		<span className="text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wide bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50">
+																		<span className={isLightMode ? "text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wide bg-[#d4af37]/20 text-purple-700 border border-[#d4af37]/50" : "text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wide bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50"}>
 																			Next
 																			on
 																			Stage
@@ -2457,7 +2471,7 @@ export default function LivePerformanceBoard() {
 																							>
 																								{member.homeCountry && (
 																									<>
-																										<span className="text-purple-400">
+																										<span className={isLightMode ? "text-purple-600" : "text-purple-600"}>
 																											From:
 																										</span>
 																										<span
@@ -2481,7 +2495,7 @@ export default function LivePerformanceBoard() {
 																									member.countryLiving !==
 																										member.homeCountry && (
 																										<>
-																											<span className="text-purple-400 ml-2">
+																											<span className={isLightMode ? "text-purple-600 ml-2" : "text-purple-400 ml-2"}>
 																												Living
 																												in:
 																											</span>
@@ -2515,7 +2529,7 @@ export default function LivePerformanceBoard() {
 																							.artist
 																							.nationality) && (
 																						<div className="flex items-center gap-1">
-																							<span className="text-purple-400">
+																							<span className={isLightMode ? "text-purple-600" : "text-purple-600"}>
 																								From:
 																							</span>
 																							<span
@@ -2563,7 +2577,7 @@ export default function LivePerformanceBoard() {
 																								.artist
 																								.home_country && (
 																							<div className="flex items-center gap-1">
-																								<span className="text-purple-400">
+																								<span className={isLightMode ? "text-purple-600" : "text-purple-600"}>
 																									Living
 																									in:
 																								</span>
@@ -2593,7 +2607,7 @@ export default function LivePerformanceBoard() {
 																				</div>
 																			)}
 																			{/* Style */}
-																			<span className="text-purple-400">
+																			<span className={isLightMode ? "text-purple-600" : "text-purple-600"}>
 																				{
 																					item
 																						.artist
@@ -2616,13 +2630,13 @@ export default function LivePerformanceBoard() {
 
 							{/* Right Column - Performance Order (1 column) */}
 							<div className="lg:col-span-1">
-								<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl overflow-hidden shadow-2xl h-full">
+								<div className={isLightMode ? "bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm h-full" : "bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl overflow-hidden shadow-2xl h-full"}>
 									{/* Header */}
-									<div className="px-6 py-4 border-b border-[#2a1f4f]">
+									<div className={isLightMode ? "px-6 py-4 border-b border-gray-200" : "px-6 py-4 border-b border-[#2a1f4f]"}>
 										<h3 className="text-xl font-bold text-white uppercase tracking-wide">
 											Performance Order
 										</h3>
-										<div className="flex items-center gap-4 mt-3 text-xs uppercase tracking-widest text-[#d4af37]">
+										<div className={isLightMode ? "flex items-center gap-4 mt-3 text-xs uppercase tracking-widest text-purple-700" : "flex items-center gap-4 mt-3 text-xs uppercase tracking-widest text-[#d4af37]"}>
 											<span className="w-6">#</span>
 											<span className="flex-1">
 												Artist / Performance
@@ -2680,15 +2694,15 @@ export default function LivePerformanceBoard() {
 																isCompleted
 																	? "bg-[#d4af37]/10"
 																	: isActive
-																		? "bg-[#1a1147]/80 border-l-4 border-l-[#e91e8c]"
-																		: "hover:bg-[#1a1147]/30"
+																		? (isLightMode ? "bg-pink-50 border-l-4 border-l-pink-500" : "bg-[#1a1147]/80 border-l-4 border-l-[#e91e8c]")
+																		: "hover:bg-purple-50/50"
 															}`}
 														>
 															<span
 																className={`w-6 text-lg font-semibold ${
 																	isCompleted
-																		? "text-[#d4af37]"
-																		: "text-purple-400"
+																		? (isLightMode ? "text-purple-700" : "text-[#d4af37]")
+																		: "text-purple-600"
 																}`}
 															>
 																{index + 1}
@@ -2707,7 +2721,7 @@ export default function LivePerformanceBoard() {
 															) : liveTimings[index]
 																?.startTime && (
 																<span
-																	className={`text-xs font-mono px-1.5 py-0.5 rounded ${liveTimings[index]?.isActual ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-[#2a1f4f] text-purple-300 border border-[#2a1f4f]"}`}
+																	className={`text-xs font-mono px-1.5 py-0.5 rounded ${liveTimings[index]?.isActual ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-gray-100 text-purple-600 border border-gray-200"}`}
 																>
 																	{
 																		liveTimings[
@@ -2826,7 +2840,7 @@ export default function LivePerformanceBoard() {
 																</div>
 																{/* Nationality text and style */}
 																<div className="flex flex-col gap-1 mt-1">
-																	<span className="text-sm text-purple-400">
+																	<span className={`text-sm ${isLightMode ? "text-purple-600" : "text-purple-600"}`}>
 																		{item.type ===
 																			"artist" &&
 																		item.artist
@@ -2869,7 +2883,7 @@ export default function LivePerformanceBoard() {
 																									}
 																									className="flex items-center gap-1"
 																								>
-																									<span className="text-purple-400">
+																									<span className={isLightMode ? "text-purple-600" : "text-purple-600"}>
 																										{
 																											member.name
 																										}
@@ -2947,7 +2961,7 @@ export default function LivePerformanceBoard() {
 																</div>
 															</div>
 
-															<span className="font-mono font-semibold text-[#d4af37] text-lg">
+															<span className={isLightMode ? "font-mono font-semibold text-purple-700 text-lg" : "font-mono font-semibold text-[#d4af37] text-lg"}>
 																{item.type ===
 																	"artist" &&
 																item.artist
@@ -2990,6 +3004,7 @@ export default function LivePerformanceBoard() {
 							isDraftShowOrder={isDraftShowOrder}
 							isShowOrderConfirmed={isShowOrderConfirmed}
 							refreshTrigger={refreshTrigger}
+							isLightMode={isLightMode}
 						/>
 					</TabsContent>
 
@@ -3011,25 +3026,26 @@ export default function LivePerformanceBoard() {
 							setNewMessageText={setNewMessageText}
 							handleSendMessage={handleSendMessage}
 							sendingMessage={sendingMessage}
+							isLightMode={isLightMode}
 						/>
 					</TabsContent>
 
 					{/* Rehearsal Schedule Tab */}
 					<TabsContent value="rehearsal-schedule" className="mt-0">
-						<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl shadow-2xl overflow-hidden">
-							<div className="px-6 py-5 border-b border-[#2a1f4f]">
+						<div className={isLightMode ? "bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" : "bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl shadow-2xl overflow-hidden"}>
+							<div className={isLightMode ? "px-6 py-5 border-b border-gray-200" : "px-6 py-5 border-b border-[#2a1f4f]"}>
 								<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 									<div>
 										<h3 className="text-xl font-bold text-white flex items-center gap-2">
-											<Calendar className="h-5 w-5 text-purple-400" />
+											<Calendar className={`h-5 w-5 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 											Rehearsal Schedule
 										</h3>
 										<div className="flex items-center gap-3 mt-1">
-											<p className="text-sm text-purple-400">
+											<p className={isLightMode ? "text-sm text-purple-600" : "text-sm text-purple-400"}>
 												Artists scheduled for rehearsal
 											</p>
 											{rehearsalShowDateInfo?.rehearsalTiming && (
-												<Badge className="bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50 font-mono text-xs">
+												<Badge className={isLightMode ? "bg-[#d4af37]/20 text-purple-700 border border-[#d4af37]/50 font-mono text-xs" : "bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/50 font-mono text-xs"}>
 													<Clock className="h-3 w-3 mr-1" />
 													{
 														rehearsalShowDateInfo.rehearsalTiming
@@ -3054,11 +3070,11 @@ export default function LivePerformanceBoard() {
 											>
 												<SelectTrigger
 													id="rehearsal-date-select"
-													className="w-48 bg-[#0f0a2e] border-[#2a1f4f] text-white"
+													className={isLightMode ? "w-48 bg-[#0f0a2e] border-gray-200 text-white" : "w-48 bg-[#0f0a2e] border-[#2a1f4f] text-white"}
 												>
 													<SelectValue placeholder="Select date" />
 												</SelectTrigger>
-												<SelectContent className="bg-[#1a1147] border-[#2a1f4f]">
+												<SelectContent className={isLightMode ? "bg-gray-100 border-[#2a1f4f]" : "bg-[#1a1147] border-[#2a1f4f]"}>
 													{availableDates.map(
 														(date, index) => (
 															<SelectItem
@@ -3156,12 +3172,12 @@ export default function LivePerformanceBoard() {
 											return (
 												<div
 													key={artist.id}
-													className="flex items-center justify-between p-5 rounded-xl border border-[#2a1f4f] bg-[#130d36]/40 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200"
+													className={isLightMode ? "flex items-center justify-between p-5 rounded-xl border border-gray-200 bg-[#130d36]/40 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200" : "flex items-center justify-between p-5 rounded-xl border border-[#2a1f4f] bg-[#130d36]/40 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200"}
 												>
 													{/* Left Group */}
 													<div className="flex items-center gap-5 flex-1 min-w-0">
 														{/* Order Number */}
-														<span className="w-8 text-xl font-bold text-purple-400 text-center">
+														<span className={isLightMode ? "w-8 text-xl font-bold text-purple-600 text-center" : "w-8 text-xl font-bold text-purple-400 text-center"}>
 															{index + 1}
 														</span>
 
@@ -3193,7 +3209,7 @@ export default function LivePerformanceBoard() {
 																				)}
 																				{member.countryLiving && member.countryLiving !== member.homeCountry && (
 																					<>
-																						<Globe className="h-3.5 w-3.5 text-purple-400 opacity-70" />
+																						<Globe className={isLightMode ? "h-3.5 w-3.5 text-purple-600 opacity-70" : "h-3.5 w-3.5 text-purple-400 opacity-70"} />
 																						<span
 																							className="text-base"
 																							title={`${member.name}: Living in ${getCountryName(member.countryLiving)}`}
@@ -3217,7 +3233,7 @@ export default function LivePerformanceBoard() {
 																		)}
 																		{artist.country_living && artist.country_living !== artist.home_country && (
 																			<>
-																				<Globe className="h-3.5 w-3.5 text-purple-400 opacity-70" />
+																				<Globe className={isLightMode ? "h-3.5 w-3.5 text-purple-600 opacity-70" : "h-3.5 w-3.5 text-purple-400 opacity-70"} />
 																				<span
 																					className="text-base"
 																					title={`Living in ${getCountryName(artist.country_living)}`}
@@ -3229,13 +3245,13 @@ export default function LivePerformanceBoard() {
 																	</div>
 																)}
 															</div>
-															<div className="text-sm text-purple-400 flex items-center gap-3 mt-1.5">
+															<div className={isLightMode ? "text-sm text-purple-600 flex items-center gap-3 mt-1.5" : "text-sm text-purple-400 flex items-center gap-3 mt-1.5"}>
 																<span className="bg-[#3b0764]/50 text-purple-300 border border-[#6b21a8]/35 px-3 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider">
 																	{artist.style}
 																</span>
 																{artist.actual_duration && (
 																	<span className="flex items-center gap-1.5 text-purple-300 font-medium">
-																		<Clock className="h-4 w-4 text-purple-400" />
+																		<Clock className={`h-4 w-4 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 																		{formatDuration(artist.actual_duration)}
 																	</span>
 																)}
@@ -3252,14 +3268,14 @@ export default function LivePerformanceBoard() {
 																Completed
 															</div>
 														) : (
-															<div className="bg-[#1a1147]/50 text-purple-300 border border-[#5b21b6]/30 flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-sm cursor-default">
-																<Clock className="h-4 w-4 text-purple-400" />
+															<div className={isLightMode ? "bg-gray-100/50 text-purple-300 border border-[#5b21b6]/30 flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-sm cursor-default" : "bg-[#1a1147]/50 text-purple-300 border border-[#5b21b6]/30 flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-sm cursor-default"}>
+																<Clock className={`h-4 w-4 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 																Scheduled
 															</div>
 														)}
 
 														{/* Time */}
-														<span className="text-2xl font-mono font-bold text-[#d4af37] min-w-[70px] text-right tracking-tight">
+														<span className={`text-2xl font-mono font-bold ${isLightMode ? "text-purple-700" : "text-purple-700"} min-w-[70px] text-right tracking-tight`}>
 															{rehearsalLiveTimings[index]?.startTime || "--:--"}
 														</span>
 													</div>
@@ -3273,13 +3289,13 @@ export default function LivePerformanceBoard() {
 									<div className="text-center py-16">
 										<div className="flex justify-center mb-6">
 											<div className="p-6 bg-purple-600/20 rounded-full">
-												<Calendar className="h-16 w-16 text-purple-400" />
+												<Calendar className={isLightMode ? "h-16 w-16 text-purple-600" : "h-16 w-16 text-purple-400"} />
 											</div>
 										</div>
 										<h3 className="text-xl font-bold mb-2 text-white">
 											No rehearsals scheduled
 										</h3>
-										<p className="text-purple-400 text-base">
+										<p className={isLightMode ? "text-purple-600 text-base" : "text-purple-400 text-base"}>
 											No artists scheduled for rehearsal
 											on this date.
 										</p>
@@ -3307,6 +3323,7 @@ function LiveBoard2Component({
 	isDraftShowOrder,
 	isShowOrderConfirmed,
 	refreshTrigger,
+	isLightMode,
 }: {
 	eventId: string;
 	selectedDate: string;
@@ -3316,6 +3333,7 @@ function LiveBoard2Component({
 	isDraftShowOrder: boolean;
 	isShowOrderConfirmed: boolean;
 	refreshTrigger: number;
+	isLightMode: boolean;
 }) {
 	const [performanceItems, setPerformanceItems] = useState<PerformanceItem[]>([]);
 	const [eventTimings, setEventTimings] = useState<{
@@ -3578,15 +3596,15 @@ function LiveBoard2Component({
 				{/* Right Section: Timings & Status */}
 				<div className="flex items-center gap-6 divide-x divide-purple-800/30 shrink-0">
 					<div className="text-center px-4">
-						<span className="text-[10px] uppercase tracking-widest text-purple-400 block mb-1">Show Start</span>
-						<span className="text-xl font-bold font-mono text-[#d4af37]">{eventTimings.show_start_time || "--:--"}</span>
+						<span className={isLightMode ? "text-[10px] uppercase tracking-widest text-purple-600 block mb-1" : "text-[10px] uppercase tracking-widest text-purple-400 block mb-1"}>Show Start</span>
+						<span className={isLightMode ? "text-xl font-bold font-mono text-purple-700" : "text-xl font-bold font-mono text-[#d4af37]"}>{eventTimings.show_start_time || "--:--"}</span>
 					</div>
 					<div className="text-center px-4 pl-6">
-						<span className="text-[10px] uppercase tracking-widest text-purple-400 block mb-1">Backstage Ready</span>
-						<span className="text-xl font-bold font-mono text-[#d4af37]">{eventTimings.backstage_ready_time || "--:--"}</span>
+						<span className={isLightMode ? "text-[10px] uppercase tracking-widest text-purple-600 block mb-1" : "text-[10px] uppercase tracking-widest text-purple-400 block mb-1"}>Backstage Ready</span>
+						<span className={isLightMode ? "text-xl font-bold font-mono text-purple-700" : "text-xl font-bold font-mono text-[#d4af37]"}>{eventTimings.backstage_ready_time || "--:--"}</span>
 					</div>
 					<div className="text-center px-4 pl-6 flex flex-col items-center">
-						<span className="text-[10px] uppercase tracking-widest text-purple-400 block mb-1">Network</span>
+						<span className={isLightMode ? "text-[10px] uppercase tracking-widest text-purple-600 block mb-1" : "text-[10px] uppercase tracking-widest text-purple-400 block mb-1"}>Network</span>
 						<span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${wsConnected ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"}`}>
 							<span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? "bg-green-400" : "bg-yellow-400 animate-pulse"}`} />
 							{wsConnected ? "Connected" : "Syncing"}
@@ -3617,7 +3635,7 @@ function LiveBoard2Component({
 									</span>
 								</div>
 								{currentItem && (
-									<Badge variant="outline" className="bg-purple-950/60 border-purple-800/60 text-[#d4af37] text-[10px] uppercase tracking-[0.15em] font-bold py-1 px-3">
+									<Badge variant="outline" className={isLightMode ? "bg-purple-950/60 border-purple-800/60 text-purple-700 text-[10px] uppercase tracking-[0.15em] font-bold py-1 px-3" : "bg-purple-950/60 border-purple-800/60 text-[#d4af37] text-[10px] uppercase tracking-[0.15em] font-bold py-1 px-3"}>
 										Act #{performanceItems.findIndex(p => p.id === currentItem.id) + 1}
 									</Badge>
 								)}
@@ -3658,12 +3676,12 @@ function LiveBoard2Component({
 														)}
 													</div>
 													<div className="flex items-center gap-3">
-														<span className="text-lg text-[#d4af37] font-bold tracking-wide">
+														<span className={isLightMode ? "text-lg text-purple-700 font-bold tracking-wide" : "text-lg text-[#d4af37] font-bold tracking-wide"}>
 															{currentItem.artist.style}
 														</span>
-														<span className="text-purple-400/50">•</span>
+														<span className={isLightMode ? "text-purple-600/50" : "text-purple-400/50"}>•</span>
 														<span className="text-purple-300 text-sm flex items-center gap-1">
-															<Music className="w-3.5 h-3.5 text-purple-400" />
+															<Music className={isLightMode ? "w-3.5 h-3.5 text-purple-600" : "w-3.5 h-3.5 text-purple-400"} />
 															Main Performance Track
 														</span>
 													</div>
@@ -3679,7 +3697,7 @@ function LiveBoard2Component({
 															{currentItem.cue.title}
 														</h2>
 													</div>
-													<span className="text-lg text-[#d4af37] font-bold tracking-wide uppercase">
+													<span className={isLightMode ? "text-lg text-purple-700 font-bold tracking-wide uppercase" : "text-lg text-[#d4af37] font-bold tracking-wide uppercase"}>
 														{currentItem.cue.type.replace("_", " ")}
 													</span>
 												</div>
@@ -3693,7 +3711,7 @@ function LiveBoard2Component({
 											}`}>
 												{formatTimeRemaining(currentRemainingTime)}
 											</span>
-											<span className="text-[10px] uppercase tracking-[0.2em] text-purple-400 font-bold mt-2">
+											<span className={isLightMode ? "text-[10px] uppercase tracking-[0.2em] text-purple-600 font-bold mt-2" : "text-[10px] uppercase tracking-[0.2em] text-purple-400 font-bold mt-2"}>
 												Time Remaining
 											</span>
 										</div>
@@ -3745,11 +3763,11 @@ function LiveBoard2Component({
 								</div>
 							) : (
 								<div className="flex flex-col items-center justify-center py-20 text-center">
-									<div className="w-16 h-16 rounded-full bg-purple-950/40 border border-purple-900/40 flex items-center justify-center mb-4 text-purple-400 animate-pulse">
+									<div className={isLightMode ? "w-16 h-16 rounded-full bg-purple-950/40 border border-purple-900/40 flex items-center justify-center mb-4 text-purple-600 animate-pulse" : "w-16 h-16 rounded-full bg-purple-950/40 border border-purple-900/40 flex items-center justify-center mb-4 text-purple-400 animate-pulse"}>
 										<Play className="w-8 h-8" />
 									</div>
 									<h3 className="text-2xl font-bold text-purple-300">No performance currently on stage</h3>
-									<p className="text-purple-400/60 text-sm mt-1">Waiting for the stage manager to launch the next act.</p>
+									<p className={isLightMode ? "text-purple-600/60 text-sm mt-1" : "text-purple-400/60 text-sm mt-1"}>Waiting for the stage manager to launch the next act.</p>
 								</div>
 							)}
 						</div>
@@ -3761,7 +3779,7 @@ function LiveBoard2Component({
 								<span>Backstage Status</span>
 							</div>
 							<div className="text-purple-200">
-								Next performer on deck by: <span className="text-[#d4af37] font-bold font-mono">{eventTimings.backstage_ready_time || "--:--"}</span>
+								Next performer on deck by: <span className={isLightMode ? "text-purple-700 font-bold font-mono" : "text-[#d4af37] font-bold font-mono"}>{eventTimings.backstage_ready_time || "--:--"}</span>
 							</div>
 						</div>
 					</div>
@@ -3784,7 +3802,7 @@ function LiveBoard2Component({
 											#1
 										</div>
 										<div className="flex-1 min-w-0">
-											<p className="text-xs text-purple-400 uppercase tracking-wider font-semibold">Est: {
+											<p className={isLightMode ? "text-xs text-purple-600 uppercase tracking-wider font-semibold" : "text-xs text-purple-400 uppercase tracking-wider font-semibold"}>Est: {
 												(() => {
 													const nextItem = nextItems[0];
 													const fullIndex = performanceItems.findIndex(p => p.id === nextItem.id);
@@ -3797,14 +3815,14 @@ function LiveBoard2Component({
 											<p className="text-xs text-purple-300 mt-0.5 truncate flex items-center gap-1.5">
 												{nextItems[0].type === "artist" ? (
 													<>
-														<Music className="w-3 h-3 text-[#d4af37]" />
+														<Music className={isLightMode ? "w-3 h-3 text-purple-700" : "w-3 h-3 text-[#d4af37]"} />
 														{nextItems[0].artist?.style}
 													</>
 												) : (
 													<>
 														{(() => {
 															const CueIcon = getCueIcon(nextItems[0].cue?.type || "");
-															return <CueIcon className="w-3 h-3 text-[#d4af37]" />;
+															return <CueIcon className={isLightMode ? "w-3 h-3 text-purple-700" : "w-3 h-3 text-[#d4af37]"} />;
 														})()}
 														Cue Break
 													</>
@@ -3830,7 +3848,7 @@ function LiveBoard2Component({
 											#2
 										</div>
 										<div className="flex-1 min-w-0">
-											<p className="text-xs text-purple-400 uppercase tracking-wider font-semibold">Est: {
+											<p className={isLightMode ? "text-xs text-purple-600 uppercase tracking-wider font-semibold" : "text-xs text-purple-400 uppercase tracking-wider font-semibold"}>Est: {
 												(() => {
 													const nextItem = nextItems[1];
 													const fullIndex = performanceItems.findIndex(p => p.id === nextItem.id);
@@ -3843,14 +3861,14 @@ function LiveBoard2Component({
 											<p className="text-xs text-purple-300 mt-0.5 truncate flex items-center gap-1.5">
 												{nextItems[1].type === "artist" ? (
 													<>
-														<Music className="w-3 h-3 text-[#d4af37]" />
+														<Music className={isLightMode ? "w-3 h-3 text-purple-700" : "w-3 h-3 text-[#d4af37]"} />
 														{nextItems[1].artist?.style}
 													</>
 												) : (
 													<>
 														{(() => {
 															const CueIcon = getCueIcon(nextItems[1].cue?.type || "");
-															return <CueIcon className="w-3 h-3 text-[#d4af37]" />;
+															return <CueIcon className={isLightMode ? "w-3 h-3 text-purple-700" : "w-3 h-3 text-[#d4af37]"} />;
 														})()}
 														Cue Break
 													</>
@@ -3872,7 +3890,7 @@ function LiveBoard2Component({
 				<div className="xl:col-span-4 w-full">
 					<div className="bg-[#110c36]/60 border border-purple-900/40 rounded-3xl p-6 shadow-2xl flex flex-col h-full min-h-[600px] xl:max-h-[720px]">
 						<h3 className="text-lg font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-							<Users className="w-5 h-5 text-purple-400" />
+							<Users className={isLightMode ? "w-5 h-5 text-purple-600" : "w-5 h-5 text-purple-400"} />
 							<span>Show Timeline</span>
 						</h3>
 						
@@ -3899,7 +3917,7 @@ function LiveBoard2Component({
 													? "bg-[#e91e8c] text-white"
 													: isCompleted
 														? "bg-green-500/25 text-green-400 border border-green-500/30"
-														: "bg-[#1a1147] text-purple-400 border border-purple-800/40"
+														: "bg-gray-100 text-purple-600 border border-purple-200"
 											}`}>
 												{isCompleted ? "✓" : index + 1}
 											</div>
@@ -3916,7 +3934,7 @@ function LiveBoard2Component({
 														</span>
 													)}
 												</div>
-												<p className="text-xs text-purple-400 mt-0.5 truncate flex items-center gap-1">
+												<p className={isLightMode ? "text-xs text-purple-600 mt-0.5 truncate flex items-center gap-1" : "text-xs text-purple-400 mt-0.5 truncate flex items-center gap-1"}>
 													{item.type === "artist" ? (
 														<>
 															<Music className="w-3 h-3 text-purple-500/70" />
@@ -3944,7 +3962,7 @@ function LiveBoard2Component({
 											}`}>
 												{liveTimings[index]?.startTime || "--:--"}
 											</span>
-											<span className="text-[10px] text-purple-400 font-mono mt-1">
+											<span className={isLightMode ? "text-[10px] text-purple-600 font-mono mt-1" : "text-[10px] text-purple-400 font-mono mt-1"}>
 												{item.type === "artist" && item.artist 
 													? formatDuration(item.artist.actual_duration || item.artist.performance_duration * 60) 
 													: `${item.cue?.duration || 5}:00`}
@@ -3980,6 +3998,7 @@ function LiveBoard3Component({
 	setNewMessageText,
 	handleSendMessage,
 	sendingMessage,
+	isLightMode,
 }: {
 	eventId: string;
 	selectedDate: string;
@@ -3997,6 +4016,7 @@ function LiveBoard3Component({
 	setNewMessageText: (text: string) => void;
 	handleSendMessage: () => Promise<void>;
 	sendingMessage: boolean;
+	isLightMode: boolean;
 }) {
 	const [performanceItems, setPerformanceItems] = useState<PerformanceItem[]>([]);
 	const [eventTimings, setEventTimings] = useState<{
@@ -4242,8 +4262,8 @@ function LiveBoard3Component({
 				);
 			default:
 				return (
-					<div className="bg-[#1a1147]/50 text-purple-300 border border-[#5b21b6]/30 flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-sm cursor-default">
-						<Clock className="h-4 w-4 text-purple-400" />
+					<div className={isLightMode ? "bg-gray-100/50 text-purple-300 border border-[#5b21b6]/30 flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-sm cursor-default" : "bg-[#1a1147]/50 text-purple-300 border border-[#5b21b6]/30 flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-sm cursor-default"}>
+						<Clock className={`h-4 w-4 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 						Scheduled
 					</div>
 				);
@@ -4270,14 +4290,14 @@ function LiveBoard3Component({
 	return (
 		<div className="space-y-6">
 			{/* Show Metrics Summary Header */}
-			<div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 rounded-2xl border border-[#2a1f4f] bg-gradient-to-r from-[#181147]/75 to-[#0b0622]/90 backdrop-blur-md shadow-2xl">
-				<div className="flex flex-col justify-center border-r border-[#2a1f4f]/40 pr-4 last:border-0 last:pr-0">
-					<span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Show Progress</span>
+			<div className={isLightMode ? "grid grid-cols-1 md:grid-cols-4 gap-4 p-5 rounded-2xl border border-gray-200 bg-gradient-to-r from-[#181147]/75 to-[#0b0622]/90 backdrop-blur-md shadow-2xl" : "grid grid-cols-1 md:grid-cols-4 gap-4 p-5 rounded-2xl border border-[#2a1f4f] bg-gradient-to-r from-[#181147]/75 to-[#0b0622]/90 backdrop-blur-md shadow-2xl"}>
+				<div className={isLightMode ? "flex flex-col justify-center border-r border-gray-200/40 pr-4 last:border-0 last:pr-0" : "flex flex-col justify-center border-r border-[#2a1f4f]/40 pr-4 last:border-0 last:pr-0"}>
+					<span className={isLightMode ? "text-xs font-semibold text-purple-600 uppercase tracking-wider" : "text-xs font-semibold text-purple-400 uppercase tracking-wider"}>Show Progress</span>
 					<div className="flex items-baseline gap-2 mt-1">
 						<span className="text-2xl font-bold text-white">{progressPercentage}%</span>
 						<span className="text-xs text-purple-300 font-medium">({completedCount}/{totalCount} items)</span>
 					</div>
-					<div className="w-full bg-[#130d36] h-2 rounded-full overflow-hidden mt-2 border border-[#2a1f4f]/35">
+					<div className={isLightMode ? "w-full bg-[#130d36] h-2 rounded-full overflow-hidden mt-2 border border-gray-200/35" : "w-full bg-[#130d36] h-2 rounded-full overflow-hidden mt-2 border border-[#2a1f4f]/35"}>
 						<div
 							className="bg-gradient-to-r from-[#d946ef] to-[#06b6d4] h-full rounded-full transition-all duration-500"
 							style={{ width: `${progressPercentage}%` }}
@@ -4285,22 +4305,22 @@ function LiveBoard3Component({
 					</div>
 				</div>
 
-				<div className="flex flex-col justify-center border-r border-[#2a1f4f]/40 px-4 last:border-0 last:pr-0">
-					<span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Remaining Duration</span>
+				<div className={isLightMode ? "flex flex-col justify-center border-r border-gray-200/40 px-4 last:border-0 last:pr-0" : "flex flex-col justify-center border-r border-[#2a1f4f]/40 px-4 last:border-0 last:pr-0"}>
+					<span className={isLightMode ? "text-xs font-semibold text-purple-600 uppercase tracking-wider" : "text-xs font-semibold text-purple-400 uppercase tracking-wider"}>Remaining Duration</span>
 					<span className="text-2xl font-bold text-[#eab308] mt-1">
 						{formatRemainingText(remainingDuration)}
 					</span>
 				</div>
 
-				<div className="flex flex-col justify-center border-r border-[#2a1f4f]/40 px-4 last:border-0 last:pr-0">
-					<span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Total Duration</span>
+				<div className={isLightMode ? "flex flex-col justify-center border-r border-gray-200/40 px-4 last:border-0 last:pr-0" : "flex flex-col justify-center border-r border-[#2a1f4f]/40 px-4 last:border-0 last:pr-0"}>
+					<span className={isLightMode ? "text-xs font-semibold text-purple-600 uppercase tracking-wider" : "text-xs font-semibold text-purple-400 uppercase tracking-wider"}>Total Duration</span>
 					<span className="text-2xl font-bold text-white mt-1">
 						{Math.round(totalDuration / 60)} mins
 					</span>
 				</div>
 
 				<div className="flex flex-col justify-center px-4">
-					<span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Est. Completion</span>
+					<span className={isLightMode ? "text-xs font-semibold text-purple-600 uppercase tracking-wider" : "text-xs font-semibold text-purple-400 uppercase tracking-wider"}>Est. Completion</span>
 					<span className="text-2xl font-bold text-[#06b6d4] mt-1 font-mono">
 						{(() => {
 							if (!eventTimings.show_start_time) return "--:--";
@@ -4316,18 +4336,18 @@ function LiveBoard3Component({
 			</div>
 
 			{/* Main Layout Card */}
-			<div className="bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl shadow-2xl overflow-hidden">
+			<div className={isLightMode ? "bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" : "bg-gradient-to-br from-[#1a1147] to-[#0f0a2e] border border-[#2a1f4f] rounded-2xl shadow-2xl overflow-hidden"}>
 				
 				{/* Filtering and Search Controls bar */}
-				<div className="px-6 py-5 border-b border-[#2a1f4f] bg-[#0c072b]/30">
+				<div className={isLightMode ? "px-6 py-5 border-b border-gray-200 bg-[#0c072b]/30" : "px-6 py-5 border-b border-[#2a1f4f] bg-[#0c072b]/30"}>
 					<div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
 						{/* Title */}
 						<div className="shrink-0">
 							<h3 className="text-xl font-bold text-white flex items-center gap-2">
-								<ListTodo className="h-5 w-5 text-purple-400" />
+								<ListTodo className={`h-5 w-5 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 								Performance Order List
 							</h3>
-							<p className="text-sm text-purple-400 mt-1">
+							<p className={isLightMode ? "text-sm text-purple-600 mt-1" : "text-sm text-purple-400 mt-1"}>
 								Live show schedule with real-time tracking
 							</p>
 						</div>
@@ -4335,7 +4355,7 @@ function LiveBoard3Component({
 						{/* Interactive Filters and Search */}
 						<div className="flex flex-col sm:flex-row gap-3 flex-1 lg:max-w-2xl justify-end">
 							{/* Category Filters */}
-							<div className="flex bg-[#130d36] border border-[#2a1f4f] rounded-lg p-1">
+							<div className={isLightMode ? "flex bg-[#130d36] border border-gray-200 rounded-lg p-1" : "flex bg-[#130d36] border border-[#2a1f4f] rounded-lg p-1"}>
 								<button
 									onClick={() => setFilter("all")}
 									className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
@@ -4370,13 +4390,13 @@ function LiveBoard3Component({
 
 							{/* Search Box */}
 							<div className="relative flex-1 max-w-sm">
-								<Search className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+								<Search className={isLightMode ? "absolute left-3 top-2.5 h-4 w-4 text-purple-600" : "absolute left-3 top-2.5 h-4 w-4 text-purple-400"} />
 								<input
 									type="text"
 									placeholder="Search artist or cue..."
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
-									className="w-full bg-[#130d36] border border-[#2a1f4f] rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-purple-500 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 transition-all"
+									className={isLightMode ? "w-full bg-[#130d36] border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-purple-500 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 transition-all" : "w-full bg-[#130d36] border border-[#2a1f4f] rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-purple-500 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 transition-all"}
 								/>
 							</div>
 						</div>
@@ -4407,7 +4427,7 @@ function LiveBoard3Component({
 											? "border-[#ef4444] bg-[#ef4444]/5 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-[pulse_2s_infinite]"
 											: item.status === "next_on_stage"
 											? "border-[#06b6d4] bg-[#06b6d4]/5 shadow-lg"
-											: "border-[#2a1f4f] bg-[#130d36]/40 backdrop-blur-sm shadow-md hover:bg-[#181145]/60 hover:border-[#3c2a74]/70"
+											: (isLightMode ? "border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300" : "border-[#2a1f4f] bg-[#130d36]/40 backdrop-blur-sm shadow-md hover:bg-[#181145]/60 hover:border-[#3c2a74]/70")
 									}`}
 								>
 									{/* Left Group */}
@@ -4416,7 +4436,7 @@ function LiveBoard3Component({
 										<span className={`w-8 text-xl font-bold text-center ${
 											item.status === "currently_on_stage"
 												? "text-red-400 font-extrabold"
-												: "text-purple-400"
+												: "text-purple-600"
 										}`}>
 											{index + 1}
 										</span>
@@ -4458,7 +4478,7 @@ function LiveBoard3Component({
 																		)}
 																		{member.countryLiving && member.countryLiving !== member.homeCountry && (
 																			<>
-																				<Globe className="h-3.5 w-3.5 text-purple-400 opacity-70" />
+																				<Globe className={isLightMode ? "h-3.5 w-3.5 text-purple-600 opacity-70" : "h-3.5 w-3.5 text-purple-400 opacity-70"} />
 																				<span
 																					className="text-base"
 																					title={`${member.name}: Living in ${getCountryName(member.countryLiving)}`}
@@ -4482,7 +4502,7 @@ function LiveBoard3Component({
 																)}
 																{artist.country_living && artist.country_living !== artist.home_country && (
 																	<>
-																		<Globe className="h-3.5 w-3.5 text-purple-400 opacity-70" />
+																		<Globe className={isLightMode ? "h-3.5 w-3.5 text-purple-600 opacity-70" : "h-3.5 w-3.5 text-purple-400 opacity-70"} />
 																		<span
 																			className="text-base"
 																			title={`Living in ${getCountryName(artist.country_living)}`}
@@ -4496,12 +4516,12 @@ function LiveBoard3Component({
 													</>
 												)}
 											</div>
-											<div className="text-sm text-purple-400 flex items-center gap-3 mt-1.5">
+											<div className={isLightMode ? "text-sm text-purple-600 flex items-center gap-3 mt-1.5" : "text-sm text-purple-400 flex items-center gap-3 mt-1.5"}>
 												<span className="bg-[#3b0764]/50 text-purple-300 border border-[#6b21a8]/35 px-3 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider">
 													{artist ? artist.style : cue?.type.replace("_", " ").toUpperCase()}
 												</span>
 												<span className="flex items-center gap-1.5 text-purple-300 font-medium">
-													<Clock className="h-4 w-4 text-purple-400" />
+													<Clock className={`h-4 w-4 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 													{artist
 														? formatDuration(artist.actual_duration || artist.performance_duration * 60)
 														: `${cue?.duration || 5}:00`}
@@ -4516,7 +4536,7 @@ function LiveBoard3Component({
 										{getStatusBadge(item.status)}
 
 										{/* Time */}
-										<span className="text-2xl font-mono font-bold text-[#d4af37] min-w-[70px] text-right tracking-tight">
+										<span className={`text-2xl font-mono font-bold ${isLightMode ? "text-purple-700" : "text-purple-700"} min-w-[70px] text-right tracking-tight`}>
 											{liveTimings[index]?.startTime || "--:--"}
 										</span>
 									</div>
@@ -4528,13 +4548,13 @@ function LiveBoard3Component({
 							<div className="text-center py-16">
 								<div className="flex justify-center mb-6">
 									<div className="p-6 bg-purple-600/20 rounded-full">
-										<ListTodo className="h-16 w-16 text-purple-400" />
+										<ListTodo className={isLightMode ? "h-16 w-16 text-purple-600" : "h-16 w-16 text-purple-400"} />
 									</div>
 								</div>
 								<h3 className="text-xl font-bold mb-2 text-white">
 									No items found
 								</h3>
-								<p className="text-purple-400 text-base">
+								<p className={isLightMode ? "text-purple-600 text-base" : "text-purple-400 text-base"}>
 									Try modifying your search query or filters.
 								</p>
 							</div>
@@ -4553,7 +4573,7 @@ function LiveBoard3Component({
 								<MessageSquare className="h-4 w-4" />
 								<span>Message From Organiser</span>
 							</div>
-							<span className="text-xs text-gray-400 font-bold">
+							<span className={`text-xs font-bold ${isLightMode ? "text-gray-500" : "text-gray-400"}`}>
 								{new Date(activeOrganiserMessage.createdAt).toLocaleTimeString("en-US", {
 									hour: "2-digit",
 									minute: "2-digit",
@@ -4612,7 +4632,7 @@ function LiveBoard3Component({
 				<div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
 					<div className="flex flex-col text-left">
 						<span className="font-extrabold text-gray-900 text-lg">Organiser Chat</span>
-						<span className="text-xs text-gray-400 font-bold">Stage ↔ Organiser</span>
+						<span className={`text-xs font-bold ${isLightMode ? "text-gray-500" : "text-gray-400"}`}>Stage ↔ Organiser</span>
 					</div>
 					<button
 						onClick={() => setShowChatsOpen(false)}
