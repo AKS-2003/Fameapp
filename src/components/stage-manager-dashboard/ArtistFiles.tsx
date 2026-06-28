@@ -433,8 +433,8 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
               </p>
             </div>
           ) : selectedArtist ? (
-            <>
-              <ArtistHeader 
+            <React.Fragment key={selectedArtist.id}>
+              <ArtistHeader
                 artist={selectedArtist} 
                 eventId={providedEventId}
                 eventData={eventData}
@@ -481,7 +481,7 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
                   </div>
                 </div>
               )}
-            </>
+            </React.Fragment>
           ) : (
             <div className="flex h-full items-center justify-center text-slate-400">
               Select an artist to view details
