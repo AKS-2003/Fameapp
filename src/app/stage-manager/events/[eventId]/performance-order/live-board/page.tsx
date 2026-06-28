@@ -1759,7 +1759,7 @@ export default function LivePerformanceBoard() {
 								</span>
 							</div>
 							<Button
-								onClick={fetchData}
+								onClick={() => { fetchData(); setRefreshTrigger((prev) => prev + 1); setRehearsalRefreshTrigger((prev) => prev + 1); }}
 								variant="ghost"
 								size="sm"
 								className="text-sm bg-purple-900/30 text-purple-300 hover:bg-purple-800/50 hover:text-white transition-all"

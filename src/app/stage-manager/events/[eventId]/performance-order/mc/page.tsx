@@ -315,7 +315,7 @@ export default function MCDashboard() {
 	const [bioModalArtist, setBioModalArtist] = useState<Artist | null>(null);
 	const [bioModalShowMcNotes, setBioModalShowMcNotes] = useState(false); // true for "See All Bio" tab
 
-	// Keep selectedItem in sync with showOrderItems when data changes
+	// Keep selectedItem in sync with showOrderItems when data refreshes
 	useEffect(() => {
 		if (selectedItem && showOrderItems.length > 0) {
 			const updatedItem = showOrderItems.find(
@@ -324,19 +324,7 @@ export default function MCDashboard() {
 					item.type === selectedItem.type,
 			);
 			if (updatedItem) {
-				// Only update if the mc_notes have changed
-				const currentMcNotes =
-					selectedItem.type === "artist"
-						? selectedItem.artist?.mc_notes
-						: selectedItem.cue?.mc_notes;
-				const newMcNotes =
-					updatedItem.type === "artist"
-						? updatedItem.artist?.mc_notes
-						: updatedItem.cue?.mc_notes;
-
-				if (currentMcNotes !== newMcNotes) {
-					setSelectedItem(updatedItem);
-				}
+				setSelectedItem(updatedItem);
 			}
 		}
 	}, [showOrderItems]);
@@ -1118,8 +1106,9 @@ export default function MCDashboard() {
 								onClick={fetchPerformanceOrder}
 								variant="outline"
 								size="sm"
+								disabled={loading}
 							>
-								<RefreshCw className="h-4 w-4 mr-2" />
+								<RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
 								Refresh
 							</Button>
 						</div>
