@@ -1,0 +1,301 @@
+[
+  {
+    "id": "art-001",
+    "name": "Aurora Waves",
+    "realName": "Marco Bellini",
+    "location": "Barcelona, Spain",
+    "status": "Confirmed",
+    "type": "Band",
+    "inviteLink": "https://id-preview--famemanager.lovable.app/invite/inv-001",
+    "agreement": {
+      "performance": "3 workshops + 2 shows",
+      "proposedFee": "€2,500",
+      "bookingTerms": "Available 2026-07-15",
+      "deliverables": "3 workshops, 2 shows, 0 DJ sets",
+      "contractDetails": {
+        "description": "Contract signature is the operational trigger for Logistics and Show Management",
+        "bookingTerms": "Standard performance agreement for Summer Vibes Festival 2026. Artist agrees to perform a 90-minute set.",
+        "deliverables": "Full live performance with band. Includes soundcheck and meet & greet.",
+        "responsibilities": "Artist responsible for own travel insurance and equipment. Organiser provides stage, PA, and hospitality.",
+        "specialClauses": "Artist retains all merchandise rights. Organiser may use performance footage for promotional purposes.",
+        "cancellationTerms": "50% fee if cancelled within 60 days. 100% if within 30 days."
+      },
+      "signatureStatus": {
+        "artist": {
+          "name": "Artist Signature",
+          "date": "2026-04-02",
+          "status": "SIGNED"
+        },
+        "organiser": {
+          "name": "Organiser Signature",
+          "status": "PENDING"
+        }
+      },
+      "schedule": {
+        "deliverablesCount": 8,
+        "overview": {
+          "workshops": 3,
+          "shows": 2,
+          "tasks": 3,
+          "dateRange": "2026-04-10 → 2026-04-16"
+        },
+        "workshops": [
+          { "id": "ws-1", "title": "Workshop 1", "date": "April 10", "time": "14:00–15:30", "location": "Main Hall", "description": "Beginner level", "status": "Confirmed" },
+          { "id": "ws-2", "title": "Workshop 2", "date": "April 11", "time": "14:00–15:30", "location": "Room B", "description": "Intermediate level", "status": "Confirmed" },
+          { "id": "ws-3", "title": "Workshop 3", "date": "April 12", "time": "14:00–15:30", "location": "Main Hall", "description": "Advanced level", "status": "Confirmed" }
+        ],
+        "performances": [
+          { "id": "sh-1", "title": "Show 1", "date": "April 11", "time": "22:00–22:45", "location": "Show Stage", "status": "Confirmed" },
+          { "id": "sh-2", "title": "Show 2", "date": "April 14", "time": "21:30–22:15", "location": "Show Stage", "status": "Confirmed" }
+        ],
+        "tasks": [
+          { "id": "tk-1", "title": "Social Dance Appearance", "date": "April 11", "time": "23:00", "description": "Attend the social dance area for at least 30 minutes after each show.", "terms": "Artist agrees to be present and available for social dancing." },
+          { "id": "tk-2", "title": "Meet & Greet Session", "date": "April 12", "time": "15:00", "description": "30-minute meet & greet with attendees at the merch area." },
+          { "id": "tk-3", "title": "Photo Session", "date": "April 13", "time": "14:00", "description": "Professional photo session for promotional materials.", "terms": "Images may be used for event promotion." }
+        ]
+      },
+      "payment": {
+        "fieldsCompleted": "5/11",
+        "calculation": {
+          "performanceFee": "€3,500",
+          "downpayment": "€1,750",
+          "remainingBalance": "€1,750",
+          "status": "In Progress"
+        },
+        "details": {
+          "performanceFee": "3500",
+          "downpayment": "1750",
+          "downpaymentDate": "—",
+          "balanceDueDate": "—",
+          "amountPaid": "1750",
+          "paymentDate": "—",
+          "paymentMethod": "—",
+          "paymentStatus": "Downpayment Done",
+          "notes": "—"
+        }
+      },
+      "contractTimeline": [
+        { "label": "Created", "date": "2026-03-28" },
+        { "label": "Sent to Artist", "date": "2026-04-01" },
+        { "label": "Viewed by Artist", "date": "2026-04-01" },
+        { "label": "Artist Signed", "date": "2026-04-02" }
+      ],
+      "stageDiscussion": [
+        {
+          "sender": "Fantasia Events",
+          "time": "Mar 1, 10:00",
+          "message": "Please review the contract terms for 3 workshops and 2 shows.",
+          "isMe": true
+        },
+        {
+          "sender": "Marco Bellini",
+          "time": "Mar 1, 14:00",
+          "message": "Looks good! We approve.",
+          "status": "Approved",
+          "isMe": false
+        }
+      ]
+    },
+    "logistics": {
+      "status": "Booking In Progress",
+      "travelers": "4 of 6 complete",
+      "missingItemsCount": 2,
+      "intakeOverview": {
+        "status": "Booking In Progress",
+        "lastSubmitted": "2026-04-03",
+        "travelers": "4 of 6 complete",
+        "passports": "5 of 6 uploaded"
+      },
+      "intakeDetails": [
+        { "question": "What is your preferred arrival date and time?", "answer": "July 13, 2026" },
+        { "question": "Do any travelers have dietary restrictions or allergies?", "answer": "1 vegetarian, 1 gluten-free" },
+        { "question": "Do you require airport VIP meet & greet service?", "answer": "No" },
+        { "question": "How many pieces of checked luggage (instruments/equipment) will you bring?", "answer": "4" },
+        { "question": "Do you need a separate vehicle for equipment transport?", "answer": "Yes — instrument cases for 4 musicians" },
+        { "question": "What is your preferred hotel room type?", "answer": "Double" },
+        { "question": "Will any travelers require visa invitation letters?", "answer": "No" },
+        { "question": "Do you have any accessibility requirements for hotel or venue?", "answer": "None" },
+        { "question": "Would you like to book additional nights before or after the event?", "answer": "Yes — 1 night before" },
+        { "question": "Are there any specific ground transport preferences?", "answer": "Within 10 min of venue" }
+      ],
+      "missingItems": [
+        "1 passport copy missing (Andrea Ferro)",
+        "1 departure city missing (Andrea Ferro)"
+      ],
+      "members": [
+        { "id": "mem-1", "name": "Marco Bellini", "status": "Complete", "nationality": "Italian", "passport": "AA1234567", "passportExpiry": "2028-06-15", "departureCity": "Rome", "airport": "FCO", "room": "Single", "dietary": "None", "passportUpload": true, "visaDoc": true },
+        { "id": "mem-2", "name": "Luca Rossi", "status": "Complete", "nationality": "Italian", "passport": "AA2345678", "passportExpiry": "2027-03-20", "departureCity": "Rome", "airport": "FCO", "room": "Twin", "dietary": "Vegetarian", "passportUpload": true, "visaDoc": true },
+        { "id": "mem-3", "name": "Giulia Conti", "status": "Incomplete", "nationality": "Italian", "passport": "AA3456789", "passportExpiry": "2026-11-10", "departureCity": "Milan", "airport": "MXP", "room": "Twin", "dietary": "Vegan", "passportUpload": true, "visaDoc": false },
+        { "id": "mem-4", "name": "Andrea Ferro", "status": "Incomplete", "nationality": "Italian", "passport": "—", "passportExpiry": "—", "departureCity": "—", "airport": "—", "room": "Single", "dietary": "None", "passportUpload": false, "visaDoc": false }
+      ],
+      "flights": [
+        {
+          "id": "fl-1",
+          "airline": "Vueling",
+          "flightNumber": "VY6234",
+          "status": "Confirmed",
+          "from": "FCO",
+          "to": "BCN",
+          "departure": "7/13/2026, 8:30:00 AM",
+          "arrival": "7/13/2026, 10:45:00 AM",
+          "baggage": "23kg + instrument",
+          "pnr": "ABC123",
+          "notes": "Group booking for 5 pax"
+        },
+        {
+          "id": "fl-2",
+          "airline": "Vueling",
+          "flightNumber": "VY6235",
+          "status": "Booked",
+          "from": "MXP",
+          "to": "BCN",
+          "departure": "7/13/2026, 9:15:00 AM",
+          "arrival": "7/13/2026, 11:20:00 AM",
+          "baggage": "23kg + instrument",
+          "pnr": "DEF456",
+          "notes": "Separate booking for Giulia"
+        }
+      ],
+      "hotels": [
+        {
+          "id": "ht-1",
+          "name": "Hotel Arts Barcelona",
+          "roomType": "Superior Double",
+          "checkIn": "2026-07-13",
+          "checkOut": "2026-07-17",
+          "rooms": 4,
+          "roomingList": "Marco (1), Luca+Andrea (1), Giulia (1), Sofia+Paolo (1)",
+          "breakfast": "Yes",
+          "ref": "HAB-2026-0451"
+        }
+      ],
+      "transports": [
+        {
+          "id": "tr-1",
+          "type": "Airport Transfer",
+          "vehicle": "Minivan",
+          "pickupTime": "7/13/2026, 11:00:00 AM",
+          "pickupLocation": "BCN Airport Terminal 1",
+          "dropOffLocation": "Hotel Arts Barcelona",
+          "driver": "Carlos Mendez +34 612 000 111",
+          "notes": "Wait at arrivals with sign"
+        },
+        {
+          "id": "tr-2",
+          "type": "Venue Transfer",
+          "vehicle": "Minivan",
+          "pickupTime": "7/15/2026, 12:00:00 PM",
+          "pickupLocation": "Hotel Arts Barcelona",
+          "dropOffLocation": "Festival Grounds Gate B",
+          "driver": "Carlos Mendez +34 612 000 111",
+          "notes": "Equipment van follows separately"
+        }
+      ],
+      "food": {
+        "vouchers": "Yes",
+        "dietaryPreferences": "No restrictions",
+        "estimatedCost": {
+          "total": "€420",
+          "breakdown": "(€35/day × 6 days × 2 persons)"
+        },
+        "status": "Vouchers Included"
+      },
+      "notesData": [
+        {
+          "id": "note-1",
+          "author": "Sarah Chen",
+          "date": "4/3/2026",
+          "content": "Flight prices increasing for July BCN routes. Recommend booking ASAP after schedule confirmation.",
+          "isPinned": true,
+          "isFlagged": true
+        },
+        {
+          "id": "note-2",
+          "author": "Sarah Chen",
+          "date": "4/4/2026",
+          "content": "Andrea Ferro still missing passport details. Contacted artist management.",
+          "isPinned": true,
+          "isFlagged": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "art-002",
+    "name": "DJ Pulse",
+    "realName": "Sarah Jenkins",
+    "location": "Barcelona, Spain",
+    "status": "Confirmed",
+    "type": "DJ",
+    "agreement": {
+      "performance": "2 sets (90 min each)",
+      "proposedFee": "€1,200",
+      "bookingTerms": "Available 2026-07-16",
+      "deliverables": "2 DJ sets",
+      "contractDetails": {
+        "description": "DJ set performance for main stage",
+        "bookingTerms": "Artist provides own controller. Organiser provides CDJs and mixer."
+      },
+      "signatureStatus": {
+        "artist": { "name": "Artist Signature", "status": "SIGNED", "date": "2026-04-10" },
+        "organiser": { "name": "Organiser Signature", "status": "SIGNED", "date": "2026-04-11" }
+      }
+    },
+    "logistics": {
+      "status": "Confirmed",
+      "travelers": "1 of 1 complete",
+      "missingItemsCount": 0,
+      "intakeOverview": {
+        "status": "Confirmed",
+        "lastSubmitted": "2026-04-12",
+        "travelers": "1 of 1 complete",
+        "passports": "1 of 1 uploaded"
+      },
+      "intakeDetails": [
+        { "question": "What is your preferred arrival date and time?", "answer": "July 15, 2026" },
+        { "question": "Do you need a separate vehicle for equipment transport?", "answer": "No" }
+      ],
+      "missingItems": []
+    }
+  },
+  {
+    "id": "art-003",
+    "name": "The Velvet Strings",
+    "realName": "Ensemble",
+    "location": "Milan, Italy",
+    "status": "Waiting For Info",
+    "type": "Orchestra"
+  },
+  {
+    "id": "art-004",
+    "name": "KIRA",
+    "realName": "Kira Volkov",
+    "location": "Barcelona, Spain",
+    "status": "Confirmed",
+    "type": "Solo Artist"
+  },
+  {
+    "id": "art-005",
+    "name": "Collective Mind",
+    "realName": "Group",
+    "location": "Milan, Italy",
+    "status": "Awaiting Signature",
+    "type": "Band"
+  },
+  {
+    "id": "art-006",
+    "name": "Nomad Sound",
+    "realName": "Alex Rivers",
+    "location": "Barcelona, Spain",
+    "status": "Confirmed",
+    "type": "DJ"
+  },
+  {
+    "id": "art-007",
+    "name": "Luna Del Rey",
+    "realName": "Elena Gomez",
+    "location": "Barcelona, Spain",
+    "status": "Invited",
+    "type": "Solo Artist"
+  }
+]
