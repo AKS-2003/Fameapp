@@ -299,20 +299,7 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 	return (
 		<NotificationProvider userRole="stage-manager">
 			<div className="fixed inset-0 overflow-hidden bg-[#f6f5fb] text-slate-950 flex">
-				<StageManagerSidebar
-					collapsed={sidebarCollapsed}
-					onToggle={() => setSidebarCollapsed((value) => !value)}
-					activeTab={activeTab}
-					onSelectTab={(tab) => {
-						if (tab === "Dashboard") {
-							setSelectedEventId(null);
-						}
-						setSelectedSearchArtistId(null);
-						setActiveTab(tab);
-					}}
-				/>
-
-				<div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
+				<div className="flex h-screen min-w-0 flex-1 flex-col overflow-visible">
 					<StageManagerTopbar
 						search={search}
 						onSearchChange={setSearch}
@@ -349,6 +336,14 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 									setSearch("");
 								}
 							}
+						}}
+						activeTab={activeTab}
+						onSelectTab={(tab) => {
+							if (tab === "Dashboard") {
+								setSelectedEventId(null);
+							}
+							setSelectedSearchArtistId(null);
+							setActiveTab(tab);
 						}}
 					/>
 
@@ -505,11 +500,9 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 								<ProfilePage isDashboardTab={true} />
 							</div>
 						)}
-
-
-					</div>
 				</div>
 			</div>
+		</div>
 
 			<UpgradeModal
 				open={upgradeModalOpen}
