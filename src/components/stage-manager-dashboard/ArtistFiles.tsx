@@ -59,6 +59,10 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
         clauses: agr.contractDetails?.clauses,
         documents: agr.contractDetails?.documents,
       },
+      arrivalDate: agr.arrivalDate || "",
+      departureDate: agr.departureDate || "",
+      bookingDateFrom: agr.bookingDateFrom || "",
+      bookingDateTo: agr.bookingDateTo || "",
       signatureStatus: {
         artist: {
           name: a.contractSignatureName || a.legalName || a.realName || "Artist Signature",

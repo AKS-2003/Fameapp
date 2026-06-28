@@ -112,7 +112,9 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
     city: a.city || "",
     country: a.country || "",
     arrivalDate: a.agreement?.arrivalDate || "",
-    departureDate: a.agreement?.departureDate || ""
+    departureDate: a.agreement?.departureDate || "",
+    bookingDateFrom: a.agreement?.bookingDateFrom || "",
+    bookingDateTo: a.agreement?.bookingDateTo || ""
   });
 
   const [formData, setFormData] = React.useState(() => buildFormData(artist));
@@ -121,7 +123,7 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
   React.useEffect(() => {
     setFormData(buildFormData(artist));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artist.id, artist.agreement?.arrivalDate, artist.agreement?.departureDate]);
+  }, [artist.id, artist.agreement?.arrivalDate, artist.agreement?.departureDate, artist.agreement?.bookingDateFrom, artist.agreement?.bookingDateTo]);
 
   const updateClause = (id: string, field: 'title' | 'content', value: string) => {
     setFormData(prev => ({
@@ -207,6 +209,8 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
           ...artist.agreement,
           arrivalDate: formData.arrivalDate || formData.bookingTerms.replace("Available ", ""),
           departureDate: formData.departureDate,
+          bookingDateFrom: formData.bookingDateFrom,
+          bookingDateTo: formData.bookingDateTo,
           bookingTerms: formData.bookingTerms,
           deliverables: formData.deliverables,
           contractDetails: {
@@ -334,25 +338,26 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
             {isEditing ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Start Date</label>
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">From</label>
                   <div className="w-full bg-white border border-pink-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
                     <Calendar className="h-4 w-4 text-pink-500 shrink-0" />
                     <input
                       type="date"
-                      value={formData.arrivalDate ? formData.arrivalDate.substring(0, 10) : ""}
-                      onChange={e => setFormData(prev => ({ ...prev, arrivalDate: e.target.value }))}
+                      value={formData.bookingDateFrom ? formData.bookingDateFrom.substring(0, 10) : ""}
+                      onChange={e => setFormData(prev => ({ ...prev, bookingDateFrom: e.target.value }))}
                       className="flex-1 text-sm font-medium text-slate-700 bg-transparent outline-none border-none"
                     />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">End Date</label>
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">To</label>
                   <div className="w-full bg-white border border-pink-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
                     <Calendar className="h-4 w-4 text-pink-500 shrink-0" />
                     <input
                       type="date"
-                      value={formData.departureDate ? formData.departureDate.substring(0, 10) : ""}
-                      onChange={e => setFormData(prev => ({ ...prev, departureDate: e.target.value }))}
+                      value={formData.bookingDateTo ? formData.bookingDateTo.substring(0, 10) : ""}
+                      min={formData.bookingDateFrom ? formData.bookingDateFrom.substring(0, 10) : undefined}
+                      onChange={e => setFormData(prev => ({ ...prev, bookingDateTo: e.target.value }))}
                       className="flex-1 text-sm font-medium text-slate-700 bg-transparent outline-none border-none"
                     />
                   </div>
@@ -360,49 +365,35 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Prefer the editable arrivalDate/departureDate if set, otherwise fall back to show dates */}
-                {formData.arrivalDate || formData.departureDate ? (
+                {formData.bookingDateFrom || formData.bookingDateTo ? (
                   <>
-                    {formData.arrivalDate && (
+                    {formData.bookingDateFrom && (
                       <div className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center gap-3">
                         <Calendar className="h-4 w-4 text-pink-500" />
-                        <span className="text-sm font-medium text-slate-700">
-                          {new Date(formData.arrivalDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">From</span>
+                          <span className="text-sm font-medium text-slate-700">
+                            {new Date(formData.bookingDateFrom).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
                       </div>
                     )}
-                    {formData.departureDate && (
+                    {formData.bookingDateTo && (
                       <div className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center gap-3">
                         <Calendar className="h-4 w-4 text-pink-500" />
-                        <span className="text-sm font-medium text-slate-700">
-                          {new Date(formData.departureDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">To</span>
+                          <span className="text-sm font-medium text-slate-700">
+                            {new Date(formData.bookingDateTo).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </>
-                ) : allShows && allShows.length > 0 ? (
-                  allShows.map((show, idx) => {
-                    const showDate = show.overrides?.performanceDate || show.overrides?.performance_date || show.performanceDate || show.performance_date || show.date || show.startDate || show.day || (artist as any).performance_date;
-                    return (
-                      <div key={idx} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <Calendar className="h-4 w-4 text-pink-500" />
-                          <span className="text-sm font-medium text-slate-700">
-                            {showDate ? new Date(showDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : "Date TBD"}
-                          </span>
-                        </div>
-                        {show.startTime && show.endTime && (
-                          <span className="text-xs font-bold text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">
-                            {show.startTime} - {show.endTime}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })
                 ) : (
-                  <div className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center gap-3">
+                  <div className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center gap-3 col-span-2">
                     <Calendar className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm font-medium text-slate-700">{formData.bookingTerms || "Dates TBD"}</span>
+                    <span className="text-sm font-medium text-slate-400">No booking dates set</span>
                   </div>
                 )}
               </div>

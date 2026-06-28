@@ -136,6 +136,8 @@ export interface Agreement {
   deliverables: string;
   arrivalDate?: string;
   departureDate?: string;
+  bookingDateFrom?: string;
+  bookingDateTo?: string;
   contractDetails: ContractDetails;
   signatureStatus: SignatureStatus;
   schedule?: Schedule;
