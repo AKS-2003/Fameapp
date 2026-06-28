@@ -1768,26 +1768,26 @@ export default function ArtistDashboard() {
 
 			{/* Enhanced Header with Logo */}
 			<header className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-700 text-white shadow-2xl">
-				<div className="container mx-auto px-4 py-4 md:py-8">
-					<div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-						<div className="flex items-center gap-3 md:gap-6">
-							<div className="bg-white/10 backdrop-blur-sm rounded-2xl md:rounded-3xl p-2 md:p-3 border border-white/20 shadow-2xl">
+				<div className="container mx-auto px-3 sm:px-4 py-3 md:py-8">
+					<div className="flex flex-row items-center justify-between gap-2 md:gap-4">
+						<div className="flex items-center gap-2 md:gap-6 min-w-0">
+							<div className="bg-white/10 backdrop-blur-sm rounded-xl md:rounded-3xl p-1.5 md:p-3 border border-white/20 shadow-2xl flex-shrink-0">
 								<img
 									src="/fame-logo.png"
 									alt="FAME Logo"
-									className="h-12 w-12 md:h-16 md:w-16 object-contain drop-shadow-2xl"
+									className="h-8 w-8 md:h-16 md:w-16 object-contain drop-shadow-2xl"
 								/>
 							</div>
-							<div>
-								<h1 className="text-2xl md:text-4xl font-bold drop-shadow-2xl mb-1">
+							<div className="min-w-0">
+								<h1 className="text-lg sm:text-2xl md:text-4xl font-bold drop-shadow-2xl mb-0.5 truncate">
 									Artist Dashboard
 								</h1>
-								<p className="text-purple-100 text-sm md:text-xl font-medium">
-									Welcome back, {profile.artistName}!
+								<p className="text-purple-100 text-xs sm:text-sm md:text-xl font-medium truncate">
+									Welcome, {profile.artistName}!
 								</p>
 							</div>
 						</div>
-						<div className="flex items-center gap-2 w-full md:w-auto">
+						<div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
 							{/* Notification Bell */}
 							{profile.eventId && (
 								<NotificationBell
@@ -1810,36 +1810,30 @@ export default function ArtistDashboard() {
 							)}
 							<Button
 								variant="ghost"
-								className="text-white hover:bg-white/20 h-9 md:h-10 flex-1 md:flex-none text-sm"
+								size="sm"
+								className="text-white hover:bg-white/20 h-8 px-2 md:px-3"
 								onClick={() => {
 									if (artistEditEnabled) {
-										router.push(
-											`/artist-edit/${profile.id}`,
-										);
+										router.push(`/artist-edit/${profile.id}`);
 									} else {
 										setShowEditBlockedDialog(true);
 									}
 								}}
 							>
-								<Edit className="h-4 w-4 mr-2" />
-								<span className="hidden sm:inline">
-									Edit Profile
-								</span>
-								<span className="sm:hidden">Edit</span>
+								<Edit className="h-4 w-4" />
+								<span className="hidden sm:inline ml-1.5">Edit</span>
 							</Button>
 							<Button
 								variant="ghost"
-								className="text-white hover:bg-white/20 h-9 md:h-10 flex-1 md:flex-none text-sm"
+								size="sm"
+								className="text-white hover:bg-white/20 h-8 px-2 md:px-3"
 								onClick={() => {
-									// Clear artist session
 									localStorage.removeItem("artistSession");
-									// Redirect to artist login page
 									router.push("/famelink-auth");
 								}}
 							>
-								<LogOut className="h-4 w-4 mr-2" />
-								<span className="hidden sm:inline">Logout</span>
-								<span className="sm:hidden">Logout</span>
+								<LogOut className="h-4 w-4" />
+								<span className="hidden sm:inline ml-1.5">Logout</span>
 							</Button>
 						</div>
 					</div>
@@ -1856,11 +1850,11 @@ export default function ArtistDashboard() {
 
 			{/* Mobile Drawer */}
 			<div
-				className={`fixed top-0 left-0 h-full w-80 bg-gradient-to-b from-gray-900 via-purple-900 to-gray-900 text-white z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
+				className={`fixed top-0 left-0 h-full w-[min(320px,85vw)] bg-gradient-to-b from-gray-900 via-purple-900 to-gray-900 text-white z-50 transform transition-transform duration-300 ease-in-out lg:hidden overflow-y-auto ${
 					isDrawerOpen ? "translate-x-0" : "-translate-x-full"
 				}`}
 			>
-				<div className="p-6">
+				<div className="p-4">
 					{/* Close Button */}
 					<button
 						onClick={() => setIsDrawerOpen(false)}
@@ -2026,36 +2020,37 @@ export default function ArtistDashboard() {
 				</div>
 			</div>
 
-			<main className="container mx-auto px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 lg:py-8 max-w-7xl">
+			<main className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 lg:py-8 max-w-7xl">
 				<Tabs
 					value={activeTab}
 					onValueChange={setActiveTab}
 					className="w-full"
 				>
 					{/* Mobile Hamburger Button */}
-					<div className="lg:hidden mb-4">
+					<div className="lg:hidden mb-3">
 						<Button
 							variant="outline"
-							size="lg"
 							onClick={() => setIsDrawerOpen(true)}
-							className="flex items-center justify-between border-2  hover:bg-purple-50 py-6"
+							className="w-full flex items-center justify-between border border-purple-200 bg-white hover:bg-purple-50 h-10 px-3"
 						>
-							<span className="flex items-center gap-2 font-semibold text-base">
-								<svg
-									className="w-6 h-6"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M4 6h16M4 12h16M4 18h16"
-									/>
+							<span className="flex items-center gap-2 font-medium text-sm text-slate-700">
+								<svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
 								</svg>
-								Menu
+								<span>
+									{activeTab === "liveboard" && "Live Board"}
+									{activeTab === "overview" && "Overview"}
+									{activeTab === "rehearsal" && "Rehearsal"}
+									{activeTab === "music" && "Music"}
+									{activeTab === "technical" && "Technical"}
+									{activeTab === "gallery" && "Gallery"}
+									{activeTab === "assigned-artists" && "Assigned Artists"}
+									{activeTab === "event" && "Event Details"}
+								</span>
 							</span>
+							<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+							</svg>
 						</Button>
 					</div>
 
