@@ -31,11 +31,6 @@ interface FilterState {
 
 const CURRENCY = "€";
 
-function fmt(n: number) {
-	if (n === 0) return "—";
-	return `${CURRENCY}${n.toLocaleString()}`;
-}
-
 function fmtTotal(n: number) {
 	return `${CURRENCY}${n.toLocaleString()}`;
 }
@@ -58,11 +53,7 @@ interface ArtistRow {
 	transport: number;
 	food: number;
 	extra: number;
-	paidFee: boolean;
-	paidFlights: boolean;
-	paidHotel: boolean;
-	paidTransport: boolean;
-	paidFood: boolean;
+	amountPaid: number;
 }
 
 function buildCostRow(artist: any): ArtistRow {
@@ -73,8 +64,10 @@ function buildCostRow(artist: any): ArtistRow {
 		1,
 	);
 
-	// Fee from contract agreement
-	const fee = parseCurrency(agreement.agreedFee);
+	const payment = agreement.payment || {};
+
+	// Fee: from payment form's performanceFee (where it's actually stored)
+	const fee = parseCurrency(payment.details?.performanceFee) || parseCurrency(agreement.agreedFee);
 
 	// Flights: actual flight costs or budget
 	const flightActual = (travelLogistics.flights || []).reduce(
@@ -100,7 +93,16 @@ function buildCostRow(artist: any): ArtistRow {
 		? 35 * Math.max(hotelNights, 1) * memberCount
 		: 0;
 
-	const payments = agreement.payments || {};
+	// Extra fees from custom payment lines
+	const extra = (payment.customLines || []).reduce(
+		(sum: number, line: any) => sum + parseCurrency(line.value),
+		0,
+	);
+
+	// Amount paid from payment form (downpayment + amountPaid)
+	const downpayment = parseCurrency(payment.details?.downpayment);
+	const amountPaid = parseCurrency(payment.details?.amountPaid);
+	const totalPaid = downpayment + amountPaid;
 
 	return {
 		id: artist.id,
@@ -111,12 +113,8 @@ function buildCostRow(artist: any): ArtistRow {
 		hotel,
 		transport,
 		food,
-		extra: 0,
-		paidFee: payments.feePaid ?? false,
-		paidFlights: payments.flightsPaid ?? false,
-		paidHotel: payments.hotelPaid ?? false,
-		paidTransport: payments.transportPaid ?? false,
-		paidFood: payments.foodPaid ?? false,
+		extra,
+		amountPaid: totalPaid,
 	};
 }
 
@@ -188,28 +186,19 @@ export default function CostAnalysis({ providedEventId }: CostAnalysisProps) {
 	}, [providedEventId]);
 
 	const totals = rows.reduce(
-		(acc, r) => ({
-			fees: acc.fees + r.fee,
-			flights: acc.flights + r.flights,
-			hotels: acc.hotels + r.hotel,
-			transport: acc.transport + r.transport,
-			food: acc.food + r.food,
-			extra: 0,
-			total:
-				acc.total +
-				r.fee +
-				r.flights +
-				r.hotel +
-				r.transport +
-				r.food,
-			paid:
-				acc.paid +
-				(r.paidFee ? r.fee : 0) +
-				(r.paidFlights ? r.flights : 0) +
-				(r.paidHotel ? r.hotel : 0) +
-				(r.paidTransport ? r.transport : 0) +
-				(r.paidFood ? r.food : 0),
-		}),
+		(acc, r) => {
+			const rowTotal = r.fee + r.flights + r.hotel + r.transport + r.food + r.extra;
+			return {
+				fees: acc.fees + r.fee,
+				flights: acc.flights + r.flights,
+				hotels: acc.hotels + r.hotel,
+				transport: acc.transport + r.transport,
+				food: acc.food + r.food,
+				extra: acc.extra + r.extra,
+				total: acc.total + rowTotal,
+				paid: acc.paid + Math.min(r.amountPaid, rowTotal),
+			};
+		},
 		{
 			fees: 0,
 			flights: 0,
@@ -264,7 +253,7 @@ export default function CostAnalysis({ providedEventId }: CostAnalysisProps) {
 			label: "Extra",
 			icon: Package,
 			color: "text-slate-400",
-			value: 0,
+			value: totals.extra,
 		},
 	];
 
@@ -279,7 +268,8 @@ export default function CostAnalysis({ providedEventId }: CostAnalysisProps) {
 			(filters.flights ? r.flights : 0) +
 			(filters.hotels ? r.hotel : 0) +
 			(filters.transport ? r.transport : 0) +
-			(filters.food ? r.food : 0),
+			(filters.food ? r.food : 0) +
+			(filters.extra ? r.extra : 0),
 		0,
 	);
 
@@ -455,13 +445,9 @@ export default function CostAnalysis({ providedEventId }: CostAnalysisProps) {
 									r.flights +
 									r.hotel +
 									r.transport +
-									r.food;
-								const rowPaid =
-									(r.paidFee ? r.fee : 0) +
-									(r.paidFlights ? r.flights : 0) +
-									(r.paidHotel ? r.hotel : 0) +
-									(r.paidTransport ? r.transport : 0) +
-									(r.paidFood ? r.food : 0);
+									r.food +
+									r.extra;
+								const rowPaid = Math.min(r.amountPaid, rowTotal);
 								const rowUnpaid = rowTotal - rowPaid;
 
 								return (
@@ -478,39 +464,22 @@ export default function CostAnalysis({ providedEventId }: CostAnalysisProps) {
 											{r.memberCount}
 										</td>
 										{filters.fees && (
-											<CostCell
-												val={r.fee}
-												isPaid={r.paidFee}
-											/>
+											<CostCell val={r.fee} />
 										)}
 										{filters.flights && (
-											<CostCell
-												val={r.flights}
-												isPaid={r.paidFlights}
-											/>
+											<CostCell val={r.flights} />
 										)}
 										{filters.hotels && (
-											<CostCell
-												val={r.hotel}
-												isPaid={r.paidHotel}
-											/>
+											<CostCell val={r.hotel} />
 										)}
 										{filters.transport && (
-											<CostCell
-												val={r.transport}
-												isPaid={r.paidTransport}
-											/>
+											<CostCell val={r.transport} />
 										)}
 										{filters.food && (
-											<CostCell
-												val={r.food}
-												isPaid={r.paidFood}
-											/>
+											<CostCell val={r.food} />
 										)}
 										{filters.extra && (
-											<td className="px-3 py-4 text-sm text-slate-300">
-												—
-											</td>
+											<CostCell val={r.extra} />
 										)}
 										<td className="px-3 py-4 text-sm font-semibold text-slate-900">
 											{rowTotal > 0
@@ -578,8 +547,10 @@ export default function CostAnalysis({ providedEventId }: CostAnalysisProps) {
 									</td>
 								)}
 								{filters.extra && (
-									<td className="px-3 py-4 text-sm font-bold text-slate-400">
-										—
+									<td className="px-3 py-4 text-sm font-bold text-red-500">
+										{totals.extra > 0
+											? fmtTotal(totals.extra)
+											: "—"}
 									</td>
 								)}
 								<td className="px-3 py-4 text-sm font-bold text-slate-900">
@@ -608,26 +579,13 @@ export default function CostAnalysis({ providedEventId }: CostAnalysisProps) {
 	);
 }
 
-function CostCell({
-	val,
-	isPaid,
-}: {
-	val: number;
-	isPaid?: boolean;
-}) {
+function CostCell({ val }: { val: number }) {
 	if (val === 0) {
 		return <td className="px-3 py-4 text-sm text-slate-300">—</td>;
 	}
 	return (
 		<td className="px-3 py-4 text-sm text-slate-700">
-			<span className="flex items-center gap-1">
-				{isPaid !== undefined && (
-					<CheckCircle2
-						className={`h-3.5 w-3.5 ${isPaid ? "text-emerald-500" : "text-slate-300"}`}
-					/>
-				)}
-				{fmtTotal(val)}
-			</span>
+			{fmtTotal(val)}
 		</td>
 	);
 }
