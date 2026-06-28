@@ -2289,6 +2289,9 @@ export default function DJDashboard() {
 											}
 
 											if (item.type === "cue") {
+												// Exclude stage-ops cues (cleaning, rehearsal) from DJ view
+												const cueType = item.cue?.type;
+												if (cueType === "cleaning_break") return false;
 												return true;
 											}
 
@@ -2388,374 +2391,132 @@ export default function DJDashboard() {
 																				: ""
 																		}`}
 																	>
-																		<div className="flex items-center justify-between w-full mr-4">
-																			<div className="flex items-center space-x-4">
+																		<div className="flex items-center justify-between w-full mr-2 gap-2 min-w-0">
+																			<div className="flex items-center gap-3 min-w-0">
 																				<div
-																					className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-																						itemColor &&
-																						!isLightColor(
-																							itemColor,
-																						)
+																					className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+																						itemColor && !isLightColor(itemColor)
 																							? "bg-white/20 text-white"
 																							: "bg-primary text-primary-foreground"
 																					}`}
 																				>
-																					{index +
-																						1}
+																					{index + 1}
 																				</div>
-																				<div className="text-left">
-																					<h3
-																						className={`text-lg font-semibold ${
-																							itemColor &&
-																							!isLightColor(
-																								itemColor,
-																							)
-																								? "text-white"
-																								: ""
-																						}`}
-																					>
-																						{
-																							item
-																								.artist
-																								.artist_name
-																						}
+																				<div className="text-left min-w-0">
+																					<h3 className={`text-base font-semibold truncate ${
+																						itemColor && !isLightColor(itemColor) ? "text-white" : ""
+																					}`}>
+																						{item.artist.artist_name}
 																					</h3>
-																					<div className="flex items-center gap-2 mt-1">
-																						<Badge
-																							variant="outline"
-																							className={
-																								itemColor &&
-																								!isLightColor(
-																									itemColor,
-																								)
-																									? "bg-white/20 text-white border-white/30"
-																									: ""
-																							}
-																						>
-																							{
-																								item
-																									.artist
-																									.style
-																							}
-																						</Badge>
-																						{item
-																							.artist
-																							.performanceType && (
+																					<div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+																						{item.artist.style && (
 																							<Badge
 																								variant="outline"
-																								className={
-																									itemColor &&
-																									!isLightColor(
-																										itemColor,
-																									)
-																										? "bg-white/20 text-white border-white/30"
-																										: ""
-																								}
-																							>
-																								{
-																									item
-																										.artist
-																										.performanceType
-																								}
-																							</Badge>
-																						)}
-																						<span
-																							className={`text-sm flex items-center gap-1 ${
-																								itemColor &&
-																								!isLightColor(
-																									itemColor,
-																								)
-																									? "text-white/80"
-																									: "text-muted-foreground"
-																							}`}
-																						>
-																							<Clock className="h-3 w-3" />
-																							{getDisplayDuration(
-																								item.artist,
-																							)}
-																						</span>
-																						{item
-																							.artist
-																							.rehearsal_completed && (
-																							<Badge
-																								variant="secondary"
-																								className={`flex items-center gap-1 ${
-																									itemColor &&
-																									!isLightColor(
-																										itemColor,
-																									)
+																								className={`text-xs ${
+																									itemColor && !isLightColor(itemColor)
 																										? "bg-white/20 text-white border-white/30"
 																										: ""
 																								}`}
 																							>
-																								<CheckCircle className="h-3 w-3" />
-																								Rehearsed
+																								{item.artist.style}
 																							</Badge>
 																						)}
-																						{getQualityBadge(
-																							item
-																								.artist
-																								.quality_rating,
+																						{item.artist.performanceType && (
+																							<Badge
+																								variant="outline"
+																								className={`text-xs ${
+																									itemColor && !isLightColor(itemColor)
+																										? "bg-white/20 text-white border-white/30"
+																										: ""
+																								}`}
+																							>
+																								{item.artist.performanceType}
+																							</Badge>
 																						)}
+																						<span className={`text-xs flex items-center gap-1 ${
+																							itemColor && !isLightColor(itemColor) ? "text-white/80" : "text-muted-foreground"
+																						}`}>
+																							<Clock className="h-3 w-3 flex-shrink-0" />
+																							{getDisplayDuration(item.artist)}
+																						</span>
+																						{(() => {
+																							const tracks = getArtistTracks(item.artist.id);
+																							const tempos = [...new Set(tracks.map((t: any) => t.tempo).filter(Boolean))];
+																							return tempos.length > 0 ? (
+																								<span className={`text-xs ${
+																									itemColor && !isLightColor(itemColor) ? "text-white/80" : "text-muted-foreground"
+																								}`}>♩ {tempos.join(" / ")}</span>
+																							) : null;
+																						})()}
 																					</div>
 																				</div>
 																			</div>
-																			<div className="flex items-center gap-4">
+																			<div className="flex-shrink-0">
 																				<Badge
 																					variant={
-																						item.status ===
-																						"completed"
+																						item.status === "completed"
 																							? "destructive"
-																							: item.status ===
-																								  "currently_on_stage"
-																								? "default"
-																								: "outline"
+																							: item.status === "currently_on_stage"
+																							? "default"
+																							: "outline"
 																					}
-																					className={
-																						itemColor &&
-																						!isLightColor(
-																							itemColor,
-																						)
+																					className={`text-xs whitespace-nowrap ${
+																						itemColor && !isLightColor(itemColor)
 																							? "bg-white/20 text-white border-white/30"
 																							: ""
-																					}
+																					}`}
 																				>
-																					{item.status ===
-																						"not_started" &&
-																						"Backstage"}
-																					{item.status ===
-																						"next_on_deck" &&
-																						"Next on Deck"}
-																					{item.status ===
-																						"next_on_stage" &&
-																						"Next on Stage"}
-																					{item.status ===
-																						"currently_on_stage" &&
-																						"Currently on Stage"}
-																					{item.status ===
-																						"completed" &&
-																						"Completed"}
+																					{item.status === "not_started" && "Backstage"}
+																					{item.status === "next_on_deck" && "Next on Deck"}
+																					{item.status === "next_on_stage" && "Next on Stage"}
+																					{item.status === "currently_on_stage" && "On Stage"}
+																					{item.status === "completed" && "Done"}
 																				</Badge>
 																			</div>
 																		</div>
 																	</AccordionTrigger>
-																	<AccordionContent className="px-6 pb-6">
-																		<div className="space-y-6">
-																			{/* Music Tracks Section */}
-																			<div>
-																				<h4 className="font-medium mb-4 flex items-center gap-2">
-																					<FileMusic className="h-4 w-4" />
-																					Music
-																					Tracks
-																					&
-																					Timing
-																				</h4>
-																				{(() => {
-																					const artistTracks =
-																						getArtistTracks(
-																							item
-																								.artist!
-																								.id,
-																						);
-																					return artistTracks.length ===
-																						0 ? (
-																						<Card className="p-4">
-																							<div className="text-center text-muted-foreground">
-																								<FileMusic className="h-8 w-8 mx-auto mb-2 opacity-50" />
-																								<p>
-																									No
-																									music
-																									tracks
-																									uploaded
-																								</p>
+																	<AccordionContent className="px-4 pb-4">
+																		<div className="space-y-3">
+																			{/* Tracks summary: tempo + timing */}
+																			{(() => {
+																				const tracks = getArtistTracks(item.artist.id);
+																				if (tracks.length === 0) return null;
+																				return (
+																					<div className="grid grid-cols-1 gap-2">
+																						{tracks.map((track: any, ti: number) => (
+																							<div key={ti} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm px-3 py-2 bg-muted/40 rounded-lg">
+																								<span className="font-medium truncate max-w-[160px]">{track.song_title}</span>
+																								{track.tempo && (
+																									<span className="text-muted-foreground text-xs">♩ {track.tempo}</span>
+																								)}
+																								{track.duration && (
+																									<span className="text-muted-foreground text-xs flex items-center gap-1"><Clock className="h-3 w-3" />{formatDuration(track.duration)}</span>
+																								)}
 																							</div>
-																						</Card>
-																					) : (
-																						<div className="space-y-3">
-																							{artistTracks.map(
-																								(
-																									track,
-																									trackIndex,
-																								) => (
-																									<Card
-																										key={
-																											trackIndex
-																										}
-																										className="p-4"
-																									>
-																										<div className="flex items-center justify-between mb-3">
-																											<div className="flex items-center gap-3">
-																												<h5 className="font-medium">
-																													{
-																														track.song_title
-																													}
-																												</h5>
-																												<Badge
-																													variant={
-																														track.is_main_track
-																															? "default"
-																															: "outline"
-																													}
-																												>
-																													{track.is_main_track
-																														? "Main Track"
-																														: "Additional"}
-																												</Badge>
-																											</div>
-																											<Button
-																												variant="destructive"
-																												size="sm"
-																												onClick={() => {
-																													if (
-																														confirm(
-																															`Delete "${track.song_title}"?`,
-																														)
-																													) {
-																														deleteTrack(
-																															item
-																																.artist!
-																																.id,
-																															trackIndex,
-																														);
-																													}
-																												}}
-																											>
-																												<Trash2 className="h-4 w-4 mr-1" />
-																												Delete
-																											</Button>
-																										</div>
-
-																										{track.file_url ? (
-																											<AudioPlayer
-																												track={
-																													track
-																												}
-																											/>
-																										) : (
-																											<div className="bg-muted/50 rounded-lg p-3">
-																												<div className="flex items-center gap-2 text-muted-foreground">
-																													<AlertTriangle className="h-4 w-4" />
-																													<span className="text-sm">
-																														No
-																														audio
-																														file
-																														uploaded
-																													</span>
-																												</div>
-																											</div>
-																										)}
-
-																										<div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-																											<div>
-																												<Label className="text-xs text-muted-foreground">
-																													Tempo
-																												</Label>
-																												<p className="font-medium">
-																													{track.tempo ||
-																														"Not specified"}
-																												</p>
-																											</div>
-																											<div>
-																												<Label className="text-xs text-muted-foreground">
-																													Duration
-																												</Label>
-																												<p className="font-medium">
-																													{formatDuration(
-																														track.duration,
-																													)}
-																												</p>
-																											</div>
-																										</div>
-
-																										{track.notes && (
-																											<div className="mt-3 p-3 bg-muted rounded-lg">
-																												<Label className="text-xs text-muted-foreground">
-																													Artist
-																													Notes
-																												</Label>
-																												<p className="text-sm mt-1">
-																													{
-																														track.notes
-																													}
-																												</p>
-																											</div>
-																										)}
-																									</Card>
-																								),
-																							)}
-																						</div>
-																					);
-																				})()}
-																			</div>
-
-																			{/* DJ Notes Section */}
+																						))}
+																					</div>
+																				);
+																			})()}
+																			{/* DJ Notes */}
 																			<div>
-																				<h4 className="font-medium mb-4 flex items-center gap-2">
-																					<Volume2 className="h-4 w-4" />
-																					DJ
-																					Notes
-																				</h4>
-																				<div className="space-y-3">
-																					<Textarea
-																						value={
-																							djNotesState[
-																								item
-																									.artist!
-																									.id
-																							] ||
-																							""
-																						}
-																						onChange={(
-																							e,
-																						) =>
-																							setDjNotesState(
-																								(
-																									prev,
-																								) => ({
-																									...prev,
-																									[item
-																										.artist!
-																										.id]:
-																										e
-																											.target
-																											.value,
-																								}),
-																							)
-																						}
-																						placeholder="Add your DJ notes, cues, and timing information here..."
-																						className="min-h-[100px]"
-																					/>
-																					<Button
-																						onClick={() =>
-																							saveDjNotes(
-																								item
-																									.artist!
-																									.id,
-																							)
-																						}
-																						size="sm"
-																					>
-																						<Save className="h-4 w-4 mr-2" />
-																						Save
-																						DJ
-																						Notes
-																					</Button>
-																				</div>
-																			</div>
-
-																			{/* Upload New Track Section */}
-																			<div>
-																				<h4 className="font-medium mb-4 flex items-center gap-2">
-																					<Upload className="h-4 w-4" />
-																					Upload
-																					New
-																					Track
-																				</h4>
-																				<ArtistUploadSection
-																					artist={
-																						item.artist
+																				<Textarea
+																					value={djNotesState[item.artist!.id] || ""}
+																					onChange={(e) =>
+																						setDjNotesState((prev) => ({
+																							...prev,
+																							[item.artist!.id]: e.target.value,
+																						}))
 																					}
+																					placeholder="DJ notes, cues, timing…"
+																					className="min-h-[80px] text-sm"
 																				/>
+																				<Button
+																					onClick={() => saveDjNotes(item.artist!.id)}
+																					size="sm"
+																					className="mt-2"
+																				>
+																					<Save className="h-4 w-4 mr-1" /> Save
+																				</Button>
 																			</div>
 																		</div>
 																	</AccordionContent>
@@ -2918,80 +2679,70 @@ export default function DJDashboard() {
 
 					{/* See All Musics Tab */}
 					<TabsContent value="all-musics" className="space-y-6">
-						<div className="flex items-center justify-between mb-4">
-							<h2 className="text-xl font-semibold">
+						<div className="flex flex-wrap items-center gap-2 mb-4">
+							<h2 className="text-base font-semibold mr-auto">
 								All Music Tracks
 							</h2>
-							<div className="flex items-center gap-4">
-								{selectedMusicDay === "all" && (
+							{selectedMusicDay === "all" && (
+								<Button
+									onClick={downloadAllMusic}
+									disabled={
+										downloadingAll ||
+										musicTracks.length === 0
+									}
+									variant="outline"
+									size="sm"
+									className="flex items-center gap-1 text-xs h-8 px-2"
+								>
+									{downloadingAll ? (
+										<>
+											<RefreshCw className="h-3 w-3 animate-spin" />
+											{downloadProgress}%
+										</>
+									) : (
+										<>
+											<Download className="h-3 w-3" />
+											Download All
+										</>
+									)}
+								</Button>
+							)}
+							{selectedMusicDay &&
+								selectedMusicDay !== "all" && (
 									<Button
-										onClick={downloadAllMusic}
+										onClick={() =>
+											downloadDayMusic(selectedMusicDay)
+										}
 										disabled={
-											downloadingAll ||
-											musicTracks.length === 0
+											downloadingDay ||
+											getMusicTracksByDay(selectedMusicDay).length === 0
 										}
 										variant="outline"
-										className="flex items-center gap-2 min-w-[180px]"
+										size="sm"
+										className="flex items-center gap-1 text-xs h-8 px-2"
 									>
-										{downloadingAll ? (
+										{downloadingDay ? (
 											<>
-												<RefreshCw className="h-4 w-4 animate-spin" />
-												Downloading {downloadProgress}%
+												<RefreshCw className="h-3 w-3 animate-spin" />
+												{Math.round(dayDownloadProgress)}%
 											</>
 										) : (
 											<>
-												<Download className="h-4 w-4" />
-												Download All Music
+												<Download className="h-3 w-3" />
+												Day {eventDates.indexOf(selectedMusicDay) + 1}
 											</>
 										)}
 									</Button>
 								)}
-								{selectedMusicDay &&
-									selectedMusicDay !== "all" && (
-										<Button
-											onClick={() =>
-												downloadDayMusic(
-													selectedMusicDay,
-												)
-											}
-											disabled={
-												downloadingDay ||
-												getMusicTracksByDay(
-													selectedMusicDay,
-												).length === 0
-											}
-											variant="outline"
-											className="flex items-center gap-2 min-w-[180px]"
-										>
-											{downloadingDay ? (
-												<>
-													<RefreshCw className="h-4 w-4 animate-spin" />
-													Downloading{" "}
-													{Math.round(
-														dayDownloadProgress,
-													)}
-													%
-												</>
-											) : (
-												<>
-													<Download className="h-4 w-4" />
-													Download Day{" "}
-													{eventDates.indexOf(
-														selectedMusicDay,
-													) + 1}
-												</>
-											)}
-										</Button>
-									)}
-								{eventDates.length > 0 && (
-									<div className="flex items-center gap-2">
-										<Calendar className="h-4 w-4" />
-										<Select
-											value={selectedMusicDay}
-											onValueChange={setSelectedMusicDay}
-										>
-											<SelectTrigger className="w-[180px]">
-												<SelectValue placeholder="All Days" />
+							{eventDates.length > 0 && (
+								<div className="flex items-center gap-1">
+									<Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+									<Select
+										value={selectedMusicDay}
+										onValueChange={setSelectedMusicDay}
+									>
+										<SelectTrigger className="h-8 text-xs w-auto min-w-[120px] max-w-[160px]">
+											<SelectValue placeholder="All Days" />
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="all">
@@ -3012,9 +2763,8 @@ export default function DJDashboard() {
 												)}
 											</SelectContent>
 										</Select>
-									</div>
-								)}
-							</div>
+								</div>
+							)}
 						</div>
 
 						{/* Music Tracks - grouped by day when "All Days" selected, flat list for single day */}
@@ -3232,44 +2982,25 @@ export default function DJDashboard() {
 										if (dayTracks.length === 0) return null;
 										return (
 											<Card key={date}>
-												<CardHeader>
-													<div className="flex items-center justify-between">
-														<div>
-															<CardTitle className="flex items-center gap-2">
-																<Calendar className="h-5 w-5 text-purple-600" />
-																Day{" "}
-																{dayIndex + 1} —{" "}
-																{formatDateSimple(
-																	date,
-																)}
+												<CardHeader className="px-4 py-3">
+													<div className="flex items-center justify-between gap-2">
+														<div className="min-w-0">
+															<CardTitle className="flex items-center gap-2 text-base">
+																<Calendar className="h-4 w-4 text-purple-600 flex-shrink-0" />
+																<span className="truncate">Day {dayIndex + 1} — {formatDateSimple(date)}</span>
 															</CardTitle>
-															<CardDescription>
-																{
-																	dayTracks.length
-																}{" "}
-																track
-																{dayTracks.length !==
-																1
-																	? "s"
-																	: ""}
+															<CardDescription className="text-xs mt-0.5">
+																{dayTracks.length} track{dayTracks.length !== 1 ? "s" : ""}
 															</CardDescription>
 														</div>
 														<Button
 															variant="outline"
 															size="sm"
-															onClick={() =>
-																downloadDayMusic(
-																	date,
-																)
-															}
-															disabled={
-																downloadingDay
-															}
-															className="flex items-center gap-2"
+															onClick={() => downloadDayMusic(date)}
+															disabled={downloadingDay}
+															className="flex-shrink-0 h-8 px-2 text-xs gap-1"
 														>
-															<Download className="h-4 w-4" />
-															Download Day{" "}
-															{dayIndex + 1}
+															<Download className="h-3 w-3" />Day {dayIndex + 1}
 														</Button>
 													</div>
 												</CardHeader>
@@ -3281,132 +3012,57 @@ export default function DJDashboard() {
 																	key={`${track.artist_id}-${date}-${index}`}
 																	className="border"
 																>
-																	<CardContent className="pt-4">
-																		<div className="flex items-start gap-4">
-																			<div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 text-purple-600 font-bold shrink-0">
-																				{index +
-																					1}
+																	<CardContent className="pt-3 pb-3 px-3">
+																		{/* Header row: number + name/meta + download */}
+																		<div className="flex items-center gap-3 min-w-0">
+																			<div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 text-sm font-bold">
+																				{index + 1}
 																			</div>
-																			<div className="flex-1 space-y-3 min-w-0">
-																				<div className="flex items-center justify-between flex-wrap gap-2">
-																					<div>
-																						<h3 className="text-lg font-semibold">
-																							{track.artist_name ||
-																								track.song_title}
-																						</h3>
-																						<div className="flex items-center gap-2 mt-1 flex-wrap">
-																							{track.duration && (
-																								<span className="text-sm text-muted-foreground flex items-center gap-1">
-																									<Clock className="h-3 w-3" />
-																									{formatDuration(
-																										track.duration,
-																									)}
-																								</span>
-																							)}
-																							{track.tempo && (
-																								<Badge
-																									variant="secondary"
-																									className="text-xs"
-																								>
-																									{
-																										track.tempo
-																									}
-																								</Badge>
-																							)}
-																							{track.is_main_track && (
-																								<Badge
-																									variant="default"
-																									className="text-xs"
-																								>
-																									Main
-																									Track
-																								</Badge>
-																							)}
-																						</div>
-																					</div>
-																					{track.file_url && (
-																						<Button
-																							variant="outline"
-																							size="sm"
-																							onClick={() => {
-																								const artistName =
-																									track.artist_name ||
-																									"Unknown";
-																								const urlParts =
-																									track.file_url.split(
-																										".",
-																									);
-																								const extension =
-																									urlParts.length >
-																									1
-																										? urlParts[
-																												urlParts.length -
-																													1
-																											].split(
-																												"?",
-																											)[0]
-																										: "mp3";
-																								downloadFile(
-																									track.file_url,
-																									`${artistName}.${extension}`,
-																									artistName
-																								);
-																							}}
-																						>
-																							<Download className="h-4 w-4 mr-1" />
-																							Download
-																						</Button>
+																			<div className="flex-1 min-w-0">
+																				<p className="text-sm font-semibold truncate">{track.artist_name || track.song_title}</p>
+																				<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+																					{track.duration && (
+																						<span className="text-xs text-muted-foreground flex items-center gap-1">
+																							<Clock className="h-3 w-3" />{formatDuration(track.duration)}
+																						</span>
+																					)}
+																					{track.tempo && (
+																						<span className="text-xs text-muted-foreground">♪ {track.tempo}</span>
 																					)}
 																				</div>
-																				{track.file_url ? (
-																					<div className="bg-gray-50 rounded-lg p-3">
-																						<AudioPlayer
-																							track={
-																								track
-																							}
-																						/>
-																					</div>
-																				) : (
-																					<div className="bg-muted/50 rounded-lg p-3">
-																						<div className="flex items-center gap-2 text-muted-foreground">
-																							<AlertTriangle className="h-4 w-4" />
-																							<span className="text-sm">
-																								No
-																								audio
-																								file
-																								uploaded
-																							</span>
-																						</div>
-																					</div>
-																				)}
-																				{track.notes && (
-																					<div className="p-3 bg-muted rounded-lg">
-																						<Label className="text-xs text-muted-foreground">
-																							Artist
-																							Notes
-																						</Label>
-																						<p className="text-sm mt-1">
-																							{
-																								track.notes
-																							}
-																						</p>
-																					</div>
-																				)}
-																				{track.dj_notes && (
-																					<div className="p-3 bg-blue-50 rounded-lg">
-																						<Label className="text-xs text-blue-600">
-																							DJ
-																							Notes
-																						</Label>
-																						<p className="text-sm mt-1">
-																							{
-																								track.dj_notes
-																							}
-																						</p>
-																					</div>
-																				)}
 																			</div>
+																			{track.file_url && (
+																				<Button
+																					variant="outline"
+																					size="sm"
+																					className="flex-shrink-0 h-8 px-2 text-xs"
+																					onClick={() => {
+																						const artistName = track.artist_name || "Unknown";
+																						const urlParts = track.file_url.split(".");
+																						const extension = urlParts.length > 1 ? urlParts[urlParts.length - 1].split("?")[0] : "mp3";
+																						downloadFile(track.file_url, `${artistName}.${extension}`, artistName);
+																					}}
+																				>
+																					<Download className="h-3 w-3 mr-1" />Download
+																				</Button>
+																			)}
 																		</div>
+																		{/* Audio player */}
+																		{track.file_url ? (
+																			<div className="mt-2 rounded-lg overflow-hidden">
+																				<AudioPlayer track={track} />
+																			</div>
+																		) : (
+																			<div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+																				<AlertTriangle className="h-3 w-3" />No audio file
+																			</div>
+																		)}
+																		{/* DJ Notes */}
+																		{track.dj_notes && (
+																			<div className="mt-2 px-2 py-1.5 bg-blue-50 rounded text-xs text-blue-700">
+																				<span className="font-semibold">DJ: </span>{track.dj_notes}
+																			</div>
+																		)}
 																	</CardContent>
 																</Card>
 															),
