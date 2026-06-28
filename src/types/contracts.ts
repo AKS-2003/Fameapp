@@ -4,6 +4,8 @@
 
 // ---- Status Enums ----
 
+export type ContractItemStatus = "required" | "not_required" | "not_applicable";
+
 export type ContractStatus =
 	| "invited"
 	| "waiting"
@@ -190,6 +192,7 @@ export interface ContractArtist {
 	agreement: Agreement;
 	groupMembers: GroupMember[];
 	travelLogistics: TravelLogistics;
+	contractItemStatuses?: Record<string, ContractItemStatus>;
 	createdAt: string;
 	updatedAt: string;
 }

@@ -1,3 +1,5 @@
+export type SectionItemStatus = "required" | "not_required" | "not_applicable";
+
 export interface Artist {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface Artist {
   inviteLink?: string;
   agreement?: Agreement;
   logistics?: Logistics;
+  sectionStatuses?: Record<string, SectionItemStatus>;
 }
 
 export interface Logistics {

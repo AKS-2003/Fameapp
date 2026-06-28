@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Artist, Schedule, ScheduleItem, ScheduleTask } from "../types";
+import { Artist, Schedule, ScheduleItem, ScheduleTask, SectionItemStatus } from "../types";
 import { StageDiscussion } from "../StageDiscussion";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { v4 as uuidv4 } from "uuid";
@@ -29,12 +29,44 @@ interface ArtistScheduleProps {
   artist: Artist;
   eventId: string;
   onRefresh?: () => void;
+  onAutoOpen?: (itemValue: string) => void;
 }
 
-export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistScheduleProps) {
+const sectionStatusColors: Record<SectionItemStatus, string> = {
+  required:       "text-emerald-600 bg-emerald-50 border-emerald-200",
+  not_required:   "text-amber-600 bg-amber-50 border-amber-200",
+  not_applicable: "text-slate-400 bg-slate-100 border-slate-200",
+};
+
+export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: ArtistScheduleProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [workshopsStatus, setWorkshopsStatus] = useState<SectionItemStatus>(
+    (artist.sectionStatuses?.["workshops"] as SectionItemStatus) ?? "required"
+  );
+  const [performancesStatus, setPerformancesStatus] = useState<SectionItemStatus>(
+    (artist.sectionStatuses?.["performances"] as SectionItemStatus) ?? "required"
+  );
+  const [tasksStatus, setTasksStatus] = useState<SectionItemStatus>(
+    (artist.sectionStatuses?.["custom_tasks"] as SectionItemStatus) ?? "required"
+  );
+
+  useEffect(() => {
+    setWorkshopsStatus((artist.sectionStatuses?.["workshops"] as SectionItemStatus) ?? "required");
+    setPerformancesStatus((artist.sectionStatuses?.["performances"] as SectionItemStatus) ?? "required");
+    setTasksStatus((artist.sectionStatuses?.["custom_tasks"] as SectionItemStatus) ?? "required");
+  }, [artist.id, artist.sectionStatuses?.["workshops"], artist.sectionStatuses?.["performances"], artist.sectionStatuses?.["custom_tasks"]]);
+
+  const saveSectionStatus = async (section: string, status: SectionItemStatus) => {
+    try {
+      await fetch(`/api/contracts/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistId: artist.id, sectionStatuses: { ...(artist.sectionStatuses || {}), [section]: status } }),
+      });
+    } catch {}
+  };
   const [scheduleData, setScheduleData] = useState<Schedule>(
     artist.agreement?.schedule || {
       deliverablesCount: 0,
@@ -155,10 +187,26 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </div>
             <h2 className="text-base font-bold text-slate-900">Workshops</h2>
             <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none ml-2">{scheduleData.workshops.length}</Badge>
+            <select
+              value={workshopsStatus}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => { const val = e.target.value as SectionItemStatus; setWorkshopsStatus(val); saveSectionStatus("workshops", val); if (onAutoOpen) onAutoOpen("workshops"); }}
+              className={`ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-400/40 transition-colors ${sectionStatusColors[workshopsStatus]}`}
+            >
+              <option value="required">Required</option>
+              <option value="not_required">Not Required</option>
+              <option value="not_applicable">N/A</option>
+            </select>
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-6 pb-6">
-        
+
+        {workshopsStatus === "not_required" ? (
+          <div className="flex items-center gap-3 py-4 px-4 rounded-xl bg-amber-50 border border-amber-200 mt-2">
+            <span className="text-amber-600 text-sm font-medium">This section has been marked as Not Required</span>
+          </div>
+        ) : (
+        <>
         <div className="flex justify-end mb-4">
           {isEditing ? (
             <div className="flex gap-2">
@@ -175,7 +223,7 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </Button>
           )}
         </div>
-        
+
         <div className="space-y-4">
           {scheduleData.workshops.map((item) => (
             <div key={item.id} className="relative rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col gap-3">
@@ -247,8 +295,8 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </div>
           ))}
           {isEditing && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => addItem('workshops')}
               className="w-full h-12 bg-slate-50/50 border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg shadow-sm"
             >
@@ -256,6 +304,8 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </Button>
           )}
         </div>
+        </>
+        )}
         </AccordionContent>
       </AccordionItem>
 
@@ -268,10 +318,26 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </div>
             <h2 className="text-base font-bold text-slate-900">Performances</h2>
             <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none ml-2">{scheduleData.performances.length}</Badge>
+            <select
+              value={performancesStatus}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => { const val = e.target.value as SectionItemStatus; setPerformancesStatus(val); saveSectionStatus("performances", val); if (onAutoOpen) onAutoOpen("performances"); }}
+              className={`ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-400/40 transition-colors ${sectionStatusColors[performancesStatus]}`}
+            >
+              <option value="required">Required</option>
+              <option value="not_required">Not Required</option>
+              <option value="not_applicable">N/A</option>
+            </select>
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-6 pb-6">
-        
+
+        {performancesStatus === "not_required" ? (
+          <div className="flex items-center gap-3 py-4 px-4 rounded-xl bg-amber-50 border border-amber-200 mt-2">
+            <span className="text-amber-600 text-sm font-medium">This section has been marked as Not Required</span>
+          </div>
+        ) : (
+        <>
         <div className="flex justify-end mb-4">
           {isEditing ? (
             <div className="flex gap-2">
@@ -360,8 +426,8 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </div>
           ))}
           {isEditing && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => addItem('performances')}
               className="w-full h-12 bg-slate-50/50 border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg shadow-sm"
             >
@@ -369,6 +435,8 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </Button>
           )}
         </div>
+        </>
+        )}
         </AccordionContent>
       </AccordionItem>
 
@@ -381,10 +449,26 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </div>
             <h2 className="text-base font-bold text-slate-900">Custom Tasks</h2>
             <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none ml-2">{scheduleData.tasks.length}</Badge>
+            <select
+              value={tasksStatus}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => { const val = e.target.value as SectionItemStatus; setTasksStatus(val); saveSectionStatus("custom_tasks", val); if (onAutoOpen) onAutoOpen("tasks"); }}
+              className={`ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-400/40 transition-colors ${sectionStatusColors[tasksStatus]}`}
+            >
+              <option value="required">Required</option>
+              <option value="not_required">Not Required</option>
+              <option value="not_applicable">N/A</option>
+            </select>
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-6 pb-6">
-        
+
+        {tasksStatus === "not_required" ? (
+          <div className="flex items-center gap-3 py-4 px-4 rounded-xl bg-amber-50 border border-amber-200 mt-2">
+            <span className="text-amber-600 text-sm font-medium">This section has been marked as Not Required</span>
+          </div>
+        ) : (
+        <>
         <div className="flex justify-end mb-4">
           {isEditing ? (
             <div className="flex gap-2">
@@ -433,8 +517,8 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </div>
           ))}
           {isEditing && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => addItem('tasks')}
               className="w-full h-11 bg-slate-50 border border-dashed border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl"
             >
@@ -442,6 +526,8 @@ export function ArtistSchedule({ artist, eventId, onRefresh }: ArtistSchedulePro
             </Button>
           )}
         </div>
+        </>
+        )}
         </AccordionContent>
       </AccordionItem>
     </>

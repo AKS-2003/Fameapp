@@ -4,7 +4,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { ContractArtist, ContractInvitation, ContractStatus } from "@/types/contracts";
+import type { ContractArtist, ContractInvitation, ContractStatus, ContractItemStatus } from "@/types/contracts";
 import { statusLabels, statusColors } from "@/types/contracts";
 import type { StageStatus, StageName, NegotiationMessage } from "@/types/bookingStages";
 import { stageStatusLabels, stageStatusColors } from "@/types/bookingStages";
@@ -153,21 +153,82 @@ export function OrgStageTracker({ stages, activeStage, onStageClick }: { stages:
 
 // ═══════ EDITABLE STAGE FIELDS ═══════
 
-export function EditableStageFields({ fields, editing, onChange, currencySymbol }: { fields: Record<string, string>; editing: boolean; onChange: (k: string, v: string) => void; currencySymbol?: string }) {
+const itemStatusSelectClass: Record<ContractItemStatus, string> = {
+	required:       "text-[hsl(var(--status-confirmed))] bg-[hsl(var(--status-confirmed))]/10 border-[hsl(var(--status-confirmed))]/25",
+	not_required:   "text-[hsl(var(--status-waiting))] bg-[hsl(var(--status-waiting))]/10 border-[hsl(var(--status-waiting))]/25",
+	not_applicable: "text-muted-foreground bg-muted border-border",
+};
+
+export function EditableStageFields({
+	fields,
+	editing,
+	onChange,
+	currencySymbol,
+	itemStatuses,
+	onItemStatusChange,
+}: {
+	fields: Record<string, string>;
+	editing: boolean;
+	onChange: (k: string, v: string) => void;
+	currencySymbol?: string;
+	itemStatuses?: Record<string, ContractItemStatus>;
+	onItemStatusChange?: (k: string, s: ContractItemStatus) => void;
+}) {
+	const visibleEntries = Object.entries(fields).filter(
+		([label]) => (itemStatuses?.[label] ?? "required") !== "not_applicable"
+	);
+
 	return (
-		<div className="space-y-3">
-			{Object.entries(fields).map(([label, value]) => (
-				<div key={label}>
-					<p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">
-						{label} {currencySymbol && ["Performance Fee", "Deposit", "Remaining Balance"].includes(label) ? `(${currencySymbol})` : ""}
+		<div className="space-y-4">
+			{visibleEntries.map(([label, value]) => {
+				const currentStatus: ContractItemStatus = itemStatuses?.[label] ?? "required";
+				return (
+					<div key={label}>
+						<div className="flex items-center gap-2 mb-0.5">
+							<p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">
+								{label}{currencySymbol && ["Performance Fee", "Deposit", "Remaining Balance"].includes(label) ? ` (${currencySymbol})` : ""}
+							</p>
+							{onItemStatusChange && (
+								<select
+									value={currentStatus}
+									onChange={(e) => onItemStatusChange(label, e.target.value as ContractItemStatus)}
+									className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/40 transition-colors ${itemStatusSelectClass[currentStatus]}`}
+								>
+									<option value="required">Required</option>
+									<option value="not_required">Not Required</option>
+									<option value="not_applicable">N/A</option>
+								</select>
+							)}
+						</div>
+						{editing ? (
+							<textarea value={value} onChange={(e) => onChange(label, e.target.value)} rows={1} placeholder={`Enter ${label.toLowerCase()}...`} className="w-full px-3 py-2 bg-muted/30 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none min-h-[36px]" />
+						) : (
+							<p className={`text-sm leading-relaxed ${value ? "text-foreground" : "text-muted-foreground italic"}`}>{value || "Not specified"}</p>
+						)}
+					</div>
+				);
+			})}
+			{Object.entries(fields).some(([label]) => (itemStatuses?.[label] ?? "required") === "not_applicable") && (
+				<div className="pt-2 border-t border-border">
+					<p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+						<X className="w-3 h-3" /> Hidden Items (N/A)
 					</p>
-					{editing ? (
-						<textarea value={value} onChange={(e) => onChange(label, e.target.value)} rows={1} placeholder={`Enter ${label.toLowerCase()}...`} className="w-full px-3 py-2 bg-muted/30 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none min-h-[36px]" />
-					) : (
-						<p className={`text-sm leading-relaxed ${value ? "text-foreground" : "text-muted-foreground italic"}`}>{value || "Not specified"}</p>
-					)}
+					<div className="flex flex-wrap gap-1.5">
+						{Object.entries(fields)
+							.filter(([label]) => (itemStatuses?.[label] ?? "required") === "not_applicable")
+							.map(([label]) => (
+								<button
+									key={label}
+									onClick={() => onItemStatusChange?.(label, "required")}
+									title="Click to restore this item"
+									className="text-[10px] text-muted-foreground bg-muted border border-border rounded px-2 py-0.5 line-through hover:line-through-0 hover:text-foreground hover:border-primary/30 transition-all"
+								>
+									{label}
+								</button>
+							))}
+					</div>
 				</div>
-			))}
+			)}
 		</div>
 	);
 }

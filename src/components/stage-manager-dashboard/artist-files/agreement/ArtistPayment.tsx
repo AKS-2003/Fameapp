@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Artist, Payment } from "../types";
+import { Artist, Payment, SectionItemStatus } from "../types";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,12 +28,36 @@ interface ArtistPaymentProps {
   artist: Artist;
   eventId: string;
   onRefresh?: () => void;
+  onAutoOpen?: (itemValue: string) => void;
 }
 
-export function ArtistPayment({ artist, eventId, onRefresh }: ArtistPaymentProps) {
+const sectionStatusColors: Record<SectionItemStatus, string> = {
+  required:       "text-emerald-600 bg-emerald-50 border-emerald-200",
+  not_required:   "text-amber-600 bg-amber-50 border-amber-200",
+  not_applicable: "text-slate-400 bg-slate-100 border-slate-200",
+};
+
+export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: ArtistPaymentProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<SectionItemStatus>(
+    (artist.sectionStatuses?.["payment"] as SectionItemStatus) ?? "required"
+  );
+
+  useEffect(() => {
+    setPaymentStatus((artist.sectionStatuses?.["payment"] as SectionItemStatus) ?? "required");
+  }, [artist.id, artist.sectionStatuses?.["payment"]]);
+
+  const saveSectionStatus = async (status: SectionItemStatus) => {
+    try {
+      await fetch(`/api/contracts/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistId: artist.id, sectionStatuses: { ...(artist.sectionStatuses || {}), payment: status } }),
+      });
+    } catch {}
+  };
   const [paymentData, setPaymentData] = useState<Payment>(
     artist.agreement?.payment || {
       fieldsCompleted: "0/11",
@@ -146,10 +170,26 @@ export function ArtistPayment({ artist, eventId, onRefresh }: ArtistPaymentProps
             </div>
             <h2 className="text-base font-bold text-slate-900">Payment</h2>
             <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none ml-2">{paymentData.fieldsCompleted}</Badge>
+            <select
+              value={paymentStatus}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => { const val = e.target.value as SectionItemStatus; setPaymentStatus(val); saveSectionStatus(val); if (onAutoOpen) onAutoOpen("payment"); }}
+              className={`ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-400/40 transition-colors ${sectionStatusColors[paymentStatus]}`}
+            >
+              <option value="required">Required</option>
+              <option value="not_required">Not Required</option>
+              <option value="not_applicable">N/A</option>
+            </select>
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-6 pb-6">
 
+        {paymentStatus === "not_required" ? (
+          <div className="flex items-center gap-3 py-4 px-4 rounded-xl bg-amber-50 border border-amber-200 mt-2">
+            <span className="text-amber-600 text-sm font-medium">This section has been marked as Not Required</span>
+          </div>
+        ) : (
+        <>
         <div className="flex justify-end mb-4">
           {isEditing ? (
             <div className="flex gap-2">
@@ -349,6 +389,8 @@ export function ArtistPayment({ artist, eventId, onRefresh }: ArtistPaymentProps
           )}
         </div>
       </div>
+        </>
+        )}
       </AccordionContent>
       </AccordionItem>
     </>

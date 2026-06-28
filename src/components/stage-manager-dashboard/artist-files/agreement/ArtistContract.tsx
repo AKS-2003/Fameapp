@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { 
   FileText, 
   FileDown, 
@@ -22,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Artist } from "../types";
+import { Artist, SectionItemStatus } from "../types";
 import { StageDiscussion } from "../StageDiscussion";
 import { useToast } from "@/hooks/use-toast";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
@@ -34,11 +34,35 @@ interface ArtistContractProps {
   onRefresh?: () => void;
   selectedShow?: any;
   allShows?: any[];
+  onAutoOpen?: (itemValue: string) => void;
 }
 
-export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allShows }: ArtistContractProps) {
+const sectionStatusColors: Record<SectionItemStatus, string> = {
+  required:       "text-emerald-600 bg-emerald-50 border-emerald-200",
+  not_required:   "text-amber-600 bg-amber-50 border-amber-200",
+  not_applicable: "text-slate-400 bg-slate-100 border-slate-200",
+};
+
+export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allShows, onAutoOpen }: ArtistContractProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = React.useState(false);
+  const [contractStatus, setContractStatus] = useState<SectionItemStatus>(
+    (artist.sectionStatuses?.["agreement_details"] as SectionItemStatus) ?? "required"
+  );
+
+  React.useEffect(() => {
+    setContractStatus((artist.sectionStatuses?.["agreement_details"] as SectionItemStatus) ?? "required");
+  }, [artist.id, artist.sectionStatuses?.["agreement_details"]]);
+
+  const saveSectionStatus = async (section: string, status: SectionItemStatus) => {
+    try {
+      await fetch(`/api/contracts/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistId: artist.id, sectionStatuses: { ...(artist.sectionStatuses || {}), [section]: status } }),
+      });
+    } catch {}
+  };
   const [saving, setSaving] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [viewDocument, setViewDocument] = React.useState<any>(null);
@@ -253,10 +277,30 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
             </div>
             <h2 className="text-base font-bold text-slate-900">Agreement Details</h2>
             <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none ml-2">10</Badge>
+            <select
+              value={contractStatus}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                const val = e.target.value as SectionItemStatus;
+                setContractStatus(val);
+                saveSectionStatus("agreement_details", val);
+                if (onAutoOpen) onAutoOpen("contract-details");
+              }}
+              className={`ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-400/40 transition-colors ${sectionStatusColors[contractStatus]}`}
+            >
+              <option value="required">Required</option>
+              <option value="not_required">Not Required</option>
+              <option value="not_applicable">N/A</option>
+            </select>
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-6 pb-6">
 
+        {contractStatus === "not_required" ? (
+          <div className="flex items-center gap-3 py-4 px-4 rounded-xl bg-amber-50 border border-amber-200 mt-2">
+            <span className="text-amber-600 text-sm font-medium">This section has been marked as Not Required</span>
+          </div>
+        ) : (
         <div className="flex gap-6 items-start mt-2">
           {/* Agreement Details Form */}
           <div className="flex-1">
@@ -504,6 +548,7 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
           </div>
         )}
       </div>
+        )}
       </AccordionContent>
       </AccordionItem>
 

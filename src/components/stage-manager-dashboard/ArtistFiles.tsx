@@ -213,6 +213,7 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
     workflowShow: a.workflowShow || a.overrides?.workflowShow || "Required",
     artists_page_color: a.artists_page_color || a.artistsPageColor || "",
     artists_page_tag: a.artists_page_tag || a.artistsPageTag || "",
+    sectionStatuses: a.sectionStatuses || {},
   } as any;
 }
 

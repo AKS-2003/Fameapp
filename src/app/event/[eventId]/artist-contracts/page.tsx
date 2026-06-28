@@ -18,7 +18,7 @@ import { useContractWebSocket } from "@/hooks/useContractWebSocket";
 import { useContractSocket } from "@/hooks/useContractSocket";
 import type {
 	ContractArtist, ContractInvitation, ContractStatus, ArtistRole,
-	RequestTemplateType, ConversationMessage,
+	RequestTemplateType, ConversationMessage, ContractItemStatus,
 } from "@/types/contracts";
 import {
 	statusLabels, statusColors, roleLabels,
@@ -117,6 +117,8 @@ export default function ArtistContractsPage() {
 	// Booking stages — stored per artist, synced to API/GCS
 	const [stagesMap, setStagesMap] = useState<Record<string, OrgStage[]>>({});
 	const [dataMap, setDataMap] = useState<Record<string, Record<string, Record<string, string>>>>({});
+	// itemStatusesMap: artistId → stageName.fieldLabel → ContractItemStatus
+	const [itemStatusesMap, setItemStatusesMap] = useState<Record<string, Record<string, ContractItemStatus>>>({});
 	const [activeStage, setActiveStage] = useState<StageName>("contract");
 	const [editing, setEditing] = useState(false);
 
@@ -204,6 +206,33 @@ export default function ArtistContractsPage() {
 			return { ...prev, [selectedArtist.id]: updated };
 		});
 	};
+
+	const handleItemStatusChange = (fieldLabel: string, status: ContractItemStatus) => {
+		if (!selectedArtist || activeStage === "communication") return;
+		const compositeKey = `${activeStage}.${fieldLabel}`;
+		setItemStatusesMap((prev) => {
+			const existing = prev[selectedArtist.id] || {};
+			const updated = { ...existing, [compositeKey]: status };
+			// Persist alongside stage data
+			fetch(`/api/contracts/${eventId}/bookings/stages`, {
+				method: "POST", headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ artistId: selectedArtist.id, stageName: activeStage, itemStatuses: updated }),
+			}).catch(console.error);
+			return { ...prev, [selectedArtist.id]: updated };
+		});
+	};
+
+	// Derive per-stage item statuses for the active artist/stage
+	const currentItemStatuses: Record<string, ContractItemStatus> = (() => {
+		if (!selectedArtist) return {};
+		const all = itemStatusesMap[selectedArtist.id] || {};
+		const prefix = `${activeStage}.`;
+		const result: Record<string, ContractItemStatus> = {};
+		for (const [k, v] of Object.entries(all)) {
+			if (k.startsWith(prefix)) result[k.slice(prefix.length)] = v;
+		}
+		return result;
+	})();
 
 	// ─── Filtering ───
 	const filteredArtists = artists.filter((a) => {
@@ -552,7 +581,14 @@ export default function ArtistContractsPage() {
 												{(currentStage.status === "draft" || currentStage.status === "changes_requested") && <button onClick={() => setEditing(!editing)} className="flex items-center gap-1 px-3 py-1.5 bg-secondary border border-border rounded-lg text-xs font-medium hover:bg-muted"><Edit className="w-3 h-3" />{editing ? "Done" : "Edit"}</button>}
 											</div>
 											<div className="bg-card rounded-xl border border-border p-5 shadow-[var(--shadow-card)]">
-												<EditableStageFields fields={currentData?.[activeStage] || {}} editing={editing} onChange={handleFieldChange} currencySymbol={defaultCurrency} />
+												<EditableStageFields
+													fields={currentData?.[activeStage] || {}}
+													editing={editing}
+													onChange={handleFieldChange}
+													currencySymbol={defaultCurrency}
+													itemStatuses={currentItemStatuses}
+													onItemStatusChange={handleItemStatusChange}
+												/>
 											</div>
 											<OrgStageActions stage={currentStage} onStatusChange={(s) => updateStage(selectedArtist.id, activeStage, (st) => ({ ...st, status: s }))} onSign={(url) => updateStage(selectedArtist.id, activeStage, (st) => ({ ...st, status: "completed", organiserSigned: true, organiserSignatureUrl: url }))} onSimulateArtistSign={() => updateStage(selectedArtist.id, activeStage, (st) => ({ ...st, status: "waiting_organiser_signature", artistSigned: true }))} artistName={selectedArtist.stageName} />
 											<div className="border-t border-border pt-4"><StageNegotiation negotiation={currentStage.negotiation} onSend={(msg) => updateStage(selectedArtist.id, activeStage, (st) => ({ ...st, negotiation: [...st.negotiation, msg] }))} artistName={selectedArtist.stageName} /></div>

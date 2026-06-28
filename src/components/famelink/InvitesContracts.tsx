@@ -1020,6 +1020,9 @@ export function ContractPanel({
 						<div className="flex items-center gap-3">
 							<FileText className="w-4 h-4 text-purple-400" />
 							<span className={`text-sm font-semibold ${textPrimary}`}>Agreement details</span>
+							{artist.sectionStatuses?.agreement_details === "not_required" && (
+								<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">Not Required</span>
+							)}
 						</div>
 						<div className="flex items-center gap-3">
 							<span className={`text-[10px] ${isLight ? "bg-slate-100 text-slate-500" : "bg-white/10 text-purple-200/50"} px-2 py-0.5 rounded-full font-bold`}>{clauses.length}</span>
@@ -1068,7 +1071,12 @@ export function ContractPanel({
 								<>
 									{workshops.length > 0 && (
 										<div className="space-y-3">
+											<div className="flex items-center gap-2">
 											<p className={`text-[10px] ${isLight ? "text-slate-400" : "text-purple-200/40"} uppercase tracking-wider font-bold`}>Workshops</p>
+											{artist.sectionStatuses?.workshops === "not_required" && (
+												<span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">Not Required</span>
+											)}
+										</div>
 											<div className="space-y-2">
 												{workshops.map((item: any, idx: number) => (
 													<div key={idx} className={`flex items-start gap-2.5 text-sm ${isLight ? "text-slate-600" : "text-purple-200/80"}`}>
@@ -1089,7 +1097,12 @@ export function ContractPanel({
 
 									{performances.length > 0 && (
 										<div className="space-y-3">
+											<div className="flex items-center gap-2">
 											<p className={`text-[10px] ${isLight ? "text-slate-400" : "text-purple-200/40"} uppercase tracking-wider font-bold`}>Performances</p>
+											{artist.sectionStatuses?.performances === "not_required" && (
+												<span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">Not Required</span>
+											)}
+										</div>
 											<div className="space-y-2">
 												{performances.map((item: any, idx: number) => (
 													<div key={idx} className={`flex items-start gap-2.5 text-sm ${isLight ? "text-slate-600" : "text-purple-200/80"}`}>
@@ -1122,6 +1135,9 @@ export function ContractPanel({
 						<div className="flex items-center gap-3">
 							<CheckCircle2 className="w-4 h-4 text-purple-400" />
 							<span className={`text-sm font-semibold ${textPrimary}`}>Custom tasks</span>
+							{artist.sectionStatuses?.custom_tasks === "not_required" && (
+								<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">Not Required</span>
+							)}
 						</div>
 						<div className="flex items-center gap-3">
 							<span className={`text-[10px] ${isLight ? "bg-slate-100 text-slate-500" : "bg-white/10 text-purple-200/50"} px-2 py-0.5 rounded-full font-bold`}>{tasks.length}</span>
@@ -1156,6 +1172,9 @@ export function ContractPanel({
 						<div className="flex items-center gap-3">
 							<CreditCard className="w-4 h-4 text-purple-400" />
 							<span className={`text-sm font-semibold ${textPrimary}`}>Payment</span>
+							{artist.sectionStatuses?.payment === "not_required" && (
+								<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">Not Required</span>
+							)}
 						</div>
 						<div className="flex items-center gap-3">
 							<span className={`text-[10px] ${isLight ? "bg-slate-100 text-slate-600" : "bg-white/10 text-purple-200/50"} px-2 py-0.5 rounded-full font-bold`}>{formatCurrency(performanceFee)}</span>
@@ -1372,6 +1391,9 @@ export function ContractPanel({
 											<div className="flex items-center gap-3">
 												<FileText className="w-4 h-4 text-purple-600" />
 												<span className="text-sm font-bold text-slate-800">Agreement details</span>
+												{artist.sectionStatuses?.agreement_details === "not_required" && (
+													<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200">Not Required</span>
+												)}
 											</div>
 											<div className="flex items-center gap-3">
 												<span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">{clauses.length}</span>
@@ -1420,7 +1442,12 @@ export function ContractPanel({
 													<>
 														{workshops.length > 0 && (
 															<div className="space-y-3">
-																<p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Workshops</p>
+																<div className="flex items-center gap-2">
+																	<p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Workshops</p>
+																	{artist.sectionStatuses?.workshops === "not_required" && (
+																		<span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200">Not Required</span>
+																	)}
+																</div>
 																<div className="space-y-2">
 																	{workshops.map((item: any, idx: number) => (
 																		<div key={idx} className="flex items-start gap-2.5 text-sm text-slate-700">
@@ -1441,7 +1468,12 @@ export function ContractPanel({
 
 														{performances.length > 0 && (
 															<div className="space-y-3">
-																<p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Performances</p>
+																<div className="flex items-center gap-2">
+																	<p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Performances</p>
+																	{artist.sectionStatuses?.performances === "not_required" && (
+																		<span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200">Not Required</span>
+																	)}
+																</div>
 																<div className="space-y-2">
 																	{performances.map((item: any, idx: number) => (
 																		<div key={idx} className="flex items-start gap-2.5 text-sm text-slate-700">
@@ -1474,6 +1506,9 @@ export function ContractPanel({
 											<div className="flex items-center gap-3">
 												<CheckCircle2 className="w-4 h-4 text-purple-600" />
 												<span className="text-sm font-bold text-slate-800">Custom tasks</span>
+												{artist.sectionStatuses?.custom_tasks === "not_required" && (
+													<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200">Not Required</span>
+												)}
 											</div>
 											<div className="flex items-center gap-3">
 												<span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">{tasks.length}</span>
@@ -1508,6 +1543,9 @@ export function ContractPanel({
 											<div className="flex items-center gap-3">
 												<CreditCard className="w-4 h-4 text-purple-600" />
 												<span className="text-sm font-bold text-slate-800">Payment</span>
+												{artist.sectionStatuses?.payment === "not_required" && (
+													<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200">Not Required</span>
+												)}
 											</div>
 											<div className="flex items-center gap-3">
 												<span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">{formatCurrency(performanceFee)}</span>

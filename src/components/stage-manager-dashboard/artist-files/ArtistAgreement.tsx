@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Artist } from "./types";
+import { Artist, SectionItemStatus } from "./types";
 import { StageDiscussion } from "./StageDiscussion";
 import { ArtistContract } from "./agreement/ArtistContract";
 import { ArtistSchedule } from "./agreement/ArtistSchedule";
@@ -34,9 +34,41 @@ interface ArtistAgreementProps {
   allShows?: any[];
 }
 
+const sectionStatusColors: Record<SectionItemStatus, string> = {
+  required:       "text-emerald-600 bg-emerald-50 border-emerald-200",
+  not_required:   "text-amber-600 bg-amber-50 border-amber-200",
+  not_applicable: "text-slate-400 bg-slate-100 border-slate-200",
+};
+
 export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allShows }: ArtistAgreementProps) {
   const [signatureName, setSignatureName] = useState("");
   const [signing, setSigning] = useState(false);
+  const [openItems, setOpenItems] = useState<string[]>([]);
+  const [signaturesStatus, setSignaturesStatus] = useState<SectionItemStatus>(
+    (artist.sectionStatuses?.["signatures"] as SectionItemStatus) ?? "required"
+  );
+  const [chatStatus, setChatStatus] = useState<SectionItemStatus>(
+    (artist.sectionStatuses?.["agreement_chat"] as SectionItemStatus) ?? "required"
+  );
+
+  React.useEffect(() => {
+    setSignaturesStatus((artist.sectionStatuses?.["signatures"] as SectionItemStatus) ?? "required");
+    setChatStatus((artist.sectionStatuses?.["agreement_chat"] as SectionItemStatus) ?? "required");
+  }, [artist.id, artist.sectionStatuses?.["signatures"], artist.sectionStatuses?.["agreement_chat"]]);
+
+  const handleAutoOpen = (itemValue: string) => {
+    setOpenItems((prev) => prev.includes(itemValue) ? prev : [...prev, itemValue]);
+  };
+
+  const saveSectionStatus = async (section: string, status: SectionItemStatus) => {
+    try {
+      await fetch(`/api/contracts/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistId: artist.id, sectionStatuses: { ...(artist.sectionStatuses || {}), [section]: status } }),
+      });
+    } catch {}
+  };
 
   const organiserSig = artist.agreement?.signatureStatus?.organiser;
   const artistSig = artist.agreement?.signatureStatus?.artist;
@@ -85,10 +117,10 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
     <div className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-100">
       {/* Combined Content in Accordions */}
       <div className="animate-in fade-in duration-300 mt-6">
-        <Accordion type="multiple" className="w-full space-y-4">
-          <ArtistContract artist={artist} eventId={eventId} onRefresh={onRefresh} allShows={allShows} selectedShow={selectedShow} />
-          <ArtistSchedule artist={artist} eventId={eventId} onRefresh={onRefresh} />
-          <ArtistPayment artist={artist} eventId={eventId} onRefresh={onRefresh} />
+        <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full space-y-4">
+          <ArtistContract artist={artist} eventId={eventId} onRefresh={onRefresh} allShows={allShows} selectedShow={selectedShow} onAutoOpen={handleAutoOpen} />
+          <ArtistSchedule artist={artist} eventId={eventId} onRefresh={onRefresh} onAutoOpen={handleAutoOpen} />
+          <ArtistPayment artist={artist} eventId={eventId} onRefresh={onRefresh} onAutoOpen={handleAutoOpen} />
         </Accordion>
 
         {/* Signatures Section */}
@@ -99,6 +131,15 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
             </div>
             <h2 className="text-base font-bold text-slate-900">Signatures</h2>
             <Badge className="bg-pink-50 text-pink-600 hover:bg-pink-50 border-none ml-2 font-bold">{signedCount}/2</Badge>
+            <select
+              value={signaturesStatus}
+              onChange={(e) => { const val = e.target.value as SectionItemStatus; setSignaturesStatus(val); saveSectionStatus("signatures", val); }}
+              className={`ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-400/40 transition-colors ${sectionStatusColors[signaturesStatus]}`}
+            >
+              <option value="required">Required</option>
+              <option value="not_required">Not Required</option>
+              <option value="not_applicable">N/A</option>
+            </select>
           </div>
           <div className="p-6">
               <div className="space-y-4">
@@ -219,6 +260,15 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
                 </div>
                 <h2 className="text-base font-bold text-slate-900">Agreement Chat</h2>
                 <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none ml-2">{artist.agreement.stageDiscussion.length || 0}</Badge>
+                <select
+                  value={chatStatus}
+                  onChange={(e) => { const val = e.target.value as SectionItemStatus; setChatStatus(val); saveSectionStatus("agreement_chat", val); }}
+                  className={`ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-400/40 transition-colors ${sectionStatusColors[chatStatus]}`}
+                >
+                  <option value="required">Required</option>
+                  <option value="not_required">Not Required</option>
+                  <option value="not_applicable">N/A</option>
+                </select>
               </div>
             </div>
             <div className="p-6">
