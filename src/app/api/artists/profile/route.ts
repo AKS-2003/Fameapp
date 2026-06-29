@@ -1,11 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFameLinkArtistById, getEventParticipationsByArtist, getEventById } from "@/lib/data-access";
+import { getFameLinkArtistById, getEventParticipationsByArtist, getEventById, getFameLinkArtistByEmail } from "@/lib/data-access";
+import FameLinkArtistModel from "@/database/models/FameLinkArtist";
+import { connectToDatabase } from "@/database/mongodb";
 import { APIResponse } from "@/types";
 
 export async function GET(request: NextRequest) {
 	try {
 		const url = new URL(request.url);
 		const artistId = url.searchParams.get("artistId");
+		const search = url.searchParams.get("search");
+
+		// ── Search mode: find by email (exact) or artistName (partial) ──
+		if (search) {
+			await connectToDatabase();
+			const q = search.trim();
+			const byEmail = await getFameLinkArtistByEmail(q);
+			let results: any[] = [];
+			if (byEmail) {
+				results = [byEmail];
+			} else {
+				// Case-insensitive partial match on artistName
+				results = await FameLinkArtistModel.find({
+					artistName: { $regex: q, $options: "i" },
+				})
+					.limit(10)
+					.lean();
+			}
+			return NextResponse.json<APIResponse>({
+				success: true,
+				data: results.map((a: any) => ({
+					id: a.id || a._id,
+					artistName: a.artistName,
+					email: a.email,
+					realName: a.realName,
+					phone: a.phone,
+					image_url: a.image_url,
+				})),
+			});
+		}
 
 		if (!artistId) {
 			return NextResponse.json<APIResponse>(

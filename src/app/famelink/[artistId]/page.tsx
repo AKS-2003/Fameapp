@@ -79,6 +79,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useCheckIn } from "@/hooks/use-checkin";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { InvitesContracts, ShowInfoPanel } from "@/components/famelink/InvitesContracts";
+import { OnboardingFlowModal, FinishSettingUpBanner } from "@/components/famelink/OnboardingFlowModal";
 
 // ── Animation hook ──────────────────────────────────────────────
 function useAnimateIn(delay = 0) {
@@ -681,6 +682,14 @@ function FameLinkDashboardContent() {
 		hasShows: false,
 	});
 
+	// Onboarding flow modal state
+	const [onboardingOpen, setOnboardingOpen] = useState(false);
+	// Dismissed is stored in localStorage so it persists across reloads, keyed by artistId
+	const onboardingStorageKey = `onboarding_dismissed_${artistId}`;
+	const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
+		typeof window !== "undefined" && localStorage.getItem(`onboarding_dismissed_${artistId}`) === "1"
+	);
+
 	// ── Data fetching (unchanged logic) ─────────────────────────
 	useEffect(() => {
 		const fetchData = async () => {
@@ -780,6 +789,34 @@ function FameLinkDashboardContent() {
 			refreshShows();
 		}
 	}, [justUpgraded, artistId]);
+
+	// Auto-open onboarding popup on first load once data is ready
+	useEffect(() => {
+		if (loading) return;          // wait for initial fetch
+		if (onboardingDismissed) return; // user already dismissed this session
+		if (onboardingOpen) return;   // already open
+
+		const pendingRequests = eventRequests.filter((r) => r.status === "pending");
+
+		// Participations that still need a show assigned:
+		// status=pending with showCount=0 means joined but never submitted a show
+		const unsubmittedParticipations = eventParticipations.filter(
+			(p) => p.status === "pending" && ((p as any).showCount ?? 0) === 0
+		);
+
+		// If there are unsubmitted participations AND the artist now has shows to assign,
+		// clear the dismissed flag so the popup re-opens (the state has changed)
+		if (unsubmittedParticipations.length > 0 && shows.length > 0 && onboardingDismissed) {
+			localStorage.removeItem(onboardingStorageKey);
+			setOnboardingDismissed(false);
+			return; // will re-run with onboardingDismissed=false
+		}
+
+		// Only open if there are actual pending invites that need action
+		if (pendingRequests.length > 0 || unsubmittedParticipations.length > 0) {
+			setOnboardingOpen(true);
+		}
+	}, [loading, eventRequests, eventParticipations, shows, onboardingDismissed, onboardingOpen]);
 
 	const fetchEventRequests = useCallback(async () => {
 		try {
@@ -2008,6 +2045,19 @@ function FameLinkDashboardContent() {
 
 				{/* ── SECTION CONTENT ── */}
 				<main className="flex-1 p-4 sm:p-6">
+
+					{/* Finish Setting Up banner — shown on dashboard after dismissing popup */}
+					{activeSection === "dashboard" && onboardingDismissed && (
+						<FinishSettingUpBanner
+							artistId={artistId}
+							shows={shows}
+							pendingRequests={eventRequests.filter((r) => r.status === "pending")}
+						pendingParticipations={eventParticipations.filter((p) => p.status === "pending" && ((p as any).showCount ?? 0) === 0)}
+
+							hasLogistics={false}
+							onOpenModal={() => setOnboardingOpen(true)}
+						/>
+					)}
 
 					{/* Hidden Modal Trigger from Dashboard */}
 					{activeSection !== "event-tasks" && initialSection && selectedEventInviteId && (
@@ -4182,6 +4232,30 @@ function FameLinkDashboardContent() {
 						</div>
 					</DialogContent>
 				</Dialog>
+
+				{/* ── Onboarding Flow Modal ──────────────────────── */}
+				{onboardingOpen && profile && (
+					<OnboardingFlowModal
+						artistId={artistId}
+						shows={shows}
+						pendingRequests={eventRequests.filter((r) => r.status === "pending")}
+						pendingParticipations={eventParticipations.filter((p) => p.status === "pending" && ((p as any).showCount ?? 0) === 0)}
+						hasLogistics={false}
+						onDismiss={() => {
+							setOnboardingOpen(false);
+							setOnboardingDismissed(true);
+							localStorage.setItem(onboardingStorageKey, "1");
+						}}
+						onShowCreated={() => {
+							setOnboardingOpen(false);
+							router.push(`/famelink/${artistId}/shows/create`);
+						}}
+						onRequestResponded={() => {
+							fetchEventRequests();
+							fetchEventParticipations();
+						}}
+					/>
+				)}
 
 				{/* ── Upgrade Modal ──────────────────────────────── */}
 				<UpgradeModal

@@ -206,11 +206,13 @@ export function middleware(request: NextRequest) {
 		}
 
 		// Protect actual artist dashboard — require an artist session
-		const isProtectedArtistPage = pathname.startsWith("/artist-dashboard") || pathname.startsWith("/famelink/");
+		const isProtectedArtistPage = pathname.startsWith("/artist-dashboard") ||
+			(pathname.startsWith("/famelink/") && !pathname.startsWith("/famelink/invite"));
 		if (!artistSession && isProtectedArtistPage) {
 			console.log(`[MIDDLEWARE] Access denied to artist page ${pathname} (No session)`);
+			const fullPath = request.nextUrl.pathname + request.nextUrl.search;
 			return NextResponse.redirect(
-				new URL(`/famelink-auth?redirect=${encodeURIComponent(pathname)}`, request.url),
+				new URL(`/famelink-auth?redirect=${encodeURIComponent(fullPath)}`, request.url),
 			);
 		}
 

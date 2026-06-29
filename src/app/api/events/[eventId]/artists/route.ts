@@ -304,6 +304,7 @@ export async function POST(
 			tshirtSizes: artistData.tshirtSizes || [],
 			managedBy: artistData.managedBy || "",
 			status: artistData.status || "pending",
+			famelinkArtistId: artistData.famelinkArtistId || "",
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 		};

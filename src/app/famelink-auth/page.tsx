@@ -91,8 +91,10 @@ function FameLinkAuthContent() {
 								return;
 							}
 
-							if (redirectUrl)
-								router.push(redirectUrl);
+							// Read directly from searchParams to avoid race condition with state
+							const redirParam = searchParams.get("redirect");
+							if (redirParam)
+								window.location.href = redirParam;
 							else if (joinId)
 								router.push(`/join-event/${joinId}/confirm`);
 							else router.push(`/famelink/${userId}`);
@@ -212,12 +214,16 @@ function FameLinkAuthContent() {
 						JSON.stringify(result.data.artist),
 					);
 				const artistId = result.data?.artist?.id;
-				if (redirectUrl)
-					router.push(redirectUrl);
-				else if (joinEventId)
-					router.push(`/join-event/${joinEventId}/confirm`);
-				else if (eventRequestId)
-					router.push(`/event-request/${eventRequestId}`);
+				// Read directly from searchParams to avoid stale closure on redirectUrl state
+				const redirParam = searchParams.get("redirect");
+				const joinParam = searchParams.get("joinEventId");
+				const reqParam = searchParams.get("eventRequestId");
+				if (redirParam)
+					window.location.href = redirParam;
+				else if (joinParam)
+					router.push(`/join-event/${joinParam}/confirm`);
+				else if (reqParam)
+					router.push(`/event-request/${reqParam}`);
 				else router.push(`/famelink/${artistId}`);
 			} else {
 				setError(
@@ -276,10 +282,12 @@ function FameLinkAuthContent() {
 			});
 			const result = await response.json();
 			if (result.success) {
-				if (redirectUrl) {
-					router.push(redirectUrl);
-				} else if (joinEventId) {
-					router.push(`/join-event/${joinEventId}/confirm`);
+				const redirParam = searchParams.get("redirect");
+				const joinParam = searchParams.get("joinEventId");
+				if (redirParam) {
+					window.location.href = redirParam;
+				} else if (joinParam) {
+					router.push(`/join-event/${joinParam}/confirm`);
 				} else {
 					setRegistrationSuccess(true);
 				}

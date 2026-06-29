@@ -95,6 +95,36 @@ export function ArtistHeader({
 }: ArtistHeaderProps) {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    const text = fullMagicLink;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(() => {
+        // Fallback for clipboard API failure
+        const el = document.createElement("textarea");
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    } else {
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // Local draft of workflow — committed to parent on Save
   const defaultWorkflow: WorkflowState = artistWorkflow || { contract: "Required", logistics: "Required", show: "Required" };
@@ -159,7 +189,8 @@ export function ArtistHeader({
   };
 
   const modulesParam = getModulesPath(committed);
-  const magicLinkPath = `/famelink/invite?event=${eventId || "unknown"}&artist=${artist.id}${modulesParam ? `&modules=${modulesParam}` : ""}`;
+  const inviteArtistId = artist.famelinkArtistId || artist.id;
+  const magicLinkPath = `/famelink/invite?event=${eventId || "unknown"}&artist=${inviteArtistId}${modulesParam ? `&modules=${modulesParam}` : ""}`;
   const fullMagicLink = typeof window !== "undefined" ? `${window.location.origin}${magicLinkPath}` : magicLinkPath;
 
   const getImageUrl = (src: string) => {
@@ -226,9 +257,10 @@ export function ArtistHeader({
               variant="outline"
               size="sm"
               className="h-8 px-3 rounded-lg text-slate-600 hover:text-slate-900 shadow-sm font-medium"
-              onClick={() => navigator.clipboard.writeText(fullMagicLink)}
+              onClick={handleCopyLink}
             >
-              <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+              {copied ? <Check className="h-3.5 w-3.5 mr-1.5 text-green-500" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+              {copied ? "Copied!" : "Copy"}
             </Button>
             <Button
               variant="outline"

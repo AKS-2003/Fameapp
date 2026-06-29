@@ -32,6 +32,7 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
     type: mapRole(a.role || a.requestTemplate),
     image: a.image || a.profileImage || a.image_url || a.avatar || a.profilePic || "",
     inviteLink: a.inviteLink || "",
+    famelinkArtistId: a.famelinkArtistId || "",
     agreement: {
       stageDiscussion: agr.stageDiscussion || agr.discussion || [],
       performance: (agr.schedule?.workshops?.length > 0 || agr.schedule?.performances?.length > 0)

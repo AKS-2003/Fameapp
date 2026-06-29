@@ -8,6 +8,8 @@ import { hashPassword } from "@/lib/auth";
 import { sendFameLinkArtistVerificationEmail } from "@/lib/email-service";
 import { APIResponse } from "@/types";
 import crypto from "crypto";
+import { EventArtistModel } from "@/database/models/FameLinkModels";
+import { connectToDatabase } from "@/database/mongodb";
 
 /**
  * Artist Registration API Endpoint
@@ -38,7 +40,22 @@ export async function POST(request: NextRequest) {
 		}
 
 		const hashedPassword = await hashPassword(password);
-		const artistId = `artist-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+
+		// Check if stage manager pre-assigned an artistId for this email
+		let artistId = `artist-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+		try {
+			await connectToDatabase();
+			const eventArtist = await EventArtistModel.findOne({
+				email: email.toLowerCase().trim(),
+				famelinkArtistId: { $exists: true, $ne: "" },
+			}).lean() as any;
+			if (eventArtist?.famelinkArtistId) {
+				artistId = eventArtist.famelinkArtistId;
+				console.log(`✅ [API] Using pre-assigned artistId from event file: ${artistId}`);
+			}
+		} catch (lookupErr) {
+			console.error("Failed to look up pre-assigned artistId:", lookupErr);
+		}
 		const verificationToken = crypto.randomBytes(32).toString("hex");
 		const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 

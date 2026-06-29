@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Save, Loader2, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, Plus, Save, Loader2, Search, CheckCircle2 } from "lucide-react";
 
 interface CreateArtistFileProps {
   onBack: () => void;
@@ -20,9 +19,6 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
     leadContactName: "",
     email: "",
     phone: "",
-    eventName: "",
-    eventDate: "",
-    destination: "",
     famelinkSearch: "",
   });
   const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
@@ -33,7 +29,6 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load events on mount
   useEffect(() => {
     fetch("/api/events")
       .then((r) => r.json())
@@ -65,9 +60,26 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
     }
   };
 
+  const handleSelectFameLink = (artist: any) => {
+    setLinkedFameLink(artist);
+    setFamelinkResults([]);
+    // Auto-fill form fields from the FameLink profile
+    setForm((prev) => ({
+      ...prev,
+      artistName: artist.artistName || prev.artistName,
+      email: artist.email || prev.email,
+      leadContactName: artist.realName || artist.artistName || prev.leadContactName,
+      phone: artist.phone || prev.phone,
+    }));
+  };
+
   const handleSave = async (asDraft = false) => {
     if (!form.artistName.trim()) {
       setError("Artist / Act Name is required.");
+      return;
+    }
+    if (!form.email.trim()) {
+      setError("Email is required.");
       return;
     }
     if (!selectedEventId) {
@@ -77,6 +89,12 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
     setSaving(true);
     setError(null);
     try {
+      // Use the linked FameLink artist's existing ID, or generate a new one
+      // so the invite link and future signup both resolve to the same artist
+      const famelinkArtistId =
+        linkedFameLink?.id ||
+        `artist-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+
       const payload = {
         artistName: form.artistName,
         realName: form.leadContactName,
@@ -85,10 +103,9 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
         performanceType: form.artistType,
         notes: form.notes,
         stageManagerNotes: form.internalOwner,
-        countryLiving: form.destination,
-        eventName: form.eventName || events.find((e) => e.id === selectedEventId)?.name || "",
+        eventName: events.find((e) => e.id === selectedEventId)?.name || "",
         status: asDraft ? "draft" : "pending",
-        famelinkArtistId: linkedFameLink?.id || "",
+        famelinkArtistId,
       };
       const res = await fetch(`/api/events/${selectedEventId}/artists`, {
         method: "POST",
@@ -107,6 +124,10 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
       setSaving(false);
     }
   };
+
+  const inputCls =
+    "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400";
+  const labelCls = "mb-1.5 block text-xs font-medium text-slate-500";
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-[#f6f5fb]">
@@ -139,7 +160,7 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
             <select
               value={selectedEventId}
               onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+              className={inputCls}
             >
               <option value="">Select an event...</option>
               {events.map((evt) => (
@@ -150,13 +171,96 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
             </select>
           </div>
 
+          {/* FameLink Connection — FIRST, above artist details */}
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="mb-1 text-base font-semibold text-slate-900">FameLink Connection</h2>
+            <p className="mb-4 text-xs text-slate-500">
+              Search by email or name to link an existing FameLink artist. Their details will be auto-filled below.
+            </p>
+
+            {linkedFameLink ? (
+              <div className="flex items-center gap-3 rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-fuchsia-600 font-bold text-white shrink-0">
+                  {linkedFameLink.artistName?.[0] || "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {linkedFameLink.artistName}
+                    </p>
+                    <CheckCircle2 className="h-4 w-4 text-fuchsia-500 shrink-0" />
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">{linkedFameLink.email}</p>
+                </div>
+                <button
+                  onClick={() => setLinkedFameLink(null)}
+                  className="text-xs text-red-400 hover:text-red-600 shrink-0"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={form.famelinkSearch}
+                    onChange={(e) => set("famelinkSearch", e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && searchFameLink()}
+                    placeholder="Search by email or artist name..."
+                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                  />
+                  <button
+                    onClick={searchFameLink}
+                    disabled={searchingFL}
+                    className="flex items-center gap-2 rounded-xl bg-fuchsia-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-fuchsia-700 disabled:opacity-50 shrink-0"
+                  >
+                    {searchingFL ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Search
+                  </button>
+                </div>
+
+                {famelinkResults.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                    {famelinkResults.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => handleSelectFameLink(r)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-fuchsia-50 border-b border-slate-100 last:border-0 transition-colors"
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fuchsia-100 font-bold text-fuchsia-700 text-xs shrink-0">
+                          {r.artistName?.[0] || "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{r.artistName}</p>
+                          <p className="text-xs text-slate-500 truncate">{r.email}</p>
+                        </div>
+                        <span className="text-xs text-fuchsia-600 font-medium shrink-0">Select →</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!searchingFL && form.famelinkSearch && famelinkResults.length === 0 && (
+                  <p className="mt-3 text-xs text-slate-400 text-center py-2">
+                    No FameLink artists found. You can still create the file manually below.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
             {/* Basic Artist Info */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-4 text-base font-semibold text-slate-900">Basic Artist Info</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  <label className={labelCls}>
                     Artist / Act Name <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -164,17 +268,15 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
                     value={form.artistName}
                     onChange={(e) => set("artistName", e.target.value)}
                     placeholder="Enter artist or act name"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    Artist Type
-                  </label>
+                  <label className={labelCls}>Artist Type</label>
                   <select
                     value={form.artistType}
                     onChange={(e) => set("artistType", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                    className={inputCls}
                   >
                     {ARTIST_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -184,19 +286,17 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    Internal Owner
-                  </label>
+                  <label className={labelCls}>Internal Owner</label>
                   <input
                     type="text"
                     value={form.internalOwner}
                     onChange={(e) => set("internalOwner", e.target.value)}
                     placeholder="Booking owner"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">Notes</label>
+                  <label className={labelCls}>Notes</label>
                   <textarea
                     rows={4}
                     value={form.notes}
@@ -213,158 +313,36 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
               <h2 className="mb-4 text-base font-semibold text-slate-900">Contact Info</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    Lead Contact Name
-                  </label>
+                  <label className={labelCls}>Lead Contact Name</label>
                   <input
                     type="text"
                     value={form.leadContactName}
                     onChange={(e) => set("leadContactName", e.target.value)}
                     placeholder="Primary contact person"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">Email</label>
+                  <label className={labelCls}>Email <span className="text-red-400">*</span></label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => set("email", e.target.value)}
                     placeholder="contact@example.com"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">Phone</label>
+                  <label className={labelCls}>Phone</label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={(e) => set("phone", e.target.value)}
                     placeholder="+1 234 567 890"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                    className={inputCls}
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Event Info */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h2 className="mb-4 text-base font-semibold text-slate-900">Event Info</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    Event Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.eventName}
-                    onChange={(e) => set("eventName", e.target.value)}
-                    placeholder="Event name"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    Event Date
-                  </label>
-                  <input
-                    type="date"
-                    value={form.eventDate}
-                    onChange={(e) => set("eventDate", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    Destination
-                  </label>
-                  <input
-                    type="text"
-                    value={form.destination}
-                    onChange={(e) => set("destination", e.target.value)}
-                    placeholder="City, Country"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* FameLink Connection */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h2 className="mb-1 text-base font-semibold text-slate-900">FameLink Connection</h2>
-              <p className="mb-4 text-xs text-slate-500">
-                Link an existing FameLink artist profile or invite the artist to create one.
-              </p>
-
-              {linkedFameLink ? (
-                <div className="flex items-center gap-3 rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-4 py-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-fuchsia-600 font-bold text-white">
-                    {linkedFameLink.artistName?.[0] || "?"}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {linkedFameLink.artistName}
-                    </p>
-                    <p className="text-xs text-slate-500">{linkedFameLink.email}</p>
-                  </div>
-                  <button
-                    onClick={() => setLinkedFameLink(null)}
-                    className="text-xs text-red-400 hover:text-red-600"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      FameLink Username or Email
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={form.famelinkSearch}
-                        onChange={(e) => set("famelinkSearch", e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && searchFameLink()}
-                        placeholder="Search FameLink..."
-                        className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={searchFameLink}
-                    disabled={searchingFL}
-                    className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    {searchingFL ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                    Search FameLink
-                  </button>
-
-                  {famelinkResults.length > 0 && (
-                    <div className="mt-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
-                      {famelinkResults.map((r) => (
-                        <button
-                          key={r.id}
-                          onClick={() => { setLinkedFameLink(r); setFamelinkResults([]); }}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-fuchsia-50 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fuchsia-100 font-bold text-fuchsia-700 text-xs">
-                            {r.artistName?.[0] || "?"}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">{r.artistName}</p>
-                            <p className="text-xs text-slate-500">{r.email}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </div>
 

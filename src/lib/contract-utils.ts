@@ -143,6 +143,7 @@ export async function getUnifiedArtistsForEvent(eventId: string) {
 			artists_page_tag: a.artists_page_tag || a.artistsPageTag || undefined,
 			createdAt: a.createdAt || new Date().toISOString(),
 			updatedAt: a.updatedAt || new Date().toISOString(),
+			famelinkArtistId: a.famelinkArtistId || "",
 		}));
 
 	// Convert FameLink EventShow submissions to ContractArtist format

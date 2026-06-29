@@ -29,33 +29,45 @@ function MagicLinkInviteContent() {
   
   const isValid = !!eventId && !!artistId;
 
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [eventData, setEventData] = useState<any>(null);
   const [artistData, setArtistData] = useState<any>(null);
   const [inviteMessage, setInviteMessage] = useState("");
   const [actionLoading, setActionLoading] = useState<"accept" | "decline" | null>(null);
 
+  useEffect(() => {
+    setMounted(true);
+    // Fallback: if loaded without params, restore from sessionStorage
+    if (!eventId && !artistId) {
+      const saved = sessionStorage.getItem("pending_invite_url");
+      if (saved && saved !== window.location.href) {
+        window.location.href = saved;
+      }
+    }
+  }, []);
+
 
   const handleAction = async (action: "accept" | "decline") => {
     setActionLoading(action);
     try {
-      // 1. Check Auth Status
+      // 1. Check Auth Status — any authenticated artist can accept
       const authRes = await fetch("/api/auth/me?role=artist");
       const authData = await authRes.json();
 
-      if (!authData.success || authData.data.userId !== artistId) {
-        // Not logged in as this artist -> redirect to login with a return URL
+      if (!authData.success || !authData.data?.userId) {
+        // Not logged in — hard redirect to auth preserving full return URL
         toast({ title: "Authentication required", description: "Please log in or sign up to accept this invitation." });
-        
-        // Save the intended action in sessionStorage so we can auto-trigger it later if needed
         sessionStorage.setItem("pending_invite_action", action);
         sessionStorage.setItem("pending_invite_event", eventId);
-        
-        router.push(`/famelink-auth?artistId=${artistId}&redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        sessionStorage.setItem("pending_invite_url", window.location.href);
+        window.location.href = `/famelink-auth?redirect=${encodeURIComponent(window.location.href)}`;
         return;
       }
 
-      // 2. User is authenticated, perform the action
+      const loggedInArtistId = authData.data.userId;
+
+      // 2. Perform the action using the logged-in artist's session
       const apiAction = action === "accept" ? "join" : "decline";
       const joinRes = await fetch(`/api/join-event/${eventId}`, {
         method: "POST",
@@ -65,17 +77,16 @@ function MagicLinkInviteContent() {
 
       const joinJson = await joinRes.json();
       if (joinJson.success) {
-        toast({ 
-          title: action === "accept" ? "Invitation Accepted!" : "Invitation Declined", 
-          description: action === "accept" ? "You have successfully joined the event." : "You have declined this invitation." 
+        toast({
+          title: action === "accept" ? "Invitation Accepted!" : "Invitation Declined",
+          description: action === "accept" ? "You have successfully joined the event." : "You have declined this invitation."
         });
-        
+
         if (action === "accept") {
-          // Redirect to their dashboard to complete modules
-          router.push(`/famelink/${artistId}/event/${eventId}`);
+          // Redirect to the show-selection flow (same as the join-event magic link)
+          router.push(`/join-event/${eventId}/confirm`);
         } else {
-          // Just go to their dashboard or show a declined state
-          router.push(`/famelink/${artistId}`);
+          router.push(`/famelink/${loggedInArtistId}`);
         }
       } else {
         toast({ title: "Error", description: joinJson.error?.message || "Something went wrong.", variant: "destructive" });
@@ -88,21 +99,24 @@ function MagicLinkInviteContent() {
   };
 
   useEffect(() => {
-    if (!isValid) return;
+    if (!isValid) {
+      setLoading(false);
+      return;
+    }
 
     const fetchDetails = async () => {
       try {
-        // Check if authenticated as this artist, and already joined
+        // If already logged in and already joined, skip straight to confirm flow
         try {
           const authRes = await fetch("/api/auth/me?role=artist");
           const authJson = await authRes.json();
-          if (authJson.success && authJson.data.userId === artistId) {
+          if (authJson.success && authJson.data?.userId) {
             const joinCheckRes = await fetch(`/api/join-event/${eventId}`);
             const joinCheckJson = await joinCheckRes.json();
             if (joinCheckJson.success && joinCheckJson.data.participation) {
               const status = joinCheckJson.data.participation.status;
               if (status === "pending" || status === "submitted" || status === "confirmed") {
-                router.replace(`/famelink/${artistId}/event/${eventId}`);
+                router.replace(`/join-event/${eventId}/confirm`);
                 return;
               }
             }
@@ -158,18 +172,18 @@ function MagicLinkInviteContent() {
     fetchDetails();
   }, [isValid, eventId, artistId]);
 
-  if (!isValid) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-[#0a0618] text-white flex items-center justify-center">
-        <p className="text-red-400">Invalid Invite Link</p>
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
       </div>
     );
   }
 
-  if (loading) {
+  if (!isValid) {
     return (
       <div className="min-h-screen bg-[#0a0618] text-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+        <p className="text-red-400">Invalid Invite Link</p>
       </div>
     );
   }

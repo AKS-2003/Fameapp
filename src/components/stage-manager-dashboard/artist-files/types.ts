@@ -11,6 +11,7 @@ export interface Artist {
   type: string;
   image?: string;
   inviteLink?: string;
+  famelinkArtistId?: string;
   agreement?: Agreement;
   logistics?: Logistics;
   sectionStatuses?: Record<string, SectionItemStatus>;
