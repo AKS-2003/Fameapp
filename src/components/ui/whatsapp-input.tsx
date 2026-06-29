@@ -147,6 +147,7 @@ export function WhatsAppInput({
 				{/* Country Code Selector */}
 				<div className="relative" ref={dropdownRef}>
 					<button
+						suppressHydrationWarning
 						type="button"
 						onClick={() =>
 							setShowCountryDropdown(!showCountryDropdown)
