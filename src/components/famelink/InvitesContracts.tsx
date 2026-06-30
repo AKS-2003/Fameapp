@@ -2757,60 +2757,71 @@ export function ShowInfoPanel({
 						</div>
 
 						{/* Title */}
-						<div className="flex justify-between items-start mb-6">
-							<div>
-								<DialogTitle className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Show Info · {invite.eventName || "Croatia Summer Salsa Festival"}</DialogTitle>
-								{(() => {
-									const submittedShowsInfo = eventShows.map(es => {
-										const s = es.snapshotJson ? (typeof es.snapshotJson === "string" ? JSON.parse(es.snapshotJson) : es.snapshotJson) : null;
-										const perfDate = es.overrides?.performanceDate || null;
-										return {
-											name: s?.name || es.showName || "Unnamed Show",
-											perfDate: perfDate ? new Date(perfDate + "T00:00:00").toLocaleDateString("en-US", {
-												weekday: "short", month: "short", day: "numeric",
-											}) : null,
-										};
-									});
+						<div className="flex flex-col gap-3 mb-5">
+							{/* Top row: title + action buttons */}
+							<div className="flex items-start justify-between gap-2">
+								<DialogTitle className="text-base sm:text-xl font-bold text-slate-900 tracking-tight leading-snug">
+									Show Info · {invite.eventName || "Croatia Summer Salsa Festival"}
+								</DialogTitle>
+								<div className="flex items-center gap-1.5 shrink-0">
+									<Button
+										onClick={() => {
+											setIsViewerOpen(false);
+											setIsOpenShowDialog(true);
+										}}
+										size="sm"
+										className="bg-gradient-to-r from-pink-500 to-[#bf1ed4] hover:opacity-90 text-white shadow-md font-bold px-3 h-8 text-xs gap-1.5 transition-all rounded-lg"
+									>
+										<Edit className="w-3.5 h-3.5" />
+										<span className="hidden sm:inline">Re-select</span>
+									</Button>
+									<Button
+										onClick={() => setIsFullscreen(!isFullscreen)}
+										size="sm"
+										className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-bold px-3 h-8 text-xs gap-1.5 transition-all rounded-lg"
+									>
+										{isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+										<span className="hidden sm:inline">{isFullscreen ? "Exit" : "Fullscreen"}</span>
+									</Button>
+								</div>
+							</div>
 
-									return (
-										<DialogDescription className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-											<span>Your submitted show and event details.</span>
-											{submittedShowsInfo.map((info, i) => (
-												<span key={i} className="flex items-center gap-1.5">
-													<span className="text-slate-300">•</span>
-													<span className="font-semibold text-slate-700">{info.name}</span>
-													{info.perfDate && (
-														<span className="text-slate-500">({info.perfDate})</span>
-													)}
-												</span>
-											))}
+							{/* Submitted shows as compact date chips */}
+							{(() => {
+								const submittedShowsInfo = eventShows.map(es => {
+									const s = es.snapshotJson ? (typeof es.snapshotJson === "string" ? JSON.parse(es.snapshotJson) : es.snapshotJson) : null;
+									const perfDate = es.overrides?.performanceDate || null;
+									return {
+										name: s?.name || es.showName || "Unnamed Show",
+										perfDate: perfDate ? new Date(perfDate + "T00:00:00").toLocaleDateString("en-US", {
+											weekday: "short", month: "short", day: "numeric",
+										}) : null,
+									};
+								});
+								return (
+									<div className="flex flex-col gap-1.5">
+										<DialogDescription className="text-xs text-slate-400">
+											Your submitted show and event details
 										</DialogDescription>
-									);
-								})()}
-							</div>
-							<div className="flex items-center gap-2 shrink-0">
-								<Button 
-									onClick={() => {
-										setIsViewerOpen(false);
-										setIsOpenShowDialog(true);
-									}}
-									className="bg-gradient-to-r from-pink-500 to-[#bf1ed4] hover:opacity-90 text-white shadow-md font-bold px-4 h-9 gap-2 transition-all rounded-lg"
-								>
-									Re-select/Manage
-								</Button>
-								<Button 
-									onClick={() => setIsFullscreen(!isFullscreen)}
-									className="bg-[#bf1ed4] hover:bg-[#a819bb] text-white shadow-md shadow-purple-500/20 font-bold px-4 h-9 gap-2 transition-all rounded-lg"
-								>
-									{isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-									{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-								</Button>
-							</div>
+										<div className="flex flex-wrap gap-2">
+											{submittedShowsInfo.map((info, i) => (
+												<div key={i} className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5">
+													<Music className="w-3 h-3 text-purple-500 shrink-0" />
+													<span className="text-xs font-semibold text-slate-800 truncate max-w-[120px] sm:max-w-none">{info.name}</span>
+													{info.perfDate && (
+														<span className="text-[10px] font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded px-1.5 py-0.5 shrink-0">{info.perfDate}</span>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								);
+							})()}
 						</div>
 
 						{/* Tab Switcher for Multiple Shows */}
 						{eventShows.length > 1 && (
-							<div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/80 border border-slate-200/60 rounded-xl mb-6 shadow-inner">
+							<div className="flex flex-wrap gap-2 mb-5">
 								{eventShows.map((es, idx) => {
 									const s = es.snapshotJson ? (typeof es.snapshotJson === "string" ? JSON.parse(es.snapshotJson) : es.snapshotJson) : null;
 									const name = s?.name || es.showName || `Show ${idx + 1}`;
@@ -2824,21 +2835,15 @@ export function ShowInfoPanel({
 											key={es.id || es.eventShowId || idx}
 											onClick={() => setSelectedViewerShowIndex(idx)}
 											className={cn(
-												"px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 flex flex-col items-start gap-0.5",
+												"flex flex-col items-start gap-0.5 px-3 py-2 rounded-xl border text-left transition-all duration-200 min-w-0",
 												isActive
-													? "bg-white text-slate-900 shadow-sm border border-slate-200"
-													: "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
+													? "bg-[#bf1ed4] text-white border-[#bf1ed4] shadow-sm shadow-purple-300"
+													: "bg-white text-slate-600 border-slate-200 hover:border-purple-300 hover:text-slate-900"
 											)}
 										>
-											<span className="flex items-center gap-1.5">
-												<span className={cn(
-													"w-1.5 h-1.5 rounded-full transition-all shrink-0",
-													isActive ? "bg-[#bf1ed4]" : "bg-slate-300"
-												)} />
-												{name}
-											</span>
+											<span className="text-xs font-bold truncate max-w-[140px]">{name}</span>
 											{perfDateLabel && (
-												<span className={cn("text-[10px] font-medium pl-3", isActive ? "text-[#bf1ed4]" : "text-slate-400")}>
+												<span className={cn("text-[10px] font-medium", isActive ? "text-white/80" : "text-purple-500")}>
 													{perfDateLabel}
 												</span>
 											)}
