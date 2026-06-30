@@ -1700,22 +1700,32 @@ export default function FameLinkEventDashboard({
 								<TabsList className="flex flex-wrap h-auto gap-2 p-1 bg-slate-100/80 border border-slate-200/50 rounded-xl justify-start">
 									{myShows.map((s) => {
 										const isSelected = myShow?.eventShowId === s.eventShowId;
+										const perfDate = (s.overrides as any)?.performanceDate || null;
+										const perfDateLabel = perfDate
+											? new Date(perfDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+											: null;
 										return (
 											<TabsTrigger
 												key={s.eventShowId}
 												value={s.eventShowId}
-												className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg flex items-center gap-2 border border-transparent
+												className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg flex flex-col items-start gap-0.5 border border-transparent
 													${isSelected
 														? "bg-gradient-to-r from-[#bf1ed4] to-[#ff66e5] text-white shadow-sm"
 														: "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
 													}`}
 											>
-												<span>{s.snapshot?.name || s.showName}</span>
-												{s.snapshot?.style && (
-													<Badge className={`text-[10px] px-1.5 py-0 border-0 ${isSelected ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
-														}`}>
-														{s.snapshot.style}
-													</Badge>
+												<span className="flex items-center gap-2">
+													<span>{s.snapshot?.name || s.showName}</span>
+													{s.snapshot?.style && (
+														<Badge className={`text-[10px] px-1.5 py-0 border-0 ${isSelected ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"}`}>
+															{s.snapshot.style}
+														</Badge>
+													)}
+												</span>
+												{perfDateLabel && (
+													<span className={`text-[10px] font-semibold ${isSelected ? "text-white/80" : "text-purple-500"}`}>
+														{perfDateLabel}
+													</span>
 												)}
 											</TabsTrigger>
 										);

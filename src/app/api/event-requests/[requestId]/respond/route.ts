@@ -30,7 +30,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 		const { requestId } = await params;
 		const body = await request.json();
-		const { baseShowId, baseShowIds, action } = body;
+		const { baseShowId, baseShowIds, action, showSlots } = body;
+		// showSlots: [{ baseShowId, performanceDate }] — new format with per-slot dates
 
 		if (!action || !["accept", "decline"].includes(action)) {
 			return NextResponse.json(
@@ -83,18 +84,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		const eventShowIds: string[] = [];
 
 		if (action === "accept") {
-			// Support both single and multi-show selection
-			const showIds: string[] =
-				baseShowIds || (baseShowId ? [baseShowId] : []);
+			// Build normalized list of { showId, performanceDate }
+			let showEntries: { showId: string; performanceDate: string }[] = [];
+			if (showSlots?.length) {
+				// New format: [{ baseShowId, performanceDate }]
+				showEntries = showSlots.map((s: any) => ({
+					showId: s.baseShowId,
+					performanceDate: s.performanceDate || "",
+				}));
+			} else {
+				// Legacy format: baseShowIds[] or baseShowId
+				const ids: string[] = baseShowIds || (baseShowId ? [baseShowId] : []);
+				showEntries = ids.map((id) => ({ showId: id, performanceDate: "" }));
+			}
 
-			if (showIds.length === 0) {
+			if (showEntries.length === 0) {
 				return NextResponse.json(
 					{
 						success: false,
 						error: {
 							code: "REQ_004",
-							message:
-								"At least one baseShowId is required for accept",
+							message: "At least one baseShowId is required for accept",
 						},
 					},
 					{ status: 400 },
@@ -104,7 +114,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 			// Get all artist's shows to verify ownership
 			const artistShows = await getBaseShowsByArtist(session.userId);
 
-			for (const showId of showIds) {
+			for (const { showId, performanceDate } of showEntries) {
 				const baseShow = artistShows.find((s) => s.id === showId);
 
 				if (!baseShow) {
@@ -120,7 +130,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 					);
 				}
 
-				// Create Event_Show with immutable snapshot (data separation: snapshot is read-only)
+				// Create Event_Show with immutable snapshot and performance date
 				const eventShowId = uuidv4();
 				const snapshotJson = createBaseShowSnapshot(baseShow);
 
@@ -131,7 +141,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 					baseShowId: showId,
 					snapshotJson,
 					snapshotCreatedAt: now,
-					overrides: {},
+					overrides: performanceDate ? { performanceDate } : {},
 					status: "pending",
 					performanceStatus: "not_started",
 					createdAt: now,

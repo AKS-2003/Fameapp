@@ -35,6 +35,7 @@ function MagicLinkInviteContent() {
   const [artistData, setArtistData] = useState<any>(null);
   const [inviteMessage, setInviteMessage] = useState("");
   const [actionLoading, setActionLoading] = useState<"accept" | "decline" | null>(null);
+  const [notForMe, setNotForMe] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -66,8 +67,31 @@ function MagicLinkInviteContent() {
       }
 
       const loggedInArtistId = authData.data.userId;
+      const loggedInEmail = authData.data.email?.toLowerCase().trim();
 
-      // 2. Perform the action using the logged-in artist's session
+      // 2. Verify this invite was created for the logged-in artist
+      // Allow if: their userId matches the artistId in the link, OR their email
+      // matches the email on the EventArtist record that has this famelinkArtistId.
+      if (loggedInArtistId !== artistId) {
+        // Do a server-side check: fetch the artist record for the URL artistId
+        // and compare emails
+        try {
+          const artistCheckRes = await fetch(`/api/artists/${artistId}`);
+          const artistCheckJson = await artistCheckRes.json();
+          const inviteEmail = artistCheckJson.data?.email?.toLowerCase().trim();
+          if (!inviteEmail || inviteEmail !== loggedInEmail) {
+            setNotForMe(true);
+            setActionLoading(null);
+            return;
+          }
+        } catch {
+          toast({ title: "Error", description: "Could not verify invite. Please try again.", variant: "destructive" });
+          setActionLoading(null);
+          return;
+        }
+      }
+
+      // 3. Perform the action using the logged-in artist's session
       const apiAction = action === "accept" ? "join" : "decline";
       const joinRes = await fetch(`/api/join-event/${eventId}`, {
         method: "POST",
@@ -106,19 +130,38 @@ function MagicLinkInviteContent() {
 
     const fetchDetails = async () => {
       try {
-        // If already logged in and already joined, skip straight to confirm flow
+        // If already logged in and this invite is for them, skip straight to confirm flow
         try {
           const authRes = await fetch("/api/auth/me?role=artist");
           const authJson = await authRes.json();
           if (authJson.success && authJson.data?.userId) {
-            const joinCheckRes = await fetch(`/api/join-event/${eventId}`);
-            const joinCheckJson = await joinCheckRes.json();
-            if (joinCheckJson.success && joinCheckJson.data.participation) {
-              const status = joinCheckJson.data.participation.status;
-              if (status === "pending" || status === "submitted" || status === "confirmed") {
-                router.replace(`/join-event/${eventId}/confirm`);
-                return;
+            const loggedInId = authJson.data.userId;
+            const loggedInEmail = authJson.data.email?.toLowerCase().trim();
+
+            // Only auto-redirect if this invite belongs to the logged-in artist
+            let inviteIsForMe = loggedInId === artistId;
+            if (!inviteIsForMe) {
+              try {
+                const ac = await fetch(`/api/artists/${artistId}`);
+                const aj = await ac.json();
+                const inviteEmail = aj.data?.email?.toLowerCase().trim();
+                inviteIsForMe = Boolean(inviteEmail && inviteEmail === loggedInEmail);
+              } catch {}
+            }
+
+            if (inviteIsForMe) {
+              const joinCheckRes = await fetch(`/api/join-event/${eventId}`);
+              const joinCheckJson = await joinCheckRes.json();
+              if (joinCheckJson.success && joinCheckJson.data.participation) {
+                const status = joinCheckJson.data.participation.status;
+                if (status === "pending" || status === "submitted" || status === "confirmed") {
+                  router.replace(`/join-event/${eventId}/confirm`);
+                  return;
+                }
               }
+            } else {
+              // Logged in as a different artist — block the UI immediately
+              setNotForMe(true);
             }
           }
         } catch (e) {
@@ -307,24 +350,33 @@ function MagicLinkInviteContent() {
 
         {/* Action Buttons underneath card */}
         <div className="mt-6 flex flex-col gap-3 relative z-10 w-full px-2">
-          <p className="text-center text-sm font-semibold text-white mb-2">Will you accept this invitation?</p>
-          <Button 
-            className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-xl h-12 text-sm font-bold shadow-lg shadow-purple-500/25"
-            onClick={() => handleAction("accept")}
-            disabled={actionLoading !== null}
-          >
-            {actionLoading === "accept" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-            Accept Invitation
-          </Button>
-          <Button 
-            variant="outline"
-            className="w-full bg-transparent border-white/10 hover:bg-white/5 text-slate-300 rounded-xl h-12 text-sm font-semibold"
-            onClick={() => handleAction("decline")}
-            disabled={actionLoading !== null}
-          >
-            {actionLoading === "decline" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Decline Invitation
-          </Button>
+          {notForMe ? (
+            <div className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-center">
+              <p className="text-sm font-bold text-red-400 mb-1">This invite is not for you</p>
+              <p className="text-xs text-red-300/70">This link was created for a specific artist. Please sign in with the correct account or use the invite link sent to your email.</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-center text-sm font-semibold text-white mb-2">Will you accept this invitation?</p>
+              <Button
+                className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-xl h-12 text-sm font-bold shadow-lg shadow-purple-500/25"
+                onClick={() => handleAction("accept")}
+                disabled={actionLoading !== null}
+              >
+                {actionLoading === "accept" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                Accept Invitation
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full bg-transparent border-white/10 hover:bg-white/5 text-slate-300 rounded-xl h-12 text-sm font-semibold"
+                onClick={() => handleAction("decline")}
+                disabled={actionLoading !== null}
+              >
+                {actionLoading === "decline" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Decline Invitation
+              </Button>
+            </>
+          )}
         </div>
 
         <p className="text-[10px] text-slate-500 text-center mt-6">

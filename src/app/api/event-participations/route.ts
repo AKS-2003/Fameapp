@@ -10,6 +10,47 @@ import { EventArtistModel } from "@/database/models/FameLinkModels";
 import { getFameLinkArtistById } from "@/lib/data-access";
 import { getUnifiedArtistsForEvent } from "@/lib/contract-utils";
 
+/** Build a safe event object including showDates for the artist portal */
+function buildEventObj(event: any) {
+	if (!event) return null;
+	return {
+		id: event.id,
+		name: event.name,
+		venueName: (event as any).venue || (event as any).venueName || "",
+		startDate: (event as any).date || (event as any).startDate || "",
+		endDate: (event as any).date || (event as any).endDate || "",
+		showDates: Array.isArray((event as any).showDates) ? (event as any).showDates : [],
+		contractEnabled: (event as any).contractEnabled !== false,
+		logisticsEnabled: (event as any).logisticsEnabled !== false,
+		showInfoEnabled: (event as any).showInfoEnabled !== false,
+		requireContractFirst: (event as any).requireContractFirst !== false,
+	};
+}
+
+/** Get performance dates for a specific artist from contract data */
+async function getArtistPerformanceDates(eventId: string, artistId: string, artistEmail?: string): Promise<string[]> {
+	try {
+		const allArtists = await getUnifiedArtistsForEvent(eventId);
+		const matched = allArtists.find((a: any) =>
+			a.id === artistId ||
+			a.famelinkArtistId === artistId ||
+			(artistEmail && a.email?.toLowerCase().trim() === artistEmail?.toLowerCase().trim())
+		);
+		if (!matched) return [];
+		const perfs: any[] = matched.agreement?.schedule?.performances || [];
+		const toYMD = (raw: string): string | null => {
+			if (!raw) return null;
+			if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+			const iso = raw.substring(0, 10);
+			if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+			return null;
+		};
+		return perfs.map((p: any) => toYMD(p.date || "")).filter(Boolean) as string[];
+	} catch {
+		return [];
+	}
+}
+
 
 /** Safely parse snapshotJson — may be a JSON string or already an object */
 function parseSnapshot(raw: any): any {
@@ -47,6 +88,10 @@ export async function GET(request: NextRequest) {
 
 		const artistId = session.userId;
 
+		// Fetch artist profile early so artistEmail is available for all enrichment paths
+		const artistProfile = await getFameLinkArtistById(artistId).catch(() => null);
+		const artistEmail = artistProfile?.email?.toLowerCase();
+
 		// ── 1. Classic EventParticipation records (invite-link flow) ──────────
 		const participations = await getEventParticipationsByArtist(artistId);
 
@@ -79,24 +124,14 @@ export async function GET(request: NextRequest) {
 							};
 						});
 
+					const perfDates = event ? await getArtistPerformanceDates(p.eventId, artistId, artistEmail) : [];
 					return {
 						...p,
 						source: "participation",
 						submittedShows: artistShows,
 						showCount: artistShows.length,
-						event: event
-							? {
-								id: event.id,
-								name: event.name,
-								venueName: (event as any).venue || (event as any).venueName || "",
-								startDate: (event as any).date || (event as any).startDate || "",
-								endDate: (event as any).date || (event as any).endDate || "",
-								contractEnabled: (event as any).contractEnabled !== false,
-								logisticsEnabled: (event as any).logisticsEnabled !== false,
-								showInfoEnabled: (event as any).showInfoEnabled !== false,
-								requireContractFirst: (event as any).requireContractFirst !== false,
-							}
-							: null,
+						performanceDates: perfDates,
+						event: buildEventObj(event),
 					};
 				} catch (error) {
 					console.error(`Error enriching participation for event ${p.eventId}:`, error);
@@ -121,6 +156,7 @@ export async function GET(request: NextRequest) {
 						const event = await getEventById(es.eventId);
 						const showName = es.overrides?.name || snap.name || "Unnamed Show";
 
+						const perfDates = event ? await getArtistPerformanceDates(es.eventId, artistId, artistEmail) : [];
 						return {
 							id: `eshow-${es.id}`,
 							eventId: es.eventId,
@@ -142,21 +178,10 @@ export async function GET(request: NextRequest) {
 								},
 							],
 							showCount: 1,
+							performanceDates: perfDates,
 							performanceDate: es.overrides?.performanceDate || null,
 							performanceOrder: es.overrides?.performanceOrder || null,
-							event: event
-								? {
-									id: event.id,
-									name: event.name,
-									venueName: (event as any).venue || (event as any).venueName || "",
-									startDate: (event as any).date || (event as any).startDate || "",
-									endDate: (event as any).date || (event as any).endDate || "",
-									contractEnabled: (event as any).contractEnabled !== false,
-									logisticsEnabled: (event as any).logisticsEnabled !== false,
-									showInfoEnabled: (event as any).showInfoEnabled !== false,
-									requireContractFirst: (event as any).requireContractFirst !== false,
-								}
-								: null,
+							event: buildEventObj(event),
 						};
 					} catch {
 						return null;
@@ -165,10 +190,6 @@ export async function GET(request: NextRequest) {
 		);
 
 		// ── 3. EventArtist (draft) records — stage manager manually added ─────
-		// Stage managers add artists by EMAIL to an event — match on that email
-		const artistProfile = await getFameLinkArtistById(artistId).catch(() => null);
-		const artistEmail = artistProfile?.email?.toLowerCase();
-
 		// Only query if we have an email to match against
 		const draftEntries: any[] = artistEmail
 			? await EventArtistModel.find({ eventId: { $exists: true }, email: artistEmail }).lean()
@@ -189,6 +210,7 @@ export async function GET(request: NextRequest) {
 						const event = await getEventById(d.eventId);
 						const showName = d.showName || d.artistName || "Assigned Performance";
 
+						const perfDates = event ? await getArtistPerformanceDates(d.eventId, artistId, artistEmail) : [];
 						return {
 							id: `draft-${d._id || d.id}`,
 							eventId: d.eventId,
@@ -210,22 +232,11 @@ export async function GET(request: NextRequest) {
 								]
 								: [],
 							showCount: showName ? 1 : 0,
+							performanceDates: perfDates,
 							performanceDate: d.performance_date || d.performanceDate || null,
 							performanceOrder: d.performance_order || d.performanceOrder || null,
 							notes: d.notes || "",
-							event: event
-								? {
-									id: event.id,
-									name: event.name,
-									venueName: (event as any).venue || (event as any).venueName || "",
-									startDate: (event as any).date || (event as any).startDate || "",
-									endDate: (event as any).date || (event as any).endDate || "",
-									contractEnabled: (event as any).contractEnabled !== false,
-									logisticsEnabled: (event as any).logisticsEnabled !== false,
-									showInfoEnabled: (event as any).showInfoEnabled !== false,
-									requireContractFirst: (event as any).requireContractFirst !== false,
-								}
-								: null,
+							event: buildEventObj(event),
 						};
 					} catch {
 						return null;

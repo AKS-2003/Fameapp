@@ -2763,29 +2763,27 @@ export function ShowInfoPanel({
 								{(() => {
 									const submittedShowsInfo = eventShows.map(es => {
 										const s = es.snapshotJson ? (typeof es.snapshotJson === "string" ? JSON.parse(es.snapshotJson) : es.snapshotJson) : null;
+										const perfDate = es.overrides?.performanceDate || null;
 										return {
 											name: s?.name || es.showName || "Unnamed Show",
-											date: es.createdAt ? new Date(es.createdAt).toLocaleDateString("en-US", {
-												month: "short",
-												day: "numeric",
-												year: "numeric",
-											}) : "N/A"
+											perfDate: perfDate ? new Date(perfDate + "T00:00:00").toLocaleDateString("en-US", {
+												weekday: "short", month: "short", day: "numeric",
+											}) : null,
 										};
 									});
-									const showNamesStr = submittedShowsInfo.map(s => s.name).join(", ");
-									const submittedDateStr = submittedShowsInfo[0]?.date || "N/A";
 
 									return (
 										<DialogDescription className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
 											<span>Your submitted show and event details.</span>
-											{submittedShowsInfo.length > 0 && (
-												<>
+											{submittedShowsInfo.map((info, i) => (
+												<span key={i} className="flex items-center gap-1.5">
 													<span className="text-slate-300">•</span>
-													<span className="font-semibold text-slate-700">Show: {showNamesStr}</span>
-													<span className="text-slate-300">•</span>
-													<span className="font-semibold text-slate-700">Submitted: {submittedDateStr}</span>
-												</>
-											)}
+													<span className="font-semibold text-slate-700">{info.name}</span>
+													{info.perfDate && (
+														<span className="text-slate-500">({info.perfDate})</span>
+													)}
+												</span>
+											))}
 										</DialogDescription>
 									);
 								})()}
@@ -2812,27 +2810,38 @@ export function ShowInfoPanel({
 
 						{/* Tab Switcher for Multiple Shows */}
 						{eventShows.length > 1 && (
-							<div className="flex items-center gap-1.5 p-1 bg-slate-100/80 border border-slate-200/60 rounded-xl mb-6 max-w-fit shadow-inner">
+							<div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/80 border border-slate-200/60 rounded-xl mb-6 shadow-inner">
 								{eventShows.map((es, idx) => {
 									const s = es.snapshotJson ? (typeof es.snapshotJson === "string" ? JSON.parse(es.snapshotJson) : es.snapshotJson) : null;
 									const name = s?.name || es.showName || `Show ${idx + 1}`;
+									const perfDate = es.overrides?.performanceDate || null;
+									const perfDateLabel = perfDate
+										? new Date(perfDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+										: null;
 									const isActive = selectedViewerShowIndex === idx;
 									return (
 										<button
 											key={es.id || es.eventShowId || idx}
 											onClick={() => setSelectedViewerShowIndex(idx)}
 											className={cn(
-												"px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 flex items-center gap-1.5",
-												isActive 
-													? "bg-white text-slate-900 shadow-sm border border-slate-200" 
+												"px-4 py-2 text-xs font-bold rounded-lg transition-all duration-200 flex flex-col items-start gap-0.5",
+												isActive
+													? "bg-white text-slate-900 shadow-sm border border-slate-200"
 													: "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50"
 											)}
 										>
-											<span className={cn(
-												"w-1.5 h-1.5 rounded-full transition-all",
-												isActive ? "bg-[#bf1ed4]" : "bg-slate-300"
-											)} />
-											{name}
+											<span className="flex items-center gap-1.5">
+												<span className={cn(
+													"w-1.5 h-1.5 rounded-full transition-all shrink-0",
+													isActive ? "bg-[#bf1ed4]" : "bg-slate-300"
+												)} />
+												{name}
+											</span>
+											{perfDateLabel && (
+												<span className={cn("text-[10px] font-medium pl-3", isActive ? "text-[#bf1ed4]" : "text-slate-400")}>
+													{perfDateLabel}
+												</span>
+											)}
 										</button>
 									);
 								})}

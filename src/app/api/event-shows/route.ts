@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const body: CreateEventShowRequest = await request.json();
-		const { eventId, baseShowId } = body;
+		const body: CreateEventShowRequest & { performanceDate?: string } = await request.json();
+		const { eventId, baseShowId, performanceDate } = body;
 
 		if (!eventId || !baseShowId) {
 			return NextResponse.json(
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 			baseShowId,
 			snapshotJson,
 			snapshotCreatedAt: now,
-			overrides: {},
+			overrides: performanceDate ? { performanceDate } : {},
 			status: "pending",
 			performanceStatus: "not_started",
 			createdAt: now,

@@ -77,12 +77,14 @@ export default function JoinEventConfirmPage() {
 	const [artistName, setArtistName] = useState<string>("");
 	const [isResubmit, setIsResubmit] = useState(false);
 	const [existingShowIds, setExistingShowIds] = useState<string[]>([]);
+	const [activeEventShows, setActiveEventShows] = useState<{ baseShowId: string; performanceDate: string | null; showName: string }[]>([]);
+	const [performanceSlots, setPerformanceSlots] = useState<string[]>([]); // YYYY-MM-DD dates from contract
 
 	const fetchData = useCallback(async () => {
 		try {
-			const authRes = await fetch("/api/auth/me");
+			const authRes = await fetch("/api/auth/me?role=artist");
 			const authData = await authRes.json();
-			
+
 			if (!authData.success || authData.data?.role !== "artist") {
 				console.log("[JOIN-EVENT] Auth check failed, redirecting to login");
 				// To break potential loops, check if we're already coming from the auth page
@@ -124,6 +126,7 @@ export default function JoinEventConfirmPage() {
 				// If not (e.g. show was deleted), allow re-registration
 				let hasActiveEventShows = false;
 				let submittedBaseShowIds: string[] = [];
+				let enrichedShows: { baseShowId: string; performanceDate: string | null; showName: string }[] = [];
 				try {
 					const esRes = await fetch(
 						`/api/event-shows?eventId=${eventId}`,
@@ -132,10 +135,49 @@ export default function JoinEventConfirmPage() {
 					const activeShows = esData.data?.eventShows || [];
 					hasActiveEventShows =
 						esData.success && activeShows.length > 0;
-					// Collect the baseShowIds of shows already submitted
 					submittedBaseShowIds = activeShows
 						.map((es: any) => es.baseShowId)
 						.filter(Boolean);
+					enrichedShows = activeShows.map((es: any) => ({
+						baseShowId: es.baseShowId || "",
+						performanceDate: es.overrides?.performanceDate || es.performanceDate || null,
+						showName: es.overrides?.name || (typeof es.snapshotJson === "object" ? es.snapshotJson?.name : null) || "Show",
+					}));
+				} catch {}
+
+				setActiveEventShows(enrichedShows);
+
+				// Fetch performance slots from the event/contract
+				try {
+					const eventData = data.data.event;
+					const slots: string[] = [];
+					// Try contract first
+					const contractRes = await fetch(`/api/contracts/${eventId}`);
+					const contractData = await contractRes.json();
+					const authRes2 = await fetch("/api/auth/me?role=artist");
+					const authData2 = await authRes2.json();
+					const myId = authData2.data?.userId;
+					const artists: any[] = contractData.artists || [];
+					const myEntry = artists.find((a: any) => a.id === myId || a.famelinkArtistId === myId || a.email === authData2.data?.email);
+					const perfs: any[] = myEntry?.agreement?.schedule?.performances || [];
+					const toYMD = (raw: string) => {
+						if (!raw) return null;
+						if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+						const iso = raw.substring(0, 10);
+						return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+					};
+					for (const perf of perfs) {
+						const ymd = toYMD(perf.date || "");
+						if (ymd && !slots.includes(ymd)) slots.push(ymd);
+					}
+					// Fall back to event showDates
+					if (slots.length === 0 && eventData?.showDates?.length) {
+						for (const d of eventData.showDates) {
+							const ymd = toYMD(d);
+							if (ymd && !slots.includes(ymd)) slots.push(ymd);
+						}
+					}
+					setPerformanceSlots(slots);
 				} catch {}
 
 				if (!hasActiveEventShows) {
@@ -221,7 +263,18 @@ export default function JoinEventConfirmPage() {
 			const data = await res.json();
 			if (data.success) {
 				setParticipation(data.data.participation);
-				setStep("success");
+				// Refresh event shows so the status page shows per-slot status
+				try {
+					const esRes = await fetch(`/api/event-shows?eventId=${eventId}`);
+					const esData = await esRes.json();
+					const activeShows = esData.data?.eventShows || [];
+					setActiveEventShows(activeShows.map((es: any) => ({
+						baseShowId: es.baseShowId || "",
+						performanceDate: es.overrides?.performanceDate || es.performanceDate || null,
+						showName: es.overrides?.name || (typeof es.snapshotJson === "object" ? es.snapshotJson?.name : null) || "Show",
+					})));
+				} catch {}
+				setStep("already-submitted");
 				try {
 					if (typeof (window as any).io === "undefined") {
 						const script = document.createElement("script");
@@ -395,33 +448,88 @@ export default function JoinEventConfirmPage() {
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.5, delay: 0.2 }}
-							className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-8 text-center space-y-4"
+							className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-6 space-y-4"
 						>
-							<div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
-								<CheckCircle className="h-8 w-8 text-green-400" />
-							</div>
-							<h2 className="text-xl font-semibold">
+							<h2 className="text-lg font-semibold text-white">
 								{participation?.status === "confirmed"
 									? "You're confirmed for this event!"
-									: "Your show has been submitted"}
+									: "Show Submission Status"}
 							</h2>
-							<p className="text-gray-400 text-sm">
-								{participation?.status === "confirmed"
-									? "The organizer has assigned you. Check your dashboard for details."
-									: "Waiting for the organizer to review and assign your show."}
-							</p>
-							<Badge
-								className={`${
-									participation?.status === "confirmed"
-										? "bg-green-500/15 text-green-300 border border-green-500/20"
-										: "bg-yellow-500/15 text-yellow-300 border border-yellow-500/20"
-								}`}
-							>
-								{participation?.status === "confirmed"
-									? "Confirmed"
-									: "Pending"}
-							</Badge>
-							<div className="flex flex-col gap-3 mt-2">
+
+							{/* Per-slot status */}
+							{performanceSlots.length > 0 ? (
+								<div className="space-y-2">
+									{performanceSlots.map((slotDate, idx) => {
+										const submitted = activeEventShows.find(
+											(es) => es.performanceDate?.substring(0, 10) === slotDate,
+										);
+										const slotLabel = new Date(slotDate + "T00:00:00").toLocaleDateString("en-US", {
+											weekday: "short", month: "short", day: "numeric",
+										});
+										return (
+											<div
+												key={slotDate}
+												className={`flex items-center gap-3 p-3 rounded-xl border ${
+													submitted
+														? "border-green-500/30 bg-green-500/8"
+														: "border-yellow-500/30 bg-yellow-500/8"
+												}`}
+											>
+												<div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+													submitted ? "bg-green-500/20" : "bg-yellow-500/20"
+												}`}>
+													{submitted
+														? <CheckCircle className="h-4 w-4 text-green-400" />
+														: <Clock className="h-4 w-4 text-yellow-400" />
+													}
+												</div>
+												<div className="flex-1 min-w-0">
+													<p className="text-sm font-semibold text-white flex items-center gap-2">
+														<Calendar className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+														{slotLabel}
+													</p>
+													<p className={`text-xs mt-0.5 ${submitted ? "text-green-400" : "text-yellow-400"}`}>
+														{submitted
+															? `Submitted${submitted.showName ? ` · ${submitted.showName}` : ""}`
+															: "Show not submitted yet"}
+													</p>
+												</div>
+												{!submitted && (
+													<button
+														onClick={() => { setIsResubmit(true); setStep("select-show"); }}
+														className="text-xs text-purple-300 hover:text-white border border-purple-500/30 hover:border-purple-400 px-2.5 py-1 rounded-lg transition-colors shrink-0"
+													>
+														Submit
+													</button>
+												)}
+											</div>
+										);
+									})}
+								</div>
+							) : (
+								/* Fallback: no slot info, show simple status */
+								<div className="text-center space-y-3 py-2">
+									<div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+										<CheckCircle className="h-7 w-7 text-green-400" />
+									</div>
+									<p className="text-gray-400 text-sm">
+										{participation?.status === "confirmed"
+											? "The organizer has assigned you. Check your dashboard for details."
+											: "Waiting for the organizer to review and assign your show."}
+									</p>
+									<Badge
+										className={`${
+											participation?.status === "confirmed"
+												? "bg-green-500/15 text-green-300 border border-green-500/20"
+												: "bg-yellow-500/15 text-yellow-300 border border-yellow-500/20"
+										}`}
+									>
+										{participation?.status === "confirmed" ? "Confirmed" : "Pending"}
+									</Badge>
+								</div>
+							)}
+
+							<div className="flex flex-col gap-3 pt-1">
 								<Button
 									onClick={handleGoToDashboard}
 									className="w-full py-5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl text-base font-semibold shadow-lg shadow-purple-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"

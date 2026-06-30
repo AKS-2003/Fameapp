@@ -31,7 +31,53 @@ export async function GET(
 		await connectToDatabase();
 
 		// ── 1. FAME/draft artists added manually by the stage manager ──────────
-		const draftArtists = (await EventArtistModel.find({ eventId }).lean()) as any[];
+		const rawDraftArtists = (await EventArtistModel.find({ eventId }).lean()) as any[];
+
+		// Helper: normalise a raw date string to YYYY-MM-DD, or null if invalid
+		function toYMD(raw: string): string | null {
+			if (!raw) return null;
+			if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+			const iso = raw.substring(0, 10);
+			return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+		}
+
+		// Helper: extract ALL performance dates from agreement.schedule.performances
+		function allAgreementPerfDates(agreement: any): string[] {
+			const perfs: any[] = agreement?.schedule?.performances || [];
+			return perfs.map((p: any) => toYMD(p.date || "")).filter(Boolean) as string[];
+		}
+
+		// Helper: return first agreement perf date (used for FameLink artists)
+		function firstAgreementPerfDate(agreement: any): string | null {
+			const dates = allAgreementPerfDates(agreement);
+			return dates[0] || null;
+		}
+
+		// For draft artists: expand into one record per performance date from agreement.
+		// If performance_date is already set (single date), keep as-is but also check agreement for extras.
+		const draftArtists = rawDraftArtists.flatMap((d: any) => {
+			const agreementDates = allAgreementPerfDates(d.agreement);
+			const existingDate = toYMD(d.performance_date || d.performanceDate || "");
+
+			// Collect all unique dates: existing field + agreement dates
+			const allDates = Array.from(new Set([
+				...(existingDate ? [existingDate] : []),
+				...agreementDates,
+			]));
+
+			if (allDates.length === 0) return [d]; // no dates — return as-is (unassigned)
+			if (allDates.length === 1) {
+				// Single date — just ensure field is set
+				return [{ ...d, performance_date: allDates[0], performanceDate: allDates[0] }];
+			}
+			// Multiple dates — one record per date with a unique composite id
+			return allDates.map((date, i) => ({
+				...d,
+				id: i === 0 ? d.id : `${d.id}-day${i + 1}`,
+				performance_date: date,
+				performanceDate: date,
+			}));
+		});
 
 		// Build a lookup map from email → draft artist (for merging agreement data into FameLink artists)
 		const draftByEmail = new Map<string, any>();
@@ -118,7 +164,24 @@ export async function GET(
 				(p) => p.artistId === es.artistId && p.eventId === eventId,
 			);
 
-			const famelinkArtist = {
+			// Resolve agreement early so we can use it for performance_date fallback
+			const resolvedAgreement = (() => {
+				const artistEmail = (freshProfile?.email || "").toLowerCase().trim();
+				const draftRecord = draftById.get(es.artistId) || (artistEmail ? draftByEmail.get(artistEmail) : undefined);
+				return draftRecord?.agreement ?? snapshot.agreement ?? null;
+			})();
+
+			// Collect all performance dates: overrides date + all agreement dates (deduplicated)
+			const overrideDate = toYMD(es.overrides?.performanceDate || "");
+			const agreementDates = allAgreementPerfDates(resolvedAgreement);
+			const allPerfDates = Array.from(new Set([
+				...(overrideDate ? [overrideDate] : []),
+				...agreementDates,
+			]));
+			// If no dates at all, still produce one record with null performance_date
+			const datesToExpand = allPerfDates.length > 0 ? allPerfDates : [null];
+
+			const baseArtist = {
 				id: es.artistId,
 				eventId,
 				artistName: snapshot.name || "FameLink Artist",
@@ -173,9 +236,6 @@ export async function GET(
 				isFameLinkSubmission: true,
 				eventShowId: es.id,
 				baseShowId: es.baseShowId,
-				// Performance scheduling (from overrides)
-				performanceDate: es.overrides?.performanceDate || null,
-				performance_date: es.overrides?.performanceDate || null,
 				performance_order: es.overrides?.performanceOrder ?? null,
 				performanceOrder: es.overrides?.performanceOrder ?? null,
 				performance_status: es.overrides?.performanceStatus ?? null,
@@ -196,31 +256,48 @@ export async function GET(
 				artistsPageColor: es.overrides?.artistsPageColor ?? null,
 				artists_page_tag: es.overrides?.artistsPageTag ?? null,
 				artistsPageTag: es.overrides?.artistsPageTag ?? null,
-				// Status
-				status:
-					participation?.status === "confirmed" ? "confirmed" : "pending",
+				status: participation?.status === "confirmed" ? "confirmed" : "pending",
 				createdAt: es.createdAt,
 				updatedAt: es.updatedAt,
-				// Show index
 				showIndex: showIndexByEventShowId.get(es.id) || 1,
 				totalShowsByArtist: showCountByArtist.get(es.artistId) || 1,
-				// Agreement — merge from EventArtistModel (stage manager edits) so dates etc. flow to artist side
-				agreement: (() => {
-					const artistEmail = (freshProfile?.email || "").toLowerCase().trim();
-					const draftRecord = draftById.get(es.artistId) || (artistEmail ? draftByEmail.get(artistEmail) : undefined);
-					return draftRecord?.agreement ?? snapshot.agreement ?? null;
-				})(),
+				agreement: resolvedAgreement,
 			};
 
-			// Skip if email already covered
-			if (
-				famelinkArtist.email &&
-				existingEmails.has(famelinkArtist.email.toLowerCase().trim())
-			) {
+			// If this FameLink artist matches a draft by email or id, mark the draft as confirmed
+			// instead of adding a duplicate record.
+			const matchesDraftByEmail = baseArtist.email && existingEmails.has(baseArtist.email.toLowerCase().trim());
+			const matchesDraftById = existingIds.has(es.artistId);
+			if (matchesDraftByEmail || matchesDraftById) {
+				const emailKey = baseArtist.email?.toLowerCase().trim();
+				// The event show was submitted for a specific date (overrideDate).
+				// Only mark the draft record whose performance_date matches that date.
+				// If the event show has no date, fall back to marking any matching draft.
+				const esDate = overrideDate || null;
+				for (const draft of draftArtists) {
+					const draftEmail = draft.email?.toLowerCase().trim();
+					const isMatch = draft.id === es.artistId || (emailKey && draftEmail === emailKey);
+					if (!isMatch) continue;
+					const draftDate = toYMD(draft.performance_date || draft.performanceDate || "");
+					// Only apply to the draft record for the same date, unless the event show has no date
+					if (esDate && draftDate && esDate !== draftDate) continue;
+					draft.isFameLinkSubmission = true;
+					draft.eventShowId = draft.eventShowId || es.id;
+					draft.baseShowId = draft.baseShowId || es.baseShowId;
+				}
 				continue;
 			}
 
-			fameLinkArtists.push(famelinkArtist);
+			// Expand: one record per performance date
+			datesToExpand.forEach((date, i) => {
+				fameLinkArtists.push({
+					...baseArtist,
+					id: i === 0 ? baseArtist.id : `${baseArtist.id}-day${i + 1}`,
+					eventShowId: i === 0 ? es.id : `${es.id}-day${i + 1}`,
+					performanceDate: date,
+					performance_date: date,
+				});
+			});
 		}
 
 		// ── 3. Merge draft + FameLink, preserving order (drafts first) ─────────

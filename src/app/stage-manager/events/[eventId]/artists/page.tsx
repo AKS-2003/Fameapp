@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { StagePositionPreview } from "@/components/StagePositionPreview";
 import { Button } from "@/components/ui/button";
@@ -3004,25 +3004,30 @@ export default function ArtistManagement({
 												>,
 											);
 
-										// Sort dates and create day labels
-										const sortedDates = Object.keys(
-											groupedArtists,
-										)
-											.filter(
-												(date) =>
-													date !== "unassigned",
-											)
-											.sort(
-												(a, b) =>
-													new Date(a).getTime() -
-													new Date(b).getTime(),
-											);
+										// Build the master list of ALL event days (from showDates), sorted
+										const eventShowDates: string[] = (event?.showDates || [])
+											.map((d: string) => {
+												try { return new Date(d).toISOString().split("T")[0]; } catch { return d; }
+											})
+											.filter(Boolean);
+										const sortedEventDates = [...eventShowDates].sort(
+											(a, b) => new Date(a).getTime() - new Date(b).getTime()
+										);
+										const eventDayMap = new Map<string, number>();
+										sortedEventDates.forEach((d, i) => eventDayMap.set(d, i + 1));
 
-										return sortedDates.map(
+										// Also include any assigned dates not in showDates (edge case)
+										const assignedOnlyDates = Object.keys(groupedArtists)
+											.filter(d => d !== "unassigned" && !eventDayMap.has(d))
+											.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+										const allDatesToShow = [...sortedEventDates, ...assignedOnlyDates];
+
+										return allDatesToShow.map(
 											(date, index) => {
-												const dayNumber = index + 1;
+												const dayNumber = eventDayMap.get(date) ?? (sortedEventDates.length + assignedOnlyDates.indexOf(date) + 1);
 												const artistsForDate =
-													groupedArtists[date];
+													groupedArtists[date] || [];
 
 												// Apply search and sort to artists for this date
 												const filteredAndSortedArtists =
@@ -3102,8 +3107,11 @@ export default function ArtistManagement({
 																		</div>
 																	)}
 															</div>
-															{/* Action buttons for this date */}
-															<div className="flex items-center gap-2 flex-wrap">
+															{/* Empty day placeholder */}
+															{artistsForDate.length === 0 && (
+																<div className="text-sm text-muted-foreground italic py-1">No artists assigned yet</div>
+															)}
+															{artistsForDate.length > 0 && <div className="flex items-center gap-2 flex-wrap">
 																{/* Select/Deselect All Button */}
 																<Button
 																	variant="outline"
@@ -3342,7 +3350,7 @@ export default function ArtistManagement({
 																		<Maximize2 className="h-4 w-4" />
 																	)}
 																</Button>
-															</div>
+															</div>}
 														</div>
 
 														{/* Search and Sort Controls */}
@@ -3464,17 +3472,8 @@ export default function ArtistManagement({
 															</div>
 														</div>
 
-														{/* Artists Table for this day - with scroll for more than 5 artists */}
-														<div
-															className={`border rounded-lg ${fullscreenDay ===
-																date
-																? "flex-1 overflow-y-auto"
-																: filteredAndSortedArtists.length >
-																	5
-																	? "max-h-[400px] overflow-y-auto"
-																	: ""
-																}`}
-														>
+														{/* Artists Table */}
+														<div className={fullscreenDay === date ? "border rounded-lg flex-1 overflow-y-auto" : filteredAndSortedArtists.length > 5 ? "border rounded-lg max-h-[400px] overflow-y-auto" : "border rounded-lg"}>
 															<Table>
 																<TableHeader className="sticky top-0 bg-white z-10">
 																	<TableRow>
@@ -3723,6 +3722,18 @@ export default function ArtistManagement({
 																												}
 																											</Badge>
 																										)}
+																									{/* Show info submission status badge */}
+																									{artist.baseShowId ? (
+																										<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 border border-green-300">
+																											<CheckCircle className="h-3 w-3" />
+																											Confirmed show info
+																										</span>
+																									) : (
+																										<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 border border-gray-200">
+																											<Clock className="h-3 w-3" />
+																											Show info not shared yet
+																										</span>
+																									)}
 																								</span>
 																							</div>
 																						</TableCell>

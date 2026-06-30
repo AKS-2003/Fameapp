@@ -52,7 +52,6 @@ import {
 	Clock,
 	Eye,
 	Share2,
-	Link2,
 	Send,
 	Lock,
 	Download,
@@ -462,12 +461,14 @@ interface EventParticipationWithEvent {
 		performanceDate: string | null;
 	}>;
 	showCount?: number;
+	performanceDates?: string[]; // YYYY-MM-DD dates from contract performances
 	event?: {
 		id: string;
 		name: string;
 		venueName: string;
 		startDate: string;
 		endDate: string;
+		showDates?: string[];
 		contractEnabled?: boolean;
 		logisticsEnabled?: boolean;
 		showInfoEnabled?: boolean;
@@ -556,15 +557,6 @@ function FameLinkDashboardContent() {
 
 	// Share link state
 	const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
-	const [shareDialogOpen, setShareDialogOpen] = useState(false);
-	const [shareShow, setShareShow] = useState<BaseShow | null>(null);
-	const [shareForm, setShareForm] = useState({
-		organizerName: "",
-		organizerEmail: "",
-		eventDate: "",
-		expiryDate: "",
-	});
-	const [creatingLink, setCreatingLink] = useState(false);
 	const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
 	// Edit event request dialog state
@@ -684,6 +676,7 @@ function FameLinkDashboardContent() {
 
 	// Onboarding flow modal state
 	const [onboardingOpen, setOnboardingOpen] = useState(false);
+	const [shareModalOpen, setShareModalOpen] = useState(false);
 	// Dismissed is stored in localStorage so it persists across reloads, keyed by artistId
 	const onboardingStorageKey = `onboarding_dismissed_${artistId}`;
 	const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
@@ -1220,18 +1213,6 @@ function FameLinkDashboardContent() {
 		}
 	};
 
-	const openShareDialog = (show: BaseShow | null) => {
-		// If no show passed but user only has one show, auto-select it
-		const selectedShow = show || (shows.length === 1 ? shows[0] : null);
-		setShareShow(selectedShow);
-		setShareForm({
-			organizerName: "",
-			organizerEmail: "",
-			eventDate: "",
-			expiryDate: "",
-		});
-		setShareDialogOpen(true);
-	};
 
 	const toggleShowSelection = (requestId: string, showId: string) => {
 		setSelectedShowIds((prev) => {
@@ -1385,77 +1366,6 @@ function FameLinkDashboardContent() {
 		}
 	};
 
-	const handleCreateShareLink = async () => {
-		if (
-			!shareShow ||
-			!shareForm.organizerName.trim() ||
-			!shareForm.eventDate
-		)
-			return;
-		// Validate event date is today or in the future
-		const today = getTodayDateString();
-		if (shareForm.eventDate < today) {
-			toast({
-				title: "Invalid Date",
-				description: "Event date must be today or in the future",
-				variant: "destructive",
-			});
-			return;
-		}
-		// Validate expiry date is at least 1 day after event date
-		if (
-			shareForm.expiryDate &&
-			shareForm.expiryDate <= shareForm.eventDate
-		) {
-			toast({
-				title: "Invalid Date",
-				description:
-					"Link valid until date must be at least 1 day after the event date",
-				variant: "destructive",
-			});
-			return;
-		}
-		setCreatingLink(true);
-		try {
-			const response = await fetch("/api/shows/share-links", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					showId: shareShow.id,
-					showName: shareShow.name,
-					showSlug: shareShow.slug,
-					organizerName: shareForm.organizerName,
-					organizerEmail: shareForm.organizerEmail,
-					eventDate: shareForm.eventDate,
-					expiryDate: shareForm.expiryDate,
-				}),
-			});
-			const result = await response.json();
-			if (result.success) {
-				setShareLinks([...shareLinks, result.data.link]);
-				setShareDialogOpen(false);
-				toast({
-					title: "Link Created!",
-					description: "Share link has been created successfully",
-				});
-			} else {
-				toast({
-					title: "Error",
-					description:
-						result.error?.message || "Failed to create link",
-					variant: "destructive",
-				});
-			}
-		} catch (error) {
-			toast({
-				title: "Error",
-				description: "Failed to create share link",
-				variant: "destructive",
-			});
-		} finally {
-			setCreatingLink(false);
-		}
-	};
 
 	const copyShareLink = (link: ShareLink) => {
 		const url = `${window.location.origin}/show/${link.showSlug}`;
@@ -2052,7 +1962,12 @@ function FameLinkDashboardContent() {
 							artistId={artistId}
 							shows={shows}
 							pendingRequests={eventRequests.filter((r) => r.status === "pending")}
-						pendingParticipations={eventParticipations.filter((p) => p.status === "pending" && ((p as any).showCount ?? 0) === 0)}
+						pendingParticipations={eventParticipations.filter((p) => {
+									const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+									const submitted = (p as any).showCount ?? 0;
+									// Show if there are unfilled slots, or no slots defined but no show submitted yet
+									return perfSlots > 0 ? submitted < perfSlots : submitted === 0;
+								})}
 
 							hasLogistics={false}
 							onOpenModal={() => setOnboardingOpen(true)}
@@ -2371,7 +2286,7 @@ function FameLinkDashboardContent() {
 																<Link href={`/famelink/${artistId}/shows/${show.id}/edit`} className="flex items-center gap-1.5 text-[13px] font-semibold text-white hover:text-purple-300 transition-colors">
 																	<Edit className="h-4 w-4 text-[#a491b5]" /> Edit
 																</Link>
-																<button onClick={() => openShareDialog(show)} className="flex items-center gap-1.5 text-[13px] font-semibold text-[#f472b6] hover:text-[#fbcfe8] transition-colors">
+																<button onClick={() => setShareModalOpen(true)} className="flex items-center gap-1.5 text-[13px] font-semibold text-[#f472b6] hover:text-[#fbcfe8] transition-colors">
 																	<Share2 className="h-4 w-4" /> Share
 																</button>
 															</div>
@@ -3284,13 +3199,23 @@ function FameLinkDashboardContent() {
 																			<Badge className="bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/20 border-0 text-[11px] font-medium px-2 py-0.5 rounded shadow-none">Waiting</Badge>
 																		)}
 																	</div>
-																	<div className="flex items-center gap-5 text-xs text-gray-400 font-medium mt-3">
+																	<div className="flex items-center gap-3 text-xs text-gray-400 font-medium mt-3 flex-wrap">
 																		{p.event?.startDate && (
 																			<span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 opacity-70" />{getDisplayDate(p.event.startDate, p.event.endDate)}</span>
 																		)}
 																		{p.event?.venueName && (
 																			<span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 opacity-70" />{p.event.venueName}</span>
 																		)}
+																		{/* Performance count badge */}
+																		{(() => {
+																			const perfCount = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+																			return perfCount > 0 ? (
+																				<span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/25 text-[10px] font-bold">
+																					<Music className="h-2.5 w-2.5" />
+																					{perfCount} perf{perfCount > 1 ? "s" : ""}
+																				</span>
+																			) : null;
+																		})()}
 																	</div>
 																</div>
 
@@ -3401,9 +3326,7 @@ function FameLinkDashboardContent() {
 									</p>
 								</div>
 								<Button
-									onClick={() => {
-										if (shows.length > 0) openShareDialog(null);
-									}}
+									onClick={() => setShareModalOpen(true)}
 									className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl gap-2 shadow-lg shadow-purple-500/20 transition-all duration-300 hover:shadow-purple-500/40 hover:-translate-y-0.5 w-full sm:w-auto shrink-0"
 									disabled={shows.length === 0}
 								>
@@ -3736,229 +3659,6 @@ function FameLinkDashboardContent() {
 					</DialogContent>
 				</Dialog>
 
-				{/* ── Share Dialog ────────────────────────────────── */}
-				<Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-					<DialogContent className="bg-[#0f0b20] border border-purple-500/20 text-white max-w-lg rounded-2xl shadow-2xl shadow-purple-500/10">
-						<DialogHeader>
-							<DialogTitle className="text-xl text-white">
-								Send Show Info
-							</DialogTitle>
-							<DialogDescription className="text-purple-200/40">
-								Create a shareable link for an organizer to view
-								this show's details.
-							</DialogDescription>
-						</DialogHeader>
-						<div className="space-y-5 mt-4">
-							<div className="space-y-2">
-								<Label className="text-white font-medium text-sm">
-									Organizer name{" "}
-									<span className="text-pink-400">*</span>
-								</Label>
-								<Input
-									value={shareForm.organizerName}
-									onChange={(e) =>
-										setShareForm({
-											...shareForm,
-											organizerName: e.target.value,
-										})
-									}
-									placeholder="Enter organizer name"
-									className="border-white/10 text-white rounded-xl placeholder:text-purple-300/30 focus:border-purple-400/50 focus:ring-purple-400/20"
-									style={{ background: "rgba(255,255,255,0.05)" }}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-white font-medium text-sm">
-									Organizer email{" "}
-									<span className="text-purple-300/40">
-										(optional)
-									</span>
-								</Label>
-								<Input
-									type="email"
-									value={shareForm.organizerEmail}
-									onChange={(e) =>
-										setShareForm({
-											...shareForm,
-											organizerEmail: e.target.value,
-										})
-									}
-									placeholder="Enter organizer email"
-									className="border-white/10 text-white rounded-xl placeholder:text-purple-300/30 focus:border-purple-400/50 focus:ring-purple-400/20"
-									style={{
-										background: "rgba(255,255,255,0.05)",
-										colorScheme: "dark",
-									}}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-white font-medium text-sm">
-									Select show{" "}
-									<span className="text-pink-400">*</span>
-								</Label>
-								{shows.length <= 1 ? (
-									<Input
-										value={
-											shareShow?.name || shows[0]?.name || ""
-										}
-										disabled
-										className="bg-white/3 border-white/5 text-purple-200/60 rounded-xl"
-									/>
-								) : (
-									<select
-										value={shareShow?.id || ""}
-										onChange={(e) => {
-											const selected = shows.find(
-												(s) => s.id === e.target.value,
-											);
-											setShareShow(selected || null);
-										}}
-										className="w-full h-11 px-3 bg-white/5 border border-white/10 text-white rounded-xl focus:border-purple-400/50 focus:ring-purple-400/20 focus:outline-none cursor-pointer"
-										style={{ colorScheme: "dark" }}
-									>
-										<option
-											value=""
-											disabled
-											className="bg-[#0f0b20] text-gray-400"
-										>
-											Choose a show...
-										</option>
-										{shows.map((s) => (
-											<option
-												key={s.id}
-												value={s.id}
-												className="bg-[#0f0b20] text-white"
-											>
-												{s.name}
-												{s.style ? ` · ${s.style}` : ""}
-											</option>
-										))}
-									</select>
-								)}
-							</div>
-							<div className="space-y-2">
-								<Label className="text-white font-medium text-sm">
-									Date of event{" "}
-									<span className="text-pink-400">*</span>
-								</Label>
-								<div className="relative">
-									<CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-300/40" />
-									<Input
-										type="date"
-										value={shareForm.eventDate}
-										min={getTodayDateString()}
-										onChange={(e) => {
-											const newEventDate = e.target.value;
-											const newForm = {
-												...shareForm,
-												eventDate: newEventDate,
-											};
-											if (
-												newEventDate &&
-												newForm.expiryDate &&
-												newForm.expiryDate <= newEventDate
-											) {
-												newForm.expiryDate =
-													getDatePlusDays(
-														newEventDate,
-														1,
-													);
-											}
-											setShareForm(newForm);
-										}}
-										className="border-white/10 text-white pl-10 rounded-xl focus:border-purple-400/50 focus:ring-purple-400/20"
-										style={{
-											background: "rgba(255,255,255,0.05)",
-											colorScheme: "dark",
-										}}
-									/>
-								</div>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-white font-medium text-sm">
-									Date of request send{" "}
-									<span className="text-pink-400">*</span>
-								</Label>
-								<div className="relative">
-									<CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-300/40" />
-									<Input
-										value={new Date().toLocaleDateString(
-											"en-US",
-											{
-												month: "long",
-												day: "numeric",
-												year: "numeric",
-											},
-										)}
-										disabled
-										className="bg-white/3 border-white/5 text-purple-200/60 pl-10 rounded-xl"
-									/>
-								</div>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-white font-medium text-sm flex items-center gap-2">
-									<Lock className="h-4 w-4 text-purple-300/40" />
-									Link valid until
-								</Label>
-								<p className="text-xs text-purple-200/30">
-									The organizer won't be able to access the show
-									details after this date.
-								</p>
-								<div className="relative">
-									<CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-300/40" />
-									<Input
-										type="date"
-										value={shareForm.expiryDate}
-										min={
-											shareForm.eventDate
-												? getDatePlusDays(
-													shareForm.eventDate,
-													1,
-												)
-												: getTodayDateString()
-										}
-										onChange={(e) =>
-											setShareForm({
-												...shareForm,
-												expiryDate: e.target.value,
-											})
-										}
-										className="border-white/10 text-white pl-10 rounded-xl focus:border-purple-400/50 focus:ring-purple-400/20"
-										style={{
-											background: "rgba(255,255,255,0.05)",
-											colorScheme: "dark",
-										}}
-									/>
-								</div>
-							</div>
-							<div className="flex gap-3 pt-2">
-								<Button
-									onClick={handleCreateShareLink}
-									disabled={
-										creatingLink ||
-										!shareShow ||
-										!shareForm.organizerName.trim() ||
-										!shareForm.eventDate
-									}
-									className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl gap-2 shadow-lg shadow-purple-500/20 transition-all duration-300 disabled:opacity-40 disabled:shadow-none"
-								>
-									{creatingLink ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : (
-										<Link2 className="h-4 w-4" />
-									)}
-									Create Link
-								</Button>
-								<Button
-									onClick={() => setShareDialogOpen(false)}
-									className="bg-white/5 hover:bg-white/10 border border-white/10 text-purple-200 rounded-xl transition-all duration-200"
-								>
-									Cancel
-								</Button>
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
 
 				{/* ── Edit Event Request Dialog ──────────────────── */}
 				<Dialog
@@ -4233,13 +3933,18 @@ function FameLinkDashboardContent() {
 					</DialogContent>
 				</Dialog>
 
-				{/* ── Onboarding Flow Modal ──────────────────────── */}
+				{/* ── Onboarding Flow Modal (auto-open for new artists) ── */}
 				{onboardingOpen && profile && (
 					<OnboardingFlowModal
 						artistId={artistId}
 						shows={shows}
 						pendingRequests={eventRequests.filter((r) => r.status === "pending")}
-						pendingParticipations={eventParticipations.filter((p) => p.status === "pending" && ((p as any).showCount ?? 0) === 0)}
+						pendingParticipations={eventParticipations.filter((p) => {
+									const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+									const submitted = (p as any).showCount ?? 0;
+									// Show if there are unfilled slots, or no slots defined but no show submitted yet
+									return perfSlots > 0 ? submitted < perfSlots : submitted === 0;
+								})}
 						hasLogistics={false}
 						onDismiss={() => {
 							setOnboardingOpen(false);
@@ -4251,6 +3956,33 @@ function FameLinkDashboardContent() {
 							router.push(`/famelink/${artistId}/shows/create`);
 						}}
 						onRequestResponded={() => {
+							fetchEventRequests();
+							fetchEventParticipations();
+						}}
+					/>
+				)}
+
+				{/* ── Share Modal (opened from Share button on show cards) ── */}
+				{shareModalOpen && profile && (
+					<OnboardingFlowModal
+						artistId={artistId}
+						shows={shows}
+						pendingRequests={eventRequests.filter((r) => r.status === "pending")}
+						pendingParticipations={eventParticipations.filter((p) => {
+									const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+									const submitted = (p as any).showCount ?? 0;
+									// Show if there are unfilled slots, or no slots defined but no show submitted yet
+									return perfSlots > 0 ? submitted < perfSlots : submitted === 0;
+								})}
+						hasLogistics={false}
+						initialStep="share_where"
+						onDismiss={() => setShareModalOpen(false)}
+						onShowCreated={() => {
+							setShareModalOpen(false);
+							router.push(`/famelink/${artistId}/shows/create`);
+						}}
+						onRequestResponded={() => {
+							setShareModalOpen(false);
 							fetchEventRequests();
 							fetchEventParticipations();
 						}}

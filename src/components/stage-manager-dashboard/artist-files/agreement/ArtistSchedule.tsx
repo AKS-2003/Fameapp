@@ -42,6 +42,51 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [eventDates, setEventDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!eventId) return;
+    fetch(`/api/events/${eventId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const ev = d.data;
+        if (!ev) return;
+        // Collect all show/performance dates from the event
+        const dates: string[] = [];
+        if (ev.showDates?.length) {
+          ev.showDates.forEach((d: string) => { if (d) dates.push(d); });
+        } else if (ev.requestedShowDates?.length) {
+          ev.requestedShowDates.forEach((d: string) => { if (d) dates.push(d); });
+        }
+        // Fallback: build range from startDate → endDate
+        if (dates.length === 0 && ev.startDate) {
+          const start = new Date(ev.startDate);
+          const end = ev.endDate ? new Date(ev.endDate) : start;
+          for (let cur = new Date(start); cur <= end; cur.setDate(cur.getDate() + 1)) {
+            dates.push(new Date(cur).toISOString().substring(0, 10));
+          }
+        }
+        // Normalize to YYYY-MM-DD, dropping unparseable values
+        const toYMD = (raw: string): string | null => {
+          if (!raw) return null;
+          // Already YYYY-MM-DD
+          if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+          // Full ISO — strip time part using UTC
+          const iso = raw.substring(0, 10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+          // Try generic parse
+          const p = new Date(raw);
+          if (isNaN(p.getTime())) return null;
+          const y = p.getFullYear();
+          const mo = String(p.getMonth() + 1).padStart(2, "0");
+          const dy = String(p.getDate()).padStart(2, "0");
+          return `${y}-${mo}-${dy}`;
+        };
+        const normalized = [...new Set(dates)].map(toYMD).filter(Boolean) as string[];
+        setEventDates(normalized);
+      })
+      .catch(() => {});
+  }, [eventId]);
   const [workshopsStatus, setWorkshopsStatus] = useState<SectionItemStatus>(
     (artist.sectionStatuses?.["workshops"] as SectionItemStatus) ?? "required"
   );
@@ -246,14 +291,29 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
               </div>
               <div className="flex gap-3 flex-col md:flex-row">
                 <div className="relative flex-1">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input 
-                    disabled={!isEditing}
-                    value={item.date}
-                    onChange={(e) => updateItem('workshops', item.id, { date: e.target.value })}
-                    placeholder="Date (e.g., April 10th, 2026)"
-                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-10 pr-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
-                  />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                  {isEditing && eventDates.length > 0 ? (
+                    <select
+                      value={item.date}
+                      onChange={(e) => updateItem('workshops', item.id, { date: e.target.value })}
+                      className="w-full h-10 rounded-lg bg-slate-50 border border-pink-300 pl-10 pr-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/20 outline-none appearance-none cursor-pointer"
+                    >
+                      <option value="">Select a date...</option>
+                      {eventDates.map((d) => (
+                        <option key={d} value={d}>
+                          {(() => { const parts = d.split("-"); if (parts.length < 3) return d; const dt = new Date(+parts[0], +parts[1] - 1, +parts[2]); return isNaN(dt.getTime()) ? d : dt.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" }); })()}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      disabled={!isEditing}
+                      value={item.date}
+                      onChange={(e) => updateItem('workshops', item.id, { date: e.target.value })}
+                      placeholder="Date (e.g., April 10th, 2026)"
+                      className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-10 pr-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
+                    />
+                  )}
                 </div>
                 <div className="relative w-full md:w-32">
                   <input 
@@ -377,14 +437,29 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
               </div>
               <div className="flex gap-3 flex-col md:flex-row">
                 <div className="relative flex-1">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input 
-                    disabled={!isEditing}
-                    value={item.date}
-                    onChange={(e) => updateItem('performances', item.id, { date: e.target.value })}
-                    placeholder="Date (e.g., April 11th, 2026)"
-                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-10 pr-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
-                  />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                  {isEditing && eventDates.length > 0 ? (
+                    <select
+                      value={item.date}
+                      onChange={(e) => updateItem('performances', item.id, { date: e.target.value })}
+                      className="w-full h-10 rounded-lg bg-slate-50 border border-pink-300 pl-10 pr-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/20 outline-none appearance-none cursor-pointer"
+                    >
+                      <option value="">Select a date...</option>
+                      {eventDates.map((d) => (
+                        <option key={d} value={d}>
+                          {(() => { const parts = d.split("-"); if (parts.length < 3) return d; const dt = new Date(+parts[0], +parts[1] - 1, +parts[2]); return isNaN(dt.getTime()) ? d : dt.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" }); })()}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      disabled={!isEditing}
+                      value={item.date}
+                      onChange={(e) => updateItem('performances', item.id, { date: e.target.value })}
+                      placeholder="Date (e.g., April 11th, 2026)"
+                      className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-10 pr-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
+                    />
+                  )}
                 </div>
                 <div className="relative w-full md:w-32">
                   <input 
