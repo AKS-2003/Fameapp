@@ -39,6 +39,7 @@ import Logistics from "./Logistics";
 import WorkshopCreator from "./WorkshopCreator";
 import CreateEvent from "./CreateEvent";
 import ProfilePage from "@/app/stage-manager/profile/page";
+import EventOverview from "./EventOverview";
 
 
 interface StageManagerUser {
@@ -67,6 +68,7 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 		const tab = searchParams.get("tab");
 		if (
 			tab === "Dashboard" ||
+			tab === "Event Dashboard" ||
 			tab === "Artist Files" ||
 			tab === "Cost Analysis" ||
 			tab === "Logistics" ||
@@ -80,7 +82,7 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 		) {
 			return tab;
 		}
-		return initialEventId ? "Show Management" : "Dashboard";
+		return initialEventId ? "Event Dashboard" : "Dashboard";
 	});
 
 	useEffect(() => {
@@ -296,6 +298,133 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 		);
 	}
 
+	if (!selectedEventId && activeTab !== "Create Event" && activeTab !== "Settings") {
+		return (
+			<NotificationProvider userRole="stage-manager">
+				<div className="min-h-screen bg-[#f6f5fb] text-slate-950">
+					<div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4 md:px-8">
+						<div className="flex items-center gap-2">
+							<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-violet-600 text-white font-bold text-xs shadow">
+								FM
+							</div>
+							<span className="font-bold text-slate-800">FameManager</span>
+						</div>
+						<div className="flex items-center gap-3">
+							<Button
+								onClick={() => setActiveTab("Create Event")}
+								className="h-10 rounded-2xl bg-fuchsia-600 px-5 text-white hover:bg-fuchsia-700"
+							>
+								<Plus className="mr-2 h-4 w-4" />
+								Create Event
+							</Button>
+							<Button
+								variant="outline"
+								onClick={handleLogout}
+								className="h-10 rounded-2xl border-slate-200 px-5"
+							>
+								<LogOut className="mr-2 h-4 w-4" />
+								Sign out
+							</Button>
+						</div>
+					</div>
+
+					<div className="px-4 py-6 md:px-8">
+						<div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+							<div>
+								<div className="flex items-center gap-3">
+									<CalendarDays className="h-6 w-6 text-fuchsia-600" />
+									<h1 className="text-3xl font-semibold tracking-tight">
+										Select an Event
+									</h1>
+									<Badge className="rounded-full bg-slate-200 px-3 py-1 text-slate-700 hover:bg-slate-200">
+										{filteredEvents.length}
+									</Badge>
+								</div>
+								<p className="mt-2 text-sm text-slate-500">
+									{`${displayName}${user?.email ? ` - ${user.email}` : ""}`}
+								</p>
+							</div>
+						</div>
+
+						{eventsLoading ? (
+							<div className="flex min-h-[360px] items-center justify-center rounded-[28px] border border-slate-200 bg-white">
+								<div className="text-center">
+									<Loader2 className="mx-auto mb-3 h-10 w-10 animate-spin text-fuchsia-600" />
+									<p className="text-sm text-slate-500">
+										Loading your events...
+									</p>
+								</div>
+							</div>
+						) : filteredEvents.length === 0 ? (
+							<div className="rounded-[28px] border border-dashed border-slate-300 bg-white p-12 text-center">
+								<h2 className="text-2xl font-semibold">
+									{events.length === 0
+										? "No events yet"
+										: "No events match your search"}
+								</h2>
+								<p className="mt-3 text-slate-500">
+									{events.length === 0
+										? "Create your first event from the top right button."
+										: "Try a different search term to find your event."}
+								</p>
+							</div>
+						) : (
+							<div className="grid grid-cols-1 gap-6 xl:grid-cols-2 2xl:grid-cols-3">
+								{filteredEvents.map((event) => (
+									<StageManagerEventCard
+										key={event.id}
+										event={event}
+										onDelete={handleDeleteClick}
+										manageButtonText="Manage Event"
+										onManage={(evt) => {
+											setSelectedEventId(evt.id);
+											setActiveTab("Event Dashboard");
+										}}
+										onEdit={(evt) => {
+											setSelectedEventId(evt.id);
+											setActiveTab("Create Event");
+										}}
+									/>
+								))}
+							</div>
+						)}
+					</div>
+				</div>
+
+				<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle className="flex items-center">
+								<AlertTriangle className="mr-2 h-5 w-5 text-red-600" />
+								Delete Event
+							</DialogTitle>
+							<DialogDescription>
+								Are you sure you want to delete "{eventToDelete?.name}"?
+								This action cannot be undone.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter>
+							<Button
+								variant="outline"
+								onClick={() => setDeleteDialogOpen(false)}
+								disabled={deleting}
+							>
+								Cancel
+							</Button>
+							<Button
+								variant="destructive"
+								onClick={handleDeleteConfirm}
+								disabled={deleting}
+							>
+								{deleting ? "Deleting..." : "Delete Event"}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			</NotificationProvider>
+		);
+	}
+
 	return (
 		<NotificationProvider userRole="stage-manager">
 			<div className="fixed inset-0 overflow-hidden bg-[#f6f5fb] text-slate-950 flex">
@@ -314,19 +443,13 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 						selectedEventId={selectedEventId}
 						onSelectEvent={(id) => {
 							setSelectedEventId(id);
-							if (id) {
-								if (activeTab === "Dashboard") {
-									setActiveTab("Show Management");
-								}
-							} else {
-								setActiveTab("Dashboard");
-							}
+							setActiveTab(id ? "Event Dashboard" : "Dashboard");
 						}}
 						artists={allArtists}
 						onSelectSearchResult={(type, id, eventId) => {
 							if (type === "event") {
 								setSelectedEventId(id);
-								setActiveTab("Show Management");
+								setActiveTab("Event Dashboard");
 								setSearch("");
 							} else if (type === "artist") {
 								if (eventId) {
@@ -348,82 +471,8 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 					/>
 
 					<div className="flex-1 overflow-y-auto overscroll-none px-4 py-5 md:px-5">
-						{(activeTab === "Dashboard" || (!selectedEventId && activeTab !== "Create Event" && activeTab !== "Settings")) && (
-							<>
-								<div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-									<div>
-										<div className="flex items-center gap-3">
-											<CalendarDays className="h-6 w-6 text-fuchsia-600" />
-											<h1 className="text-3xl font-semibold tracking-tight">
-												{activeTab === "Dashboard" ? "My Events" : "Please Select an Event"}
-											</h1>
-											<Badge className="rounded-full bg-slate-200 px-3 py-1 text-slate-700 hover:bg-slate-200">
-												{filteredEvents.length}
-											</Badge>
-										</div>
-										<p className="mt-2 text-sm text-slate-500">
-											{activeTab === "Dashboard" 
-												? `${displayName}${user?.email ? ` - ${user.email}` : ""}`
-												: `Choose an event to access the ${activeTab} section.`}
-										</p>
-									</div>
-
-									<div className="flex items-center gap-3">
-										<Button
-											onClick={() => setActiveTab("Create Event")}
-											className="h-10 rounded-2xl bg-fuchsia-600 px-5 text-white hover:bg-fuchsia-700"
-										>
-											<Plus className="mr-2 h-4 w-4" />
-											Create Event
-										</Button>
-									</div>
-								</div>
-
-								{eventsLoading ? (
-									<div className="flex min-h-[360px] items-center justify-center rounded-[28px] border border-slate-200 bg-white">
-										<div className="text-center">
-											<Loader2 className="mx-auto mb-3 h-10 w-10 animate-spin text-fuchsia-600" />
-											<p className="text-sm text-slate-500">
-												Loading your events...
-											</p>
-										</div>
-									</div>
-								) : filteredEvents.length === 0 ? (
-									<div className="rounded-[28px] border border-dashed border-slate-300 bg-white p-12 text-center">
-										<h2 className="text-2xl font-semibold">
-											{events.length === 0
-												? "No events yet"
-												: "No events match your search"}
-										</h2>
-										<p className="mt-3 text-slate-500">
-											{events.length === 0
-												? "Create your first event from the top right button."
-												: "Try a different search term to find your event."}
-										</p>
-									</div>
-								) : (
-									<div className="grid grid-cols-1 gap-6 xl:grid-cols-2 2xl:grid-cols-3">
-										{filteredEvents.map((event) => (
-											<StageManagerEventCard
-												key={event.id}
-												event={event}
-												onDelete={handleDeleteClick}
-												manageButtonText={activeTab === "Dashboard" ? "Manage Event" : "Select this Event"}
-												onManage={(evt) => {
-													setSelectedEventId(evt.id);
-													if (activeTab === "Dashboard") {
-														setActiveTab("Show Management");
-													}
-												}}
-												onEdit={(evt) => {
-													setSelectedEventId(evt.id);
-													setActiveTab("Create Event");
-												}}
-											/>
-										))}
-									</div>
-								)}
-							</>
+						{activeTab === "Event Dashboard" && selectedEventId && (
+							<EventOverview providedEventId={selectedEventId} onSelectTab={setActiveTab} />
 						)}
 						{activeTab === "Show Management" && selectedEventId && (
 							<div className="rounded-[28px] bg-white shadow-sm overflow-hidden min-h-[calc(100vh-120px)] relative">
@@ -461,13 +510,13 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 							<Communication providedEventId={selectedEventId} />
 						)}
 						{activeTab === "Artist Files" && selectedEventId && (
-							<ArtistFiles 
-								providedEventId={selectedEventId} 
+							<ArtistFiles
+								providedEventId={selectedEventId}
 								eventData={events.find(e => e.id === selectedEventId)}
 								onBack={() => {
 									setSelectedSearchArtistId(null);
-									setActiveTab("Dashboard");
-								}} 
+									setActiveTab("Event Dashboard");
+								}}
 								initialArtistId={selectedSearchArtistId}
 							/>
 						)}
@@ -500,9 +549,9 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 								<ProfilePage isDashboardTab={true} />
 							</div>
 						)}
+					</div>
 				</div>
 			</div>
-		</div>
 
 			<UpgradeModal
 				open={upgradeModalOpen}

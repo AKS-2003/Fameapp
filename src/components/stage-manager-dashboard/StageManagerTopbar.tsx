@@ -53,7 +53,7 @@ function getInitials(name: string) {
 }
 
 const NAV_TABS = [
-	{ label: "Dashboard", icon: LayoutGrid, subItems: [] },
+	{ label: "Event Dashboard", icon: LayoutGrid, subItems: [] },
 	{ label: "Artist Files", icon: Briefcase, subItems: [{ label: "Cost Analysis", icon: BarChart2 }] },
 	{ label: "Logistics", icon: Truck, subItems: [{ label: "Workshop Creator", icon: Briefcase }] },
 	{ label: "Show Management", icon: Music, subItems: [{ label: "Confirmed Artists", icon: Users }] },
