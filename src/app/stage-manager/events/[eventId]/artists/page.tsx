@@ -214,6 +214,30 @@ interface Artist {
 	baseShowId?: string; // BaseShow ID for FameLink edit navigation
 	showIndex?: number; // Which show number this is (1-based) for multi-show artists
 	totalShowsByArtist?: number; // Total shows this artist submitted to this event
+	agreement?: any; // Agreement data (schedule, performances, etc.) merged in from /api/contracts/{eventId}
+}
+
+/** Normalize a date-ish string to YYYY-MM-DD for matching, or "" if unparseable. */
+function toYMD(raw?: string): string {
+	if (!raw) return "";
+	if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+	const iso = raw.substring(0, 10);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+	const p = new Date(raw);
+	if (isNaN(p.getTime())) return "";
+	const y = p.getFullYear();
+	const mo = String(p.getMonth() + 1).padStart(2, "0");
+	const dy = String(p.getDate()).padStart(2, "0");
+	return `${y}-${mo}-${dy}`;
+}
+
+/** Find the agreement's performance entry (show name/time/location/notes) matching a given date. */
+function findAgreementPerformance(agreement: any, date?: string | null): any | null {
+	const performances = agreement?.schedule?.performances;
+	if (!Array.isArray(performances) || !date) return null;
+	const target = toYMD(date);
+	if (!target) return null;
+	return performances.find((p: any) => toYMD(p.date) === target) || null;
 }
 
 export default function ArtistManagement({
@@ -237,6 +261,9 @@ export default function ArtistManagement({
 
 	const [event, setEvent] = useState<Event | null>(null);
 	const [artists, setArtists] = useState<Artist[]>([]);
+	// Agreement data (schedule/performances) keyed by artist id/email, used to show
+	// each artist's assigned show name/duration in the "Assigned Artists" table.
+	const [agreementByArtistKey, setAgreementByArtistKey] = useState<Map<string, any>>(new Map());
 	const [loading, setLoading] = useState(true);
 	const [wsConnected, setWsConnected] = useState(false);
 	const [wsInitialized, setWsInitialized] = useState(false);
@@ -689,6 +716,7 @@ export default function ArtistManagement({
 		if (eventId && hasAccess && !accessLoading) {
 			fetchEvent();
 			fetchArtists();
+			fetchAgreementsForArtists();
 			// Initialize WebSocket connection for real-time updates
 			initializeWebSocket();
 
@@ -700,6 +728,27 @@ export default function ArtistManagement({
 			return () => clearInterval(pollingInterval);
 		}
 	}, [eventId, hasAccess, accessLoading]);
+
+	// Fetch agreement data (schedule/performances) for all artists in this event,
+	// so the Assigned Artists table can show each show's name/duration when set.
+	const fetchAgreementsForArtists = async () => {
+		try {
+			const response = await fetch(`/api/contracts/${eventId}`);
+			if (!response.ok) return;
+			const data = await response.json();
+			const contractArtists: any[] = data?.artists || [];
+			const map = new Map<string, any>();
+			contractArtists.forEach((a: any) => {
+				if (a.agreement) {
+					if (a.id) map.set(a.id, a.agreement);
+					if (a.email) map.set(a.email.toLowerCase().trim(), a.agreement);
+				}
+			});
+			setAgreementByArtistKey(map);
+		} catch (error) {
+			console.error("Error fetching agreements for artists:", error);
+		}
+	};
 
 	useEffect(() => {
 		// Listen for WebSocket toast events
@@ -1957,6 +2006,33 @@ export default function ArtistManagement({
 						showIndex: existingArtist?.showIndex,
 						totalShowsByArtist: existingArtist?.totalShowsByArtist,
 					};
+
+					// Merge in agreement data (schedule/performances) from the contracts store,
+					// matched by artist id or email, so we can show show name/time/location/notes
+					// alongside the assigned performance date.
+					try {
+						const contractRes = await fetch(`/api/contracts/${eventId}`);
+						if (contractRes.ok) {
+							const contractJson = await contractRes.json();
+							const contractArtists: any[] = contractJson?.artists || [];
+							const matchedContract =
+								contractArtists.find((c) => c.id === detailedArtist.id) ||
+								(detailedArtist.email
+									? contractArtists.find(
+											(c) =>
+												c.email &&
+												c.email.toLowerCase().trim() ===
+													detailedArtist.email.toLowerCase().trim(),
+										)
+									: undefined);
+							if (matchedContract?.agreement) {
+								detailedArtist.agreement = matchedContract.agreement;
+							}
+						}
+					} catch (agreementError) {
+						console.error("Error fetching agreement data:", agreementError);
+					}
+
 					setSelectedArtist(detailedArtist);
 					setEditFormData({
 						artist_name: detailedArtist.artist_name,
@@ -3552,7 +3628,7 @@ export default function ArtistManagement({
 																			Type
 																		</TableHead>
 																		<TableHead>
-																			Duration
+																			Show / Duration
 																		</TableHead>
 																		<TableHead>
 																			Actions
@@ -3613,6 +3689,30 @@ export default function ArtistManagement({
 																						)
 																						? "text-white"
 																						: "";
+
+																				// Look up this artist's assigned show (name/duration) from the
+																				// organiser's agreement, matched by performance date.
+																				const agreementForArtist =
+																					agreementByArtistKey.get(artist.id) ||
+																					(artist.email
+																						? agreementByArtistKey.get(
+																								artist.email.toLowerCase().trim(),
+																							)
+																						: undefined);
+																				const matchedPerformance =
+																					findAgreementPerformance(
+																						agreementForArtist,
+																						artist.performance_date,
+																					);
+																				const matchedDurationMinutes =
+																					matchedPerformance?.time &&
+																					matchedPerformance?.endTime
+																						? Math.round(
+																								(new Date(`1970-01-01T${matchedPerformance.endTime}:00`).getTime() -
+																									new Date(`1970-01-01T${matchedPerformance.time}:00`).getTime()) /
+																									60000,
+																							)
+																						: null;
 
 																				return (
 																					<TableRow
@@ -3764,23 +3864,62 @@ export default function ArtistManagement({
 																							)}
 																						</TableCell>
 																						<TableCell>
-																							{artist.actual_duration && (
-																								<span
-																									className={
-																										hasCustomColor &&
-																											!isSelected &&
-																											!isLightColor(
-																												artist.artists_page_color!,
-																											)
-																											? "text-white/90"
-																											: "text-muted-foreground"
-																									}
-																								>
-																									{formatDuration(
-																										artist.actual_duration,
-																									)}
-																								</span>
-																							)}
+																							<div className="flex flex-col gap-0.5">
+																								{matchedPerformance?.title && (
+																									<span
+																										className={`text-xs font-medium ${
+																											hasCustomColor &&
+																												!isSelected &&
+																												!isLightColor(
+																													artist.artists_page_color!,
+																												)
+																												? "text-white"
+																												: "text-foreground"
+																										}`}
+																									>
+																										{matchedPerformance.title}
+																									</span>
+																								)}
+																								{(matchedDurationMinutes || artist.actual_duration) && (
+																									<span
+																										className={
+																											hasCustomColor &&
+																												!isSelected &&
+																												!isLightColor(
+																													artist.artists_page_color!,
+																												)
+																												? "text-white/90"
+																												: "text-muted-foreground"
+																										}
+																									>
+																										{matchedDurationMinutes
+																											? `${matchedDurationMinutes} min`
+																											: formatDuration(
+																													artist.actual_duration,
+																												)}
+																									</span>
+																								)}
+																								{(matchedPerformance?.time || matchedPerformance?.endTime) && (
+																									<span
+																										className={`text-xs ${
+																											hasCustomColor &&
+																												!isSelected &&
+																												!isLightColor(
+																													artist.artists_page_color!,
+																												)
+																												? "text-white/70"
+																												: "text-muted-foreground"
+																										}`}
+																									>
+																										{[matchedPerformance.time, matchedPerformance.endTime]
+																											.filter(Boolean)
+																											.join(" – ")}
+																									</span>
+																								)}
+																								{!matchedPerformance?.title && !matchedDurationMinutes && !artist.actual_duration && !matchedPerformance?.time && (
+																									<span className="text-muted-foreground text-xs">—</span>
+																								)}
+																							</div>
 																						</TableCell>
 																						<TableCell>
 																							<div className="flex items-center gap-2">
@@ -6184,19 +6323,57 @@ export default function ArtistManagement({
 													</p>
 												</div>
 
-												{selectedArtist.performance_date && (
-													<div>
-														<p className="text-sm text-muted-foreground">
-															Assigned
-															Performance Date
-														</p>
-														<p className="font-medium">
-															{formatDateSimple(
-																selectedArtist.performance_date,
+												{selectedArtist.performance_date && (() => {
+													const matchedPerformance = findAgreementPerformance(
+														selectedArtist.agreement,
+														selectedArtist.performance_date,
+													);
+													return (
+														<div>
+															<p className="text-sm text-muted-foreground">
+																Assigned
+																Performance Date
+															</p>
+															<p className="font-medium">
+																{formatDateSimple(
+																	selectedArtist.performance_date,
+																)}
+															</p>
+															{matchedPerformance && (
+																<div className="mt-2 space-y-1 rounded-lg border bg-muted/30 p-3">
+																	{matchedPerformance.title && (
+																		<p className="text-sm">
+																			<span className="text-muted-foreground">Show: </span>
+																			<span className="font-medium">{matchedPerformance.title}</span>
+																		</p>
+																	)}
+																	{(matchedPerformance.time || matchedPerformance.endTime) && (
+																		<p className="text-sm">
+																			<span className="text-muted-foreground">Time: </span>
+																			<span className="font-medium">
+																				{[matchedPerformance.time, matchedPerformance.endTime]
+																					.filter(Boolean)
+																					.join(" – ")}
+																			</span>
+																		</p>
+																	)}
+																	{matchedPerformance.location && (
+																		<p className="text-sm">
+																			<span className="text-muted-foreground">Location: </span>
+																			<span className="font-medium">{matchedPerformance.location}</span>
+																		</p>
+																	)}
+																	{matchedPerformance.description && (
+																		<p className="text-sm">
+																			<span className="text-muted-foreground">Notes: </span>
+																			<span className="font-medium">{matchedPerformance.description}</span>
+																		</p>
+																	)}
+																</div>
 															)}
-														</p>
-													</div>
-												)}
+														</div>
+													);
+												})()}
 												<div>
 													<p className="text-sm text-muted-foreground">
 														Registration Date

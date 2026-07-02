@@ -49,6 +49,10 @@ interface BaseShow {
 interface PerformanceDate {
 	date: string; // YYYY-MM-DD
 	label?: string; // e.g. "Opening Night"
+	time?: string; // Start time, e.g. "20:00"
+	endTime?: string; // End time, e.g. "21:00"
+	location?: string; // Stage / venue area
+	description?: string; // Organiser notes for this slot
 }
 
 interface EventParticipation {
@@ -183,7 +187,16 @@ export function OnboardingFlowModal({
 					for (const p of myEntry.agreement.schedule.performances) {
 						if (p.date) {
 							const ymd = toYMD(p.date);
-							if (ymd) perfs.push({ date: ymd, label: p.title || undefined });
+							if (ymd) {
+								perfs.push({
+									date: ymd,
+									label: p.title || undefined,
+									time: p.time || undefined,
+									endTime: p.endTime || undefined,
+									location: p.location || undefined,
+									description: p.description || undefined,
+								});
+							}
 						}
 					}
 				}
@@ -756,9 +769,23 @@ export function OnboardingFlowModal({
 															<p className="text-sm font-semibold text-white flex items-center gap-1.5">
 																<Calendar className={`h-3.5 w-3.5 ${isSlotDone ? "text-green-400" : "text-pink-400"}`} />
 																{fmtSlotDate(slot.date)}
+																{(slot.time || slot.endTime) && (
+																	<span className="text-xs font-normal text-purple-300/70">
+																		{[slot.time, slot.endTime].filter(Boolean).join(" – ")}
+																	</span>
+																)}
 															</p>
 															{slot.label && (
 																<p className="text-xs text-purple-300/60 mt-0.5">{slot.label}</p>
+															)}
+															{slot.location && (
+																<p className="text-xs text-purple-300/50 mt-0.5 flex items-center gap-1">
+																	<MapPin className="h-3 w-3" />
+																	{slot.location}
+																</p>
+															)}
+															{slot.description && (
+																<p className="text-xs text-purple-300/50 mt-0.5">{slot.description}</p>
 															)}
 														</div>
 														{isSlotDone && (

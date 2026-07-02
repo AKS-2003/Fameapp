@@ -38,6 +38,15 @@ import { cn } from "@/lib/utils";
 type ArtistStatus = "confirmed" | "pending";
 type Tab = "performances" | "workshops";
 
+interface PerformanceSlot {
+	date: string;
+	title?: string;
+	time?: string;
+	endTime?: string;
+	location?: string;
+	description?: string;
+}
+
 interface ArtistRow {
 	id: string;
 	stageName: string;
@@ -45,8 +54,9 @@ interface ArtistRow {
 	role: string; // performanceType from show management
 	danceStyle: string; // style from show management
 	status: ArtistStatus;
-	// Shows = unique performanceDates this artist is assigned to
-	performanceDates: string[];
+	// Shows = unique performanceDates this artist is assigned to, enriched
+	// with show name/time/location/notes from the agreement when available
+	performanceDates: PerformanceSlot[];
 	// Workshop count from contract agreement if available
 	workshopsConfirmed: number;
 	workshopSchedule: string;
@@ -72,6 +82,28 @@ function fmtDate(d: string) {
 	} catch {
 		return d;
 	}
+}
+
+/** Normalize a date-ish string to YYYY-MM-DD for matching, or "" if unparseable. */
+function toYMD(raw?: string): string {
+	if (!raw) return "";
+	if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+	const iso = raw.substring(0, 10);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+	const p = new Date(raw);
+	if (isNaN(p.getTime())) return "";
+	const y = p.getFullYear();
+	const mo = String(p.getMonth() + 1).padStart(2, "0");
+	const dy = String(p.getDate()).padStart(2, "0");
+	return `${y}-${mo}-${dy}`;
+}
+
+/** Find the agreement's performance entry (show name/time/location/notes) matching a given date. */
+function findAgreementPerformance(contract: any, date: string): any | null {
+	const performances = contract?.agreement?.schedule?.performances;
+	if (!Array.isArray(performances) || !date) return null;
+	const target = toYMD(date);
+	return performances.find((p: any) => toYMD(p.date) === target) || null;
 }
 
 interface Props {
@@ -123,19 +155,32 @@ export default function ConfirmedArtists({ providedEventId }: Props) {
 						a.performancedate ||
 						"";
 
+					// Look up contract data for workshops + agreement performance details
+					const contract =
+						contractMap.get(a.id) ||
+						contractMap.get(a.email) ||
+						null;
+					const agreementMatch = date
+						? findAgreementPerformance(contract, date)
+						: null;
+					const slot: PerformanceSlot | null = date
+						? {
+								date,
+								title: agreementMatch?.title || "",
+								time: agreementMatch?.time || "",
+								endTime: agreementMatch?.endTime || "",
+								location: agreementMatch?.location || "",
+								description: agreementMatch?.description || "",
+							}
+						: null;
+
 					if (artistMap.has(key)) {
 						// Add this performance date to existing artist
 						const existing = artistMap.get(key)!;
-						if (date && !existing.performanceDates.includes(date)) {
-							existing.performanceDates.push(date);
+						if (slot && !existing.performanceDates.some((s) => s.date === date)) {
+							existing.performanceDates.push(slot);
 						}
 					} else {
-						// Look up contract data for workshops
-						const contract =
-							contractMap.get(a.id) ||
-							contractMap.get(a.email) ||
-							null;
-
 						artistMap.set(key, {
 							id: a.id || key,
 							stageName: a.artistName || a.stageName || a.name || "Unknown",
@@ -143,7 +188,7 @@ export default function ConfirmedArtists({ providedEventId }: Props) {
 							role: a.performanceType || a.role || "",
 							danceStyle: a.style || "",
 							status: resolveStatus(a),
-							performanceDates: date ? [date] : [],
+							performanceDates: slot ? [slot] : [],
 							workshopsConfirmed:
 								contract?.agreement?.workshopsConfirmed ?? 0,
 							workshopSchedule:
@@ -332,11 +377,16 @@ export default function ConfirmedArtists({ providedEventId }: Props) {
 									{isExp && (
 										<div className="divide-y divide-slate-50 border-t border-slate-100 bg-slate-50/40">
 											{tab === "performances"
-												? artist.performanceDates.map((date, i) => (
+												? artist.performanceDates.map((slot, i) => (
 														<ShowSlot
 															key={i}
 															index={i}
-															date={fmtDate(date)}
+															date={fmtDate(slot.date)}
+															title={slot.title}
+															time={slot.time}
+															endTime={slot.endTime}
+															location={slot.location}
+															description={slot.description}
 														/>
 													))
 												: Array.from(
@@ -371,17 +421,44 @@ export default function ConfirmedArtists({ providedEventId }: Props) {
 
 // ── Slot sub-components ────────────────────────────────────────────────────
 
-function ShowSlot({ index, date }: { index: number; date: string }) {
+function ShowSlot({
+	index,
+	date,
+	title,
+	time,
+	endTime,
+	location,
+	description,
+}: {
+	index: number;
+	date: string;
+	title?: string;
+	time?: string;
+	endTime?: string;
+	location?: string;
+	description?: string;
+}) {
+	const timeRange = [time, endTime].filter(Boolean).join(" – ");
+
 	return (
-		<div className="grid grid-cols-[32px_1fr_auto] items-center px-4 py-2.5">
+		<div className="grid grid-cols-[32px_1fr_auto] items-start px-4 py-2.5">
 			<span />
-			<div className="flex items-center gap-4 text-sm text-slate-600">
-				<Music className="h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
-				<span className="w-14 font-medium text-slate-700">
-					Show {index + 1}
-				</span>
-				{date && <span className="text-slate-500">{date}</span>}
-				<span className="text-slate-400">Show Stage</span>
+			<div className="flex flex-col gap-1 text-sm text-slate-600">
+				<div className="flex items-center gap-4">
+					<Music className="h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
+					<span className="w-14 shrink-0 font-medium text-slate-700">
+						Show {index + 1}
+					</span>
+					{title && (
+						<span className="font-medium text-slate-800">{title}</span>
+					)}
+					{date && <span className="text-slate-500">{date}</span>}
+					{timeRange && <span className="text-slate-500">{timeRange}</span>}
+					<span className="text-slate-400">{location || "Show Stage"}</span>
+				</div>
+				{description && (
+					<p className="ml-[76px] text-xs text-slate-500">{description}</p>
+				)}
 			</div>
 			<span className="rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-[11px] font-semibold text-green-700">
 				Scheduled
