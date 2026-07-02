@@ -345,7 +345,7 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
                   const newLines = paymentData.customLines?.map(l => l.id === line.id ? { ...l, name: e.target.value } : l);
                   setPaymentData({ ...paymentData, customLines: newLines });
                 }}
-                placeholder="Field name"
+                placeholder="Description"
                 className="w-[200px] shrink-0 h-11 rounded-xl bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-pink-500/10 disabled:bg-slate-50/50 disabled:border-slate-100"
               />
               <div className="flex-1 flex gap-3">
