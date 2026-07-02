@@ -33,6 +33,11 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
     image: a.image || a.profileImage || a.image_url || a.avatar || a.profilePic || "",
     inviteLink: a.inviteLink || "",
     famelinkArtistId: a.famelinkArtistId || "",
+    // Basic info fields shown in the "Basic Info" popup
+    email: a.email || "",
+    phone: a.phone || "",
+    internalOwner: a.stageManagerNotes || "",
+    notes: a.notes || "",
     agreement: {
       stageDiscussion: agr.stageDiscussion || agr.discussion || [],
       performance: (agr.schedule?.workshops?.length > 0 || agr.schedule?.performances?.length > 0)
@@ -440,7 +445,7 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
           ) : selectedArtist ? (
             <React.Fragment key={selectedArtist.id}>
               <ArtistHeader
-                artist={selectedArtist} 
+                artist={selectedArtist}
                 eventId={providedEventId}
                 eventData={eventData}
                 allShows={allShows}

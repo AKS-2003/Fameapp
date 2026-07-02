@@ -1,9 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { LayoutGrid, Copy, ExternalLink, UserPlus, Check, ChevronDown } from "lucide-react";
+import { LayoutGrid, Copy, ExternalLink, UserPlus, Check, ChevronDown, Info } from "lucide-react";
 import { InviteArtistDialog } from "@/components/stage-manager/InviteArtistDialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Artist } from "./types";
 
 type WorkflowStatus = "Required" | "Not Required" | "Not Ready Yet" | "Completed Outside System";
@@ -82,6 +88,25 @@ function WorkflowDropdown({
   );
 }
 
+function InfoField({
+  label,
+  value,
+  multiline,
+}: {
+  label: string;
+  value?: string | null;
+  multiline?: boolean;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-slate-500">{label}</p>
+      <p className={`text-sm text-slate-800 ${multiline ? "whitespace-pre-wrap" : ""} ${!value ? "text-slate-400" : ""}`}>
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
+
 export function ArtistHeader({
   artist,
   eventId,
@@ -96,6 +121,32 @@ export function ArtistHeader({
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isBasicInfoOpen, setIsBasicInfoOpen] = useState(false);
+  const [resolvedEmail, setResolvedEmail] = useState<string>("");
+  const [loadingEmail, setLoadingEmail] = useState(false);
+
+  const openBasicInfo = () => {
+    setIsBasicInfoOpen(true);
+  };
+
+  // If the artist's email isn't already on the contract record, look it up
+  // by their FameLink artist id so the popup can still show it.
+  useEffect(() => {
+    if (!isBasicInfoOpen) return;
+    const existingEmail = (artist as any).email || "";
+    if (existingEmail) {
+      setResolvedEmail(existingEmail);
+      return;
+    }
+    const lookupId = artist.famelinkArtistId || artist.id;
+    if (!lookupId) return;
+    setLoadingEmail(true);
+    fetch(`/api/artists/profile?artistId=${encodeURIComponent(lookupId)}`)
+      .then((r) => r.json())
+      .then((d) => setResolvedEmail(d?.data?.email || ""))
+      .catch(() => setResolvedEmail(""))
+      .finally(() => setLoadingEmail(false));
+  }, [isBasicInfoOpen, artist.id, artist.famelinkArtistId]);
 
   const handleCopyLink = () => {
     const text = fullMagicLink;
@@ -217,11 +268,11 @@ export function ArtistHeader({
       <div className="p-6 pb-0">
         <div className="mb-6 flex items-start gap-4">
           {artist.image && !imageError ? (
-            <img 
-              src={getImageUrl(artist.image)} 
-              alt={artist.name} 
+            <img
+              src={getImageUrl(artist.image)}
+              alt={artist.name}
               onError={() => setImageError(true)}
-              className="h-14 w-14 shrink-0 rounded-full object-cover shadow-lg shadow-fuchsia-200" 
+              className="h-14 w-14 shrink-0 rounded-full object-cover shadow-lg shadow-fuchsia-200"
             />
           ) : (
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#d912b7] text-xl font-bold text-white shadow-lg shadow-fuchsia-200">
@@ -237,6 +288,14 @@ export function ArtistHeader({
                   {(artist as any).artists_page_tag}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={openBasicInfo}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-500 hover:border-fuchsia-300 hover:bg-fuchsia-50 hover:text-fuchsia-700 transition-colors"
+              >
+                <Info className="h-3 w-3" />
+                Basic Info
+              </button>
             </h1>
             <p className="text-sm text-slate-400 font-medium">
               {artist.realName}{artist.location ? ` • ${artist.location}` : ""}
@@ -330,6 +389,38 @@ export function ArtistHeader({
           magicLink={fullMagicLink}
           modules={getModulesPath(committed).split(",").filter(Boolean)}
         />
+
+        <Dialog open={isBasicInfoOpen} onOpenChange={setIsBasicInfoOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Basic Artist Info</DialogTitle>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <div>
+                <h2 className="mb-4 text-base font-semibold text-slate-900">Basic Artist Info</h2>
+                <div className="space-y-4">
+                  <InfoField label="Artist / Act Name" value={artist.name} />
+                  <InfoField label="Artist Type" value={artist.type} />
+                  <InfoField label="Internal Owner" value={(artist as any).internalOwner} />
+                  <InfoField label="Notes" value={(artist as any).notes} multiline />
+                </div>
+              </div>
+
+              <div>
+                <h2 className="mb-4 text-base font-semibold text-slate-900">Contact Info</h2>
+                <div className="space-y-4">
+                  <InfoField label="Lead Contact Name" value={artist.realName} />
+                  <InfoField
+                    label="Email"
+                    value={loadingEmail ? "Loading..." : resolvedEmail}
+                  />
+                  <InfoField label="Phone" value={(artist as any).phone} />
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

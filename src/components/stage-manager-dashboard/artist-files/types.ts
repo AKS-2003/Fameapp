@@ -15,6 +15,11 @@ export interface Artist {
   agreement?: Agreement;
   logistics?: Logistics;
   sectionStatuses?: Record<string, SectionItemStatus>;
+  // Basic info fields shown in the "Basic Info" popup
+  email?: string;
+  phone?: string;
+  internalOwner?: string;
+  notes?: string;
 }
 
 export interface Logistics {
