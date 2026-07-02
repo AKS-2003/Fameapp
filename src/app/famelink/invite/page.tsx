@@ -240,6 +240,13 @@ function MagicLinkInviteContent() {
     }
   };
 
+  const getModuleLabel = (mod: string) => {
+    switch (mod.toLowerCase()) {
+      case 'contract': return 'Agreement';
+      default: return mod;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0618] text-white flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
       {/* Background ambient light */}
@@ -335,7 +342,7 @@ function MagicLinkInviteContent() {
                 {modules.map(mod => (
                   <div key={mod} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-md px-3 py-1.5">
                     <span className="text-slate-400">{getModuleIcon(mod)}</span>
-                    <span className="text-xs font-medium text-slate-200 capitalize">{mod}</span>
+                    <span className="text-xs font-medium text-slate-200 capitalize">{getModuleLabel(mod)}</span>
                   </div>
                 ))}
               </div>
