@@ -212,6 +212,24 @@ export function playInNewWindow(url: string, filename?: string): void {
 }
 
 let activeDownloadPopups: { [key: string]: HTMLElement } = {};
+// Order in which popups were added — determines their stacking position.
+let downloadPopupOrder: string[] = [];
+
+const DOWNLOAD_POPUP_GAP = 12; // px gap between stacked popups
+
+/** Recompute each active popup's vertical offset so they stack above one another. */
+function relayoutDownloadPopups() {
+	let offset = 24; // matches bottom-6 (1.5rem = 24px)
+	// Stack newest-on-top: iterate in reverse add order so the most recent
+	// download sits closest to the bottom of the screen.
+	for (let i = downloadPopupOrder.length - 1; i >= 0; i--) {
+		const key = downloadPopupOrder[i];
+		const popup = activeDownloadPopups[key];
+		if (!popup) continue;
+		popup.style.bottom = `${offset}px`;
+		offset += popup.offsetHeight + DOWNLOAD_POPUP_GAP;
+	}
+}
 
 export function showDownloadProgressPopup(filename: string, progress: number, totalBytes: number) {
 	if (typeof document === "undefined") return;
@@ -221,8 +239,8 @@ export function showDownloadProgressPopup(filename: string, progress: number, to
 
 	popup = document.createElement("div");
 	popup.id = `download-progress-${encodeURIComponent(filename)}`;
-	popup.className = "fixed bottom-6 right-6 z-[9999] w-96 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-4 flex flex-col gap-3 font-sans transition-all duration-300 transform translate-y-10 opacity-0";
-	
+	popup.className = "fixed right-6 z-[9999] w-96 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-4 flex flex-col gap-3 font-sans transition-all duration-300 transform translate-y-10 opacity-0";
+
 	popup.innerHTML = `
 		<div class="flex items-center justify-between gap-3">
 			<div class="flex items-center gap-2.5 min-w-0">
@@ -245,6 +263,8 @@ export function showDownloadProgressPopup(filename: string, progress: number, to
 
 	document.body.appendChild(popup);
 	activeDownloadPopups[filename] = popup;
+	downloadPopupOrder.push(filename);
+	relayoutDownloadPopups();
 
 	requestAnimationFrame(() => {
 		popup.classList.remove("translate-y-10", "opacity-0");
@@ -324,6 +344,8 @@ export function hideDownloadProgressPopup(filename: string, success: boolean, er
 		setTimeout(() => {
 			popup.remove();
 			delete activeDownloadPopups[filename];
+			downloadPopupOrder = downloadPopupOrder.filter((key) => key !== filename);
+			relayoutDownloadPopups();
 		}, 300);
 	}, success ? 2000 : 5000);
 }
