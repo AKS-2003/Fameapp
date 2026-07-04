@@ -43,13 +43,15 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
   const set = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const searchFameLink = async () => {
-    if (!form.famelinkSearch.trim()) return;
+  const searchFameLink = async (query: string) => {
+    if (!query.trim()) {
+      setFamelinkResults([]);
+      return;
+    }
     setSearchingFL(true);
-    setFamelinkResults([]);
     try {
       const r = await fetch(
-        `/api/artists/profile?search=${encodeURIComponent(form.famelinkSearch)}`
+        `/api/artists/profile?search=${encodeURIComponent(query)}`
       );
       const d = await r.json();
       setFamelinkResults(d.data || []);
@@ -59,6 +61,18 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
       setSearchingFL(false);
     }
   };
+
+  // Auto-search as the user types, debounced to avoid firing on every keystroke
+  useEffect(() => {
+    if (!form.famelinkSearch.trim()) {
+      setFamelinkResults([]);
+      setSearchingFL(false);
+      return;
+    }
+    setSearchingFL(true);
+    const timeout = setTimeout(() => searchFameLink(form.famelinkSearch), 400);
+    return () => clearTimeout(timeout);
+  }, [form.famelinkSearch]);
 
   const handleSelectFameLink = (artist: any) => {
     setLinkedFameLink(artist);
@@ -201,27 +215,18 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
               </div>
             ) : (
               <>
-                <div className="flex gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={form.famelinkSearch}
                     onChange={(e) => set("famelinkSearch", e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && searchFameLink()}
                     placeholder="Search by email or artist name..."
-                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
                   />
-                  <button
-                    onClick={searchFameLink}
-                    disabled={searchingFL}
-                    className="flex items-center gap-2 rounded-xl bg-fuchsia-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-fuchsia-700 disabled:opacity-50 shrink-0"
-                  >
-                    {searchingFL ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                    Search
-                  </button>
+                  {searchingFL && (
+                    <Loader2 className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-fuchsia-500" />
+                  )}
                 </div>
 
                 {famelinkResults.length > 0 && (
