@@ -252,22 +252,13 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
           </div>
         ) : (
         <>
-        <div className="flex justify-end mb-4">
-          {isEditing ? (
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
-                <Save className="h-4 w-4 mr-2" /> Save
-              </Button>
-              <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
-                Cancel
-              </Button>
-            </div>
-          ) : (
+        {!isEditing && (
+          <div className="flex justify-end mb-4">
             <Button variant="ghost" onClick={() => setIsEditing(true)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
               <Edit2 className="h-4 w-4 mr-2" /> Edit
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {scheduleData.workshops.map((item) => (
@@ -364,6 +355,17 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
             </Button>
           )}
         </div>
+
+        {isEditing && (
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-100">
+            <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
+              <Save className="h-4 w-4 mr-2" /> Save
+            </Button>
+          </div>
+        )}
         </>
         )}
         </AccordionContent>
@@ -398,22 +400,13 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
           </div>
         ) : (
         <>
-        <div className="flex justify-end mb-4">
-          {isEditing ? (
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
-                <Save className="h-4 w-4 mr-2" /> Save
-              </Button>
-              <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
-                Cancel
-              </Button>
-            </div>
-          ) : (
+        {!isEditing && (
+          <div className="flex justify-end mb-4">
             <Button variant="ghost" onClick={() => setIsEditing(true)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
               <Edit2 className="h-4 w-4 mr-2" /> Edit
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {scheduleData.performances.map((item) => (
@@ -510,6 +503,17 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
             </Button>
           )}
         </div>
+
+        {isEditing && (
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-100">
+            <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
+              <Save className="h-4 w-4 mr-2" /> Save
+            </Button>
+          </div>
+        )}
         </>
         )}
         </AccordionContent>
@@ -544,22 +548,13 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
           </div>
         ) : (
         <>
-        <div className="flex justify-end mb-4">
-          {isEditing ? (
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
-                <Save className="h-4 w-4 mr-2" /> Save
-              </Button>
-              <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
-                Cancel
-              </Button>
-            </div>
-          ) : (
+        {!isEditing && (
+          <div className="flex justify-end mb-4">
             <Button variant="ghost" onClick={() => setIsEditing(true)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
               <Edit2 className="h-4 w-4 mr-2" /> Edit
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {scheduleData.tasks.map((item) => (
@@ -601,6 +596,17 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
             </Button>
           )}
         </div>
+
+        {isEditing && (
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-100">
+            <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
+              <Save className="h-4 w-4 mr-2" /> Save
+            </Button>
+          </div>
+        )}
         </>
         )}
         </AccordionContent>

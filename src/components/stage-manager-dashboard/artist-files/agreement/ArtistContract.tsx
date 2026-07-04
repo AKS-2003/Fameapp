@@ -310,26 +310,15 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
           <div className="flex-1">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-900">Agreement Details</h3>
-            <div className="flex gap-2">
-              {isEditing ? (
-                <div className="flex gap-2">
-                  <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
-                    <CheckCircle2 className="h-4 w-4 mr-2" /> {saving ? "Saving..." : "Save"}
-                  </Button>
-                  <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setIsEditing(true)}
-                  className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 px-4"
-                >
-                  <Edit2 className="h-4 w-4 mr-2" /> Edit
-                </Button>
-              )}
-            </div>
+            {!isEditing && (
+              <Button
+                variant="ghost"
+                onClick={() => setIsEditing(true)}
+                className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 px-4"
+              >
+                <Edit2 className="h-4 w-4 mr-2" /> Edit
+              </Button>
+            )}
           </div>
 
           {/* Booking Dates */}
@@ -521,7 +510,18 @@ export function ArtistContract({ artist, eventId, onRefresh, selectedShow, allSh
               </div>
             )}
           </div>
-        </div>
+
+          {isEditing && (
+            <div className="flex justify-end gap-2 pt-4 mt-6 border-t border-slate-100">
+              <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
+                <CheckCircle2 className="h-4 w-4 mr-2" /> {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          )}
+          </div>
         {agreement.contractTimeline && agreement.contractTimeline.length > 0 && (
           <div className="w-[320px] space-y-6 shrink-0">
             {/* Agreement Timeline Card */}

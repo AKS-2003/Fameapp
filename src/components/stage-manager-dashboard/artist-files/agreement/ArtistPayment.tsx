@@ -190,22 +190,13 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
           </div>
         ) : (
         <>
-        <div className="flex justify-end mb-4">
-          {isEditing ? (
-            <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
-                <Save className="h-4 w-4 mr-2" /> Save
-              </Button>
-              <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
-                Cancel
-              </Button>
-            </div>
-          ) : (
+        {!isEditing && (
+          <div className="flex justify-end mb-4">
             <Button variant="ghost" onClick={() => setIsEditing(true)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
               <Edit2 className="h-4 w-4 mr-2" /> Edit
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
       {/* Main Payment Form */}
       <div className="space-y-4">
@@ -388,6 +379,17 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
             </Button>
           )}
         </div>
+
+        {isEditing && (
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-100">
+            <Button variant="ghost" onClick={() => setIsEditing(false)} className="h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="h-9 rounded-xl bg-fuchsia-600 text-white hover:bg-fuchsia-700">
+              <Save className="h-4 w-4 mr-2" /> Save
+            </Button>
+          </div>
+        )}
       </div>
         </>
         )}
