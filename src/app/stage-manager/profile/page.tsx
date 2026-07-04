@@ -23,6 +23,9 @@ import {
 	Loader2,
 	CheckCircle,
 	AlertCircle,
+	KeyRound,
+	Eye,
+	EyeOff,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -46,6 +49,19 @@ export default function ProfilePage({
 	>("idle");
 	const [avatarError, setAvatarError] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// Change password state
+	const [currentPassword, setCurrentPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+	const [showNewPassword, setShowNewPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+	const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+	const [passwordStatus, setPasswordStatus] = useState<
+		"idle" | "success" | "error"
+	>("idle");
+	const [passwordError, setPasswordError] = useState("");
 
 	const router = useRouter();
 
@@ -167,6 +183,57 @@ export default function ProfilePage({
 			setAvatarError("Network error – please try again");
 		} finally {
 			setAvatarUploading(false);
+		}
+	};
+
+	// ─── Change password logic ──────────────────────────────────────────────
+
+	const handleChangePassword = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setPasswordStatus("idle");
+		setPasswordError("");
+
+		if (!currentPassword || !newPassword || !confirmPassword) {
+			setPasswordStatus("error");
+			setPasswordError("Please fill in all password fields");
+			return;
+		}
+
+		if (newPassword.length < 8) {
+			setPasswordStatus("error");
+			setPasswordError("New password must be at least 8 characters");
+			return;
+		}
+
+		if (newPassword !== confirmPassword) {
+			setPasswordStatus("error");
+			setPasswordError("New password and confirmation do not match");
+			return;
+		}
+
+		setPasswordSubmitting(true);
+		try {
+			const res = await fetch("/api/stage-manager/profile/change-password", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ currentPassword, newPassword }),
+			});
+			const data = await res.json();
+			if (data.success) {
+				setPasswordStatus("success");
+				setCurrentPassword("");
+				setNewPassword("");
+				setConfirmPassword("");
+				setTimeout(() => setPasswordStatus("idle"), 3000);
+			} else {
+				setPasswordStatus("error");
+				setPasswordError(data.error?.message || "Failed to change password");
+			}
+		} catch {
+			setPasswordStatus("error");
+			setPasswordError("Network error – please try again");
+		} finally {
+			setPasswordSubmitting(false);
 		}
 	};
 
@@ -505,6 +572,156 @@ export default function ProfilePage({
 										</p>
 									</div>
 								)}
+							</CardContent>
+						</Card>
+
+						{/* Change Password */}
+						<Card className="border-2 border-purple-100 shadow-lg">
+							<CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg">
+								<CardTitle className="flex items-center text-purple-800">
+									<KeyRound className="h-5 w-5 mr-2 text-purple-600" />
+									Change Password
+								</CardTitle>
+								<CardDescription className="text-purple-600">
+									Enter your current password to set a new one
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="bg-white">
+								<form
+									onSubmit={handleChangePassword}
+									className="space-y-4"
+									autoComplete="off"
+								>
+									<div>
+										<Label
+											htmlFor="currentPassword"
+											className="text-purple-700 font-medium"
+										>
+											Current Password
+										</Label>
+										<div className="relative">
+											<Input
+												id="currentPassword"
+												type={showCurrentPassword ? "text" : "password"}
+												value={currentPassword}
+												onChange={(e) => setCurrentPassword(e.target.value)}
+												autoComplete="current-password"
+												className="border-purple-200 pr-10"
+											/>
+											<button
+												type="button"
+												className="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-400 hover:text-purple-600"
+												onClick={() =>
+													setShowCurrentPassword(!showCurrentPassword)
+												}
+												tabIndex={-1}
+											>
+												{showCurrentPassword ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</button>
+										</div>
+									</div>
+
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div>
+											<Label
+												htmlFor="newPassword"
+												className="text-purple-700 font-medium"
+											>
+												New Password
+											</Label>
+											<div className="relative">
+												<Input
+													id="newPassword"
+													type={showNewPassword ? "text" : "password"}
+													value={newPassword}
+													onChange={(e) => setNewPassword(e.target.value)}
+													autoComplete="new-password"
+													className="border-purple-200 pr-10"
+												/>
+												<button
+													type="button"
+													className="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-400 hover:text-purple-600"
+													onClick={() => setShowNewPassword(!showNewPassword)}
+													tabIndex={-1}
+												>
+													{showNewPassword ? (
+														<EyeOff className="h-4 w-4" />
+													) : (
+														<Eye className="h-4 w-4" />
+													)}
+												</button>
+											</div>
+										</div>
+										<div>
+											<Label
+												htmlFor="confirmPassword"
+												className="text-purple-700 font-medium"
+											>
+												Confirm New Password
+											</Label>
+											<div className="relative">
+												<Input
+													id="confirmPassword"
+													type={showConfirmPassword ? "text" : "password"}
+													value={confirmPassword}
+													onChange={(e) => setConfirmPassword(e.target.value)}
+													autoComplete="new-password"
+													className="border-purple-200 pr-10"
+												/>
+												<button
+													type="button"
+													className="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-400 hover:text-purple-600"
+													onClick={() =>
+														setShowConfirmPassword(!showConfirmPassword)
+													}
+													tabIndex={-1}
+												>
+													{showConfirmPassword ? (
+														<EyeOff className="h-4 w-4" />
+													) : (
+														<Eye className="h-4 w-4" />
+													)}
+												</button>
+											</div>
+										</div>
+									</div>
+
+									<p className="text-xs text-purple-400">
+										Must be at least 8 characters long.
+									</p>
+
+									{passwordStatus === "success" && (
+										<p className="text-xs text-emerald-600 flex items-center gap-1">
+											<CheckCircle className="h-3 w-3" />
+											Password changed successfully!
+										</p>
+									)}
+									{passwordStatus === "error" && (
+										<p className="text-xs text-red-500 flex items-center gap-1">
+											<AlertCircle className="h-3 w-3" />
+											{passwordError}
+										</p>
+									)}
+
+									<Button
+										type="submit"
+										disabled={passwordSubmitting}
+										className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+									>
+										{passwordSubmitting ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												Updating...
+											</>
+										) : (
+											"Update Password"
+										)}
+									</Button>
+								</form>
 							</CardContent>
 						</Card>
 					</div>
