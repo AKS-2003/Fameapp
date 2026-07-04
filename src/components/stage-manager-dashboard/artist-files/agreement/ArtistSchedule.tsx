@@ -307,24 +307,24 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
                   )}
                 </div>
                 <div className="relative w-full md:w-32">
-                  <input 
+                  <input
+                    type="time"
                     disabled={!isEditing}
                     value={item.time || ""}
                     onChange={(e) => updateItem('workshops', item.id, { time: e.target.value })}
-                    placeholder="Start"
-                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
+                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                   />
-                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
                 <div className="relative w-full md:w-32">
-                  <input 
+                  <input
+                    type="time"
                     disabled={!isEditing}
                     value={(item as any).endTime || ""}
                     onChange={(e) => updateItem('workshops', item.id, { endTime: e.target.value })}
-                    placeholder="End"
-                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
+                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                   />
-                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
                 <div className="flex-1">
                   <input 
@@ -455,24 +455,24 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
                   )}
                 </div>
                 <div className="relative w-full md:w-32">
-                  <input 
+                  <input
+                    type="time"
                     disabled={!isEditing}
                     value={item.time || ""}
                     onChange={(e) => updateItem('performances', item.id, { time: e.target.value })}
-                    placeholder="Start"
-                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
+                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                   />
-                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
                 <div className="relative w-full md:w-32">
-                  <input 
+                  <input
+                    type="time"
                     disabled={!isEditing}
                     value={(item as any).endTime || ""}
                     onChange={(e) => updateItem('performances', item.id, { endTime: e.target.value })}
-                    placeholder="End"
-                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
+                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                   />
-                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
                 <div className="flex-1">
                   <input 
