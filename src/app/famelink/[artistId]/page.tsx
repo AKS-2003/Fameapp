@@ -3153,7 +3153,7 @@ function FameLinkDashboardContent() {
 														{ id: "logistics", name: "Logistics", enabled: isLogisticsEnabled, status: "Not Started", actionText: "Start →" },
 														{
 															id: "showinfo",
-															name: "Show Name",
+															name: "Event Agenda",
 															enabled: isShowInfoEnabled,
 															status: (eventShowCountsMap[p.eventId] || 0) > 0 ? "Submitted" : "Not Started",
 															actionText: (eventShowCountsMap[p.eventId] || 0) > 0 ? "View →" : "Start →"
