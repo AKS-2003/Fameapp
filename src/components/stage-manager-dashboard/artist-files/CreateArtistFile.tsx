@@ -6,11 +6,12 @@ import { ArrowLeft, Plus, Save, Loader2, Search, CheckCircle2 } from "lucide-rea
 interface CreateArtistFileProps {
   onBack: () => void;
   onCreated: (artist: any) => void;
+  defaultEventId?: string;
 }
 
 const ARTIST_TYPES = ["Solo", "Duo", "Trio", "Group", "Band", "DJ", "MC", "Other"];
 
-export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
+export function CreateArtistFile({ onBack, onCreated, defaultEventId }: CreateArtistFileProps) {
   const [form, setForm] = useState({
     artistName: "",
     artistType: "Solo",
@@ -35,10 +36,14 @@ export function CreateArtistFile({ onBack, onCreated }: CreateArtistFileProps) {
       .then((d) => {
         const evts = d.data || [];
         setEvents(evts);
-        if (evts.length > 0) setSelectedEventId(evts[0].id);
+        if (defaultEventId && evts.some((e: { id: string }) => e.id === defaultEventId)) {
+          setSelectedEventId(defaultEventId);
+        } else if (evts.length > 0) {
+          setSelectedEventId(evts[0].id);
+        }
       })
       .catch(console.error);
-  }, []);
+  }, [defaultEventId]);
 
   const set = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));

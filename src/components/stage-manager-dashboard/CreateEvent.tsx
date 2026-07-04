@@ -26,7 +26,6 @@ import {
 	FileText,
 	Plane,
 	Music2,
-	Lock,
 	ArrowLeft,
 	Plus,
 	Edit,
@@ -73,11 +72,11 @@ export default function CreateEvent({ editEventId, onSuccess, onCancel }: Create
 	const [uploadingLogo, setUploadingLogo] = useState(false);
 	const [artistEditEnabled, setArtistEditEnabled] = useState(false);
 	const [registrationLinkEnabled, setRegistrationLinkEnabled] = useState(true);
-	// Workflow toggles
-	const [contractEnabled, setContractEnabled] = useState(true);
+	// Workflow toggles — Agreement is always mandatory and must always be completed first
+	const contractEnabled = true;
+	const requireContractFirst = true;
 	const [logisticsEnabled, setLogisticsEnabled] = useState(true);
 	const [showInfoEnabled, setShowInfoEnabled] = useState(true);
-	const [requireContractFirst, setRequireContractFirst] = useState(true);
 	const [selectedDates, setSelectedDates] = useState<Date[]>([]);
 	const [showInfoModal, setShowInfoModal] = useState(false);
 	const [selectedShowDate, setSelectedShowDate] = useState<Date | null>(null);
@@ -162,10 +161,8 @@ export default function CreateEvent({ editEventId, onSuccess, onCancel }: Create
 						
 						if (data.artist_edit_enabled !== undefined) setArtistEditEnabled(data.artist_edit_enabled);
 						if (data.registration_link_enabled !== undefined) setRegistrationLinkEnabled(data.registration_link_enabled);
-						if (data.contractEnabled !== undefined) setContractEnabled(data.contractEnabled);
 						if (data.logisticsEnabled !== undefined) setLogisticsEnabled(data.logisticsEnabled);
 						if (data.showInfoEnabled !== undefined) setShowInfoEnabled(data.showInfoEnabled);
-						if (data.requireContractFirst !== undefined) setRequireContractFirst(data.requireContractFirst);
 						
 						if (data.showDates && Array.isArray(data.showDates)) {
 							setSelectedDates(data.showDates.map((d: string) => new Date(d)));
@@ -677,7 +674,7 @@ export default function CreateEvent({ editEventId, onSuccess, onCancel }: Create
 									</p>
 								</div>
 
-								{/* Contract toggle */}
+								{/* Agreement — always mandatory, no toggle */}
 								<div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
 									<div className="flex items-start gap-3">
 										<div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center mt-0.5 shrink-0">
@@ -688,15 +685,13 @@ export default function CreateEvent({ editEventId, onSuccess, onCancel }: Create
 												Agreement
 											</Label>
 											<p className="text-xs text-gray-500">
-												Artist reviews and signs an agreement
+												Artist reviews and signs an agreement — always required before other tasks
 											</p>
 										</div>
 									</div>
-									<Switch
-										checked={contractEnabled}
-										onCheckedChange={setContractEnabled}
-										className="data-[state=checked]:bg-purple-600 data-[state=unchecked]:bg-gray-300"
-									/>
+									<span className="shrink-0 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple-700">
+										Mandatory
+									</span>
 								</div>
 
 								{/* Logistics toggle */}
@@ -743,27 +738,6 @@ export default function CreateEvent({ editEventId, onSuccess, onCancel }: Create
 									/>
 								</div>
 
-								{/* Require contract completion toggle */}
-								<div className="flex items-center justify-between p-4 bg-amber-50/60 rounded-lg border border-amber-200/60">
-									<div className="flex items-start gap-3">
-										<div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center mt-0.5 shrink-0">
-											<Lock className="h-4 w-4 text-amber-600" />
-										</div>
-										<div className="space-y-0.5">
-											<Label className="text-sm font-semibold text-gray-800">
-												Require agreement completion before other tasks
-											</Label>
-											<p className="text-xs text-amber-600">
-												If on, artist must sign the agreement before seeing logistics or show info
-											</p>
-										</div>
-									</div>
-									<Switch
-										checked={requireContractFirst}
-										onCheckedChange={setRequireContractFirst}
-										className="data-[state=checked]:bg-purple-600 data-[state=unchecked]:bg-gray-300"
-									/>
-								</div>
 							</div>
 
 							{/* Event Settings */}

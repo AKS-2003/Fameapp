@@ -437,6 +437,7 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
         <div className="flex flex-1 flex-col overflow-hidden">
           {creating ? (
             <CreateArtistFile
+              defaultEventId={providedEventId}
               onBack={() => setCreating(false)}
               onCreated={(newArtist) => {
                 // Refresh artists list for the current event
