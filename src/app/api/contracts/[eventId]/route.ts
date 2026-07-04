@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ContractService } from "@/lib/contract-service";
 import { connectToDatabase } from "@/database/mongodb";
-import { EventArtistModel } from "@/database/models/FameLinkModels";
+import { EventArtistModel, EventShowModel, EventParticipationModel } from "@/database/models/FameLinkModels";
 import { getEventShowsByEvent, getEventParticipationsByEvent, getAllFameLinkArtists } from "@/lib/data-access";
 import { getUnifiedArtistsForEvent, migrateBase64Screenshots } from "@/lib/contract-utils";
 
@@ -128,7 +128,7 @@ export async function PUT(
 	}
 }
 
-// DELETE /api/contracts/[eventId] — Delete an artist
+// DELETE /api/contracts/[eventId] — Delete an artist from this event
 export async function DELETE(
 	request: NextRequest,
 	{ params }: { params: { eventId: string } }
@@ -145,14 +145,32 @@ export async function DELETE(
 			);
 		}
 
-		const success = await ContractService.deleteArtist(eventId, artistId);
-		if (success) {
-			return NextResponse.json({ success: true });
+		// Artists shown in the pipeline can originate from any of three sources
+		// (contract blob, draft EventArtist, or FameLink EventShow/Participation) —
+		// remove the artist's association with this event from all of them.
+		const removedFromContracts = await ContractService.deleteArtist(eventId, artistId);
+
+		await connectToDatabase();
+		const [draftResult, showsResult, participationResult] = await Promise.all([
+			EventArtistModel.deleteOne({ id: artistId, eventId }),
+			EventShowModel.deleteMany({ artistId, eventId }),
+			EventParticipationModel.deleteMany({ artistId, eventId }),
+		]);
+
+		const removedAny =
+			removedFromContracts ||
+			draftResult.deletedCount > 0 ||
+			showsResult.deletedCount > 0 ||
+			participationResult.deletedCount > 0;
+
+		if (!removedAny) {
+			return NextResponse.json(
+				{ success: false, error: "Artist not found" },
+				{ status: 404 }
+			);
 		}
-		return NextResponse.json(
-			{ success: false, error: "Artist not found" },
-			{ status: 404 }
-		);
+
+		return NextResponse.json({ success: true });
 	} catch (error) {
 		console.error("Error deleting contract artist:", error);
 		return NextResponse.json(

@@ -353,6 +353,33 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
       .finally(() => setLoading(false));
   }, [providedEventId]);
 
+  // Delete an artist from this event
+  const handleDeleteArtist = async (artist: Artist) => {
+    if (!providedEventId) return;
+    try {
+      const res = await fetch(
+        `/api/contracts/${providedEventId}?artistId=${encodeURIComponent(artist.id)}`,
+        { method: "DELETE" }
+      );
+      const d = await res.json();
+      if (d.success) {
+        setArtists((prev) => {
+          const remaining = prev.filter((a) => a.id !== artist.id);
+          setSelectedArtist((current) =>
+            current?.id === artist.id ? (remaining[0] || null) : current
+          );
+          return remaining;
+        });
+      } else {
+        console.error("Failed to delete artist:", d.error);
+        window.alert(d.error || "Failed to delete artist");
+      }
+    } catch (err) {
+      console.error("Error deleting artist:", err);
+      window.alert("Failed to delete artist");
+    }
+  };
+
   // Function to refresh a specific artist's data without full reload
   const refreshArtistData = async (artistId: string) => {
     if (!providedEventId) return;
@@ -403,6 +430,7 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
           onSelect={(a) => { setSelectedArtist(a); setCreating(false); }}
           onBack={onBack}
           onAdd={() => { setCreating(true); setSelectedArtist(null); }}
+          onDelete={handleDeleteArtist}
         />
 
         {/* Main Content Area */}

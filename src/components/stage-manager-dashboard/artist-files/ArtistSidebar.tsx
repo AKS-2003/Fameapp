@@ -1,11 +1,22 @@
 "use client";
 
 import React from "react";
-import { Search, Plus, ChevronDown } from "lucide-react";
+import { Search, Plus, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Artist } from "./types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ArtistSidebarProps {
   artists: Artist[];
@@ -13,6 +24,7 @@ interface ArtistSidebarProps {
   onSelect: (artist: Artist) => void;
   onBack: () => void;
   onAdd: () => void;
+  onDelete?: (artist: Artist) => void;
 }
 
 
@@ -22,6 +34,7 @@ export function ArtistSidebar({
   onSelect,
   onBack,
   onAdd,
+  onDelete,
 }: ArtistSidebarProps) {
 
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -87,43 +100,79 @@ export function ArtistSidebar({
 
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {filteredArtists.map((artist) => (
-          <button
+          <div
             key={artist.id}
-            onClick={() => onSelect(artist)}
             className={cn(
-              "mb-1 flex w-full items-center gap-3 rounded-[20px] p-3 transition-all",
+              "group mb-1 flex w-full items-center gap-3 rounded-[20px] p-3 transition-all",
               selectedArtist?.id === artist.id ? "bg-fuchsia-50/50 ring-1 ring-fuchsia-100" : "hover:bg-slate-100"
             )}
           >
-            {artist.image && !imageErrors[artist.id] ? (
-              <img 
-                src={getImageUrl(artist.image)} 
-                alt={artist.name} 
-                onError={() => setImageErrors(prev => ({ ...prev, [artist.id]: true }))}
-                className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm" 
-              />
-            ) : (
-              <div 
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold shadow-sm text-sm transition-colors",
-                  selectedArtist?.id === artist.id 
-                    ? "bg-[#d912b7] text-white" 
-                    : "bg-[#fae8ff] text-[#d912b7]"
-                )}
-              >
-                {artist.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            <button
+              onClick={() => onSelect(artist)}
+              className="flex flex-1 items-center gap-3 text-left min-w-0"
+            >
+              {artist.image && !imageErrors[artist.id] ? (
+                <img
+                  src={getImageUrl(artist.image)}
+                  alt={artist.name}
+                  onError={() => setImageErrors(prev => ({ ...prev, [artist.id]: true }))}
+                  className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm"
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold shadow-sm text-sm transition-colors",
+                    selectedArtist?.id === artist.id
+                      ? "bg-[#d912b7] text-white"
+                      : "bg-[#fae8ff] text-[#d912b7]"
+                  )}
+                >
+                  {artist.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0 text-left">
+                <div className="flex items-center justify-between">
+                  <p className="truncate text-sm font-bold text-slate-900">{artist.name}</p>
+                </div>
+                <p className="text-[11px] text-slate-400">{artist.location}</p>
               </div>
+              <Badge className={cn("rounded-full px-2 py-0 text-[9px] font-medium uppercase shadow-none shrink-0", getStatusColor(artist.status))}>
+                {artist.status}
+              </Badge>
+            </button>
+
+            {onDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    title="Delete Artist"
+                    className="shrink-0 rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Artist</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete {artist.name}? This will remove the artist and all
+                      associated contract, logistics, and show data from this event. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => onDelete(artist)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
-            <div className="flex-1 text-left">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-slate-900">{artist.name}</p>
-              </div>
-              <p className="text-[11px] text-slate-400">{artist.location}</p>
-            </div>
-            <Badge className={cn("rounded-full px-2 py-0 text-[9px] font-medium uppercase shadow-none", getStatusColor(artist.status))}>
-              {artist.status}
-            </Badge>
-          </button>
+          </div>
         ))}
       </div>
 
