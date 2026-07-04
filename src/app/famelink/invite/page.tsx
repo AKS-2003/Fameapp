@@ -36,6 +36,7 @@ function MagicLinkInviteContent() {
   const [inviteMessage, setInviteMessage] = useState("");
   const [actionLoading, setActionLoading] = useState<"accept" | "decline" | null>(null);
   const [notForMe, setNotForMe] = useState(false);
+  const [loggedInArtistId, setLoggedInArtistId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -68,6 +69,7 @@ function MagicLinkInviteContent() {
 
       const loggedInArtistId = authData.data.userId;
       const loggedInEmail = authData.data.email?.toLowerCase().trim();
+      setLoggedInArtistId(loggedInArtistId);
 
       // 2. Verify this invite was created for the logged-in artist
       // Allow if: their userId matches the artistId in the link, OR their email
@@ -358,10 +360,29 @@ function MagicLinkInviteContent() {
         {/* Action Buttons underneath card */}
         <div className="mt-6 flex flex-col gap-3 relative z-10 w-full px-2">
           {notForMe ? (
-            <div className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-center">
-              <p className="text-sm font-bold text-red-400 mb-1">This invite is not for you</p>
-              <p className="text-xs text-red-300/70">This link was created for a specific artist. Please sign in with the correct account or use the invite link sent to your email.</p>
-            </div>
+            <>
+              <div className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-center">
+                <p className="text-sm font-bold text-red-400 mb-1">This invite is not for you</p>
+                <p className="text-xs text-red-300/70">This link was created for a specific artist. Please sign in with the correct account or use the invite link sent to your email.</p>
+              </div>
+              {loggedInArtistId && (
+                <Button
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-xl h-12 text-sm font-bold shadow-lg shadow-purple-500/25"
+                  onClick={() => router.push(`/famelink/${loggedInArtistId}`)}
+                >
+                  Back to Dashboard
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="w-full bg-transparent border-white/10 hover:bg-white/5 text-slate-300 rounded-xl h-12 text-sm font-semibold"
+                onClick={() => {
+                  window.location.href = `/famelink-auth?redirect=${encodeURIComponent(window.location.href)}`;
+                }}
+              >
+                Sign in with correct account
+              </Button>
+            </>
           ) : (
             <>
               <p className="text-center text-sm font-semibold text-white mb-2">Will you accept this invitation?</p>
