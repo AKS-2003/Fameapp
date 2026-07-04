@@ -511,7 +511,7 @@ export default function CreateShowPage() {
 					description: "Your show has been created successfully",
 					variant: "success",
 				});
-				router.push(`/famelink/${artistId}?tab=shows`);
+				router.push(`/famelink/${artistId}?tab=shows&justCreatedShow=true`);
 			} else {
 				if (result.error?.code === "SHOW_002") {
 					setUpgradeModalOpen(true);

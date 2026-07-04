@@ -2381,12 +2381,22 @@ export function ShowInfoPanel({
 	const [isViewerOpen, setIsViewerOpen] = useState(false);
 	const [viewerTab, setViewerTab] = useState<"overview"|"technical"|"music"|"notes">("overview");
 	const [selectedViewerShowIndex, setSelectedViewerShowIndex] = useState(0);
+	// Whether the "pick a different show for this performance" picker is open (viewer dialog)
+	const [editPerformancePickerOpen, setEditPerformancePickerOpen] = useState(false);
+	// Which base show's "edit this show" picker is open in the checklist dialog
+	const [checklistEditShowId, setChecklistEditShowId] = useState<string | null>(null);
+	const [swappingShow, setSwappingShow] = useState(false);
 
 	useEffect(() => {
 		if (isViewerOpen) {
 			setSelectedViewerShowIndex(0);
 		}
 	}, [isViewerOpen]);
+
+	// Close the "edit this show" picker whenever the active performance tab changes
+	useEffect(() => {
+		setEditPerformancePickerOpen(false);
+	}, [selectedViewerShowIndex]);
 
 	useEffect(() => {
 		if (autoOpenDialog === "submit" || autoOpenDialog === true) {
@@ -2441,9 +2451,9 @@ export function ShowInfoPanel({
 	}, [eventShows]);
 
 	const toggleSelectShow = (showId: string) => {
-		setSelectedBaseShowIds(prev => 
-			prev.includes(showId) 
-				? prev.filter(id => id !== showId) 
+		setSelectedBaseShowIds(prev =>
+			prev.includes(showId)
+				? prev.filter(id => id !== showId)
 				: [...prev, showId]
 		);
 	};
@@ -2490,6 +2500,48 @@ export function ShowInfoPanel({
 			toast({ title: "Error", description: "Failed to submit shows.", variant: "destructive" });
 		} finally {
 			setSubmitting(false);
+		}
+	};
+
+	// Replace the show submitted for one specific performance slot with a different base show,
+	// keeping that slot's performance date intact.
+	const handleSwapPerformanceShow = async (eventShow: any, newBaseShowId: string) => {
+		setSwappingShow(true);
+		try {
+			const performanceDate = eventShow.overrides?.performanceDate;
+
+			const createRes = await fetch("/api/event-shows", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					eventId: invite.eventId,
+					baseShowId: newBaseShowId,
+					performanceDate,
+				}),
+			});
+			const createData = await createRes.json();
+			if (!createRes.ok || !createData.success) {
+				throw new Error(createData.error?.message || "Failed to assign the new show");
+			}
+
+			const deleteRes = await fetch(`/api/event-shows/${eventShow.eventShowId || eventShow.id}`, {
+				method: "DELETE",
+			});
+			if (!deleteRes.ok) {
+				console.error("Failed to remove the previous show:", deleteRes.statusText);
+			}
+
+			toast({ title: "Show Updated", description: "This performance now uses the new show." });
+			setEditPerformancePickerOpen(false);
+			setChecklistEditShowId(null);
+			await fetchShowsData();
+			setSelectedViewerShowIndex(0);
+			if (onRefresh) onRefresh();
+		} catch (err) {
+			console.error("Error swapping performance show:", err);
+			toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to update this show.", variant: "destructive" });
+		} finally {
+			setSwappingShow(false);
 		}
 	};
 
@@ -2629,14 +2681,20 @@ export function ShowInfoPanel({
 							<div className="space-y-3">
 								{baseShows.length > 0 ? baseShows.map((show, idx) => {
 									const isSelected = selectedBaseShowIds.includes(show.id);
+									const matchingEventShow = eventShows.find(es => es.baseShowId === show.id);
+									const perfDate = matchingEventShow?.overrides?.performanceDate || null;
+									const perfDateLabel = perfDate
+										? new Date(perfDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+										: null;
+									const otherShows = baseShows.filter(bs => bs.id !== show.id);
 									return (
-										<div 
+										<div
 											key={show.id}
 											onClick={() => toggleSelectShow(show.id)}
 											className={cn(
 												"border rounded-xl p-4 transition-all cursor-pointer",
-												isSelected 
-													? "border-pink-300 bg-pink-50/50 shadow-sm" 
+												isSelected
+													? "border-pink-300 bg-pink-50/50 shadow-sm"
 													: "border-slate-200 bg-white hover:border-pink-200"
 											)}
 										>
@@ -2649,17 +2707,73 @@ export function ShowInfoPanel({
 												</div>
 												<div className="flex-1">
 													<p className="font-bold text-slate-900 text-[15px]">{show.name}</p>
-													<p className="text-sm text-slate-500 mb-3">{show.style || "Solo performance"} · {show.duration || 6} min · {show.performers || 1} performer{show.performers > 1 ? "s" : ""}</p>
-													
+													<p className="text-sm text-slate-500 mb-1">{show.style || "Solo performance"} · {show.duration || 6} min · {show.performers || 1} performer{show.performers > 1 ? "s" : ""}</p>
+													{perfDateLabel && (
+														<p className="text-xs font-medium text-purple-600 flex items-center gap-1 mb-3">
+															<Calendar className="w-3 h-3" /> Performing on {perfDateLabel}
+														</p>
+													)}
+													{!perfDateLabel && <div className="mb-3" />}
+
 													{isSelected && (
-														<div className="flex flex-wrap items-center gap-3 mt-1 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-															<Button className="bg-[#bf1ed4] hover:bg-[#a819bb] text-white h-8 text-xs font-bold px-4 rounded-lg shadow-sm">
-																Share as-is
-															</Button>
-															<Button variant="outline" className="h-8 text-xs font-bold px-4 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg">
-																Edit just for this event
-															</Button>
-															<span className="text-xs text-slate-500 ml-1">Your saved show will be sent as-is.</span>
+														<div onClick={(e) => e.stopPropagation()}>
+															<div className="flex flex-wrap items-center gap-3 mt-1 animate-fade-in">
+																<Button className="bg-[#bf1ed4] hover:bg-[#a819bb] text-white h-8 text-xs font-bold px-4 rounded-lg shadow-sm">
+																	Share as-is
+																</Button>
+																<Button variant="outline" className="h-8 text-xs font-bold px-4 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg">
+																	Edit just for this event
+																</Button>
+																{matchingEventShow && (
+																	<Button
+																		variant="outline"
+																		onClick={() => setChecklistEditShowId(checklistEditShowId === show.id ? null : show.id)}
+																		className="h-8 text-xs font-bold px-4 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg gap-1.5"
+																	>
+																		<Edit className="w-3.5 h-3.5" />
+																		Edit this show
+																	</Button>
+																)}
+																<span className="text-xs text-slate-500 ml-1">Your saved show will be sent as-is.</span>
+															</div>
+
+															{matchingEventShow && checklistEditShowId === show.id && (
+																<div className="mt-3 border border-slate-200 rounded-xl bg-slate-50 p-3 animate-fade-in">
+																	<p className="text-xs font-semibold text-slate-600 mb-2">
+																		Choose a different show for this performance{perfDateLabel ? ` (${perfDateLabel})` : ""}:
+																	</p>
+																	<div className="space-y-1.5">
+																		{otherShows.length > 0 ? (
+																			otherShows.map(otherShow => (
+																				<button
+																					key={otherShow.id}
+																					disabled={swappingShow}
+																					onClick={() => handleSwapPerformanceShow(matchingEventShow, otherShow.id)}
+																					className="w-full flex items-center justify-between gap-3 p-2.5 rounded-lg bg-white border border-slate-200 hover:border-pink-300 hover:bg-pink-50/40 transition-all text-left disabled:opacity-50"
+																				>
+																					<div>
+																						<p className="font-semibold text-slate-900 text-sm">{otherShow.name}</p>
+																						<p className="text-xs text-slate-500">{otherShow.style || "Solo performance"} · {otherShow.duration || 6} min</p>
+																					</div>
+																					{swappingShow ? (
+																						<Loader2 className="w-4 h-4 animate-spin text-slate-400 shrink-0" />
+																					) : (
+																						<ChevronDown className="w-4 h-4 -rotate-90 text-slate-400 shrink-0" />
+																					)}
+																				</button>
+																			))
+																		) : (
+																			<p className="text-xs text-slate-400 py-2">No other shows in your library yet.</p>
+																		)}
+																	</div>
+																	<button
+																		onClick={() => setChecklistEditShowId(null)}
+																		className="text-xs text-slate-400 hover:text-slate-600 mt-2"
+																	>
+																		Cancel
+																	</button>
+																</div>
+															)}
 														</div>
 													)}
 												</div>
@@ -2852,6 +2966,79 @@ export function ShowInfoPanel({
 								})}
 							</div>
 						)}
+
+						{/* Active performance header — name, date, and per-performance edit */}
+						{(() => {
+							const activeShow = eventShows[selectedViewerShowIndex];
+							if (!activeShow) return null;
+							const s = activeShow.snapshotJson ? (typeof activeShow.snapshotJson === "string" ? JSON.parse(activeShow.snapshotJson) : activeShow.snapshotJson) : null;
+							const name = s?.name || activeShow.showName || "Unnamed Show";
+							const perfDate = activeShow.overrides?.performanceDate || null;
+							const perfDateLabel = perfDate
+								? new Date(perfDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+								: null;
+							const otherShows = baseShows.filter(bs => bs.id !== activeShow.baseShowId);
+
+							return (
+								<div className="border border-slate-200 rounded-xl bg-slate-50 p-4 mb-4">
+									<div className="flex flex-wrap items-center justify-between gap-3">
+										<div className="flex items-center gap-3">
+											<div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+												<Music className="w-4 h-4 text-purple-600" />
+											</div>
+											<div>
+												<p className="font-bold text-slate-900 text-sm">{name}</p>
+												<p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+													<Calendar className="w-3 h-3 text-purple-500" />
+													{perfDateLabel || "No performance date set yet"}
+												</p>
+											</div>
+										</div>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setEditPerformancePickerOpen(!editPerformancePickerOpen)}
+											className="h-8 text-xs font-bold px-4 border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg gap-1.5"
+										>
+											<Edit className="w-3.5 h-3.5" />
+											Edit this show
+										</Button>
+									</div>
+
+									{editPerformancePickerOpen && (
+										<div className="mt-3 border-t border-slate-200 pt-3">
+											<p className="text-xs font-semibold text-slate-600 mb-2">
+												Choose a different show for this performance{perfDateLabel ? ` (${perfDateLabel})` : ""}:
+											</p>
+											<div className="space-y-1.5">
+												{otherShows.length > 0 ? (
+													otherShows.map(otherShow => (
+														<button
+															key={otherShow.id}
+															disabled={swappingShow}
+															onClick={() => handleSwapPerformanceShow(activeShow, otherShow.id)}
+															className="w-full flex items-center justify-between gap-3 p-2.5 rounded-lg bg-white border border-slate-200 hover:border-pink-300 hover:bg-pink-50/40 transition-all text-left disabled:opacity-50"
+														>
+															<div>
+																<p className="font-semibold text-slate-900 text-sm">{otherShow.name}</p>
+																<p className="text-xs text-slate-500">{otherShow.style || "Solo performance"} · {otherShow.duration || 6} min</p>
+															</div>
+															{swappingShow ? (
+																<Loader2 className="w-4 h-4 animate-spin text-slate-400 shrink-0" />
+															) : (
+																<ChevronDown className="w-4 h-4 -rotate-90 text-slate-400 shrink-0" />
+															)}
+														</button>
+													))
+												) : (
+													<p className="text-xs text-slate-400 py-2">No other shows in your library yet.</p>
+												)}
+											</div>
+										</div>
+									)}
+								</div>
+							);
+						})()}
 
 						{/* Content */}
 						<div className="mt-4">

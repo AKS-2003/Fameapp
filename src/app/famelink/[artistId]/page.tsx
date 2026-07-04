@@ -677,6 +677,8 @@ function FameLinkDashboardContent() {
 	// Onboarding flow modal state
 	const [onboardingOpen, setOnboardingOpen] = useState(false);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
+	// Tracks whether we've already handled the ?justCreatedShow=true redirect this page load
+	const justCreatedShowRef = useRef(false);
 	// Dismissed is stored in localStorage so it persists across reloads, keyed by artistId
 	const onboardingStorageKey = `onboarding_dismissed_${artistId}`;
 	const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
@@ -788,6 +790,8 @@ function FameLinkDashboardContent() {
 		if (loading) return;          // wait for initial fetch
 		if (onboardingDismissed) return; // user already dismissed this session
 		if (onboardingOpen) return;   // already open
+		if (shareModalOpen) return;   // share popup is taking priority (e.g. just created a show)
+		if (justCreatedShowRef.current) return; // let the other effect decide first
 
 		const pendingRequests = eventRequests.filter((r) => r.status === "pending");
 
@@ -809,7 +813,33 @@ function FameLinkDashboardContent() {
 		if (pendingRequests.length > 0 || unsubmittedParticipations.length > 0) {
 			setOnboardingOpen(true);
 		}
-	}, [loading, eventRequests, eventParticipations, shows, onboardingDismissed, onboardingOpen]);
+	}, [loading, eventRequests, eventParticipations, shows, onboardingDismissed, onboardingOpen, shareModalOpen]);
+
+	// Just created a show — if there are events still waiting on a show submission,
+	// jump straight to the "Where do you want to share?" popup instead of the tasks list.
+	// Uses the same "still needs a show" condition as the Share Modal's own pendingParticipations filter below,
+	// so this only opens when the popup will actually have something to show.
+	useEffect(() => {
+		if (loading) return;
+		if (searchParams.get("justCreatedShow") !== "true") return;
+		if (justCreatedShowRef.current) return; // only handle this once per navigation
+		justCreatedShowRef.current = true;
+
+		const pendingRequests = eventRequests.filter((r) => r.status === "pending");
+		const unsubmittedParticipations = eventParticipations.filter((p) => {
+			const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+			const submitted = (p as any).showCount ?? 0;
+			return perfSlots > 0 ? submitted < perfSlots : submitted === 0;
+		});
+
+		if (shows.length > 0 && (pendingRequests.length > 0 || unsubmittedParticipations.length > 0)) {
+			setOnboardingOpen(false);
+			setShareModalOpen(true);
+		}
+
+		// Clean up the URL param so this doesn't re-trigger on refresh
+		window.history.replaceState({}, "", window.location.pathname + "?tab=shows");
+	}, [loading, eventRequests, eventParticipations, shows, searchParams]);
 
 	const fetchEventRequests = useCallback(async () => {
 		try {
