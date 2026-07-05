@@ -150,6 +150,15 @@ export interface Agreement {
   payment?: Payment;
   contractTimeline?: TimelineItem[];
   stageDiscussion?: DiscussionMessage[];
+  signatureLog?: SignatureLogEntry[];
+}
+
+// Append-only history of every sign/unsign action, in the order they occurred.
+export interface SignatureLogEntry {
+  actor: "artist" | "organiser";
+  action: "signed" | "unsigned";
+  name: string;
+  timestamp: string;
 }
 
 export interface Payment {

@@ -14,7 +14,9 @@ import {
   Bell,
   CheckCircle2,
   PenLine,
-  MessageSquare
+  MessageSquare,
+  History,
+  XCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,6 +87,7 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
       // Only mark the contract as fully "confirmed" once the ARTIST has also signed.
       // Otherwise the organiser's own signature must not flip the artist's status to SIGNED.
       const docStatus = isArtistSigned ? "confirmed" : "signed_by_organiser";
+      const now = new Date().toISOString();
       const res = await fetch(`/api/contracts/${eventId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -92,9 +95,12 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
           artistId: artist.id,
           contractDocStatus: docStatus,
           status: docStatus === "confirmed" ? "confirmed" : artist.status,
-          organiserSignedAt: new Date().toISOString(),
+          organiserSignedAt: now,
           contractSignedByOrganiser: true,
           organiserSignatureName: signatureName.trim(),
+          // Server appends this to whatever log currently exists in the DB —
+          // never send the full array, since a stale client copy would drop history.
+          signatureLogEntry: { actor: "organiser", action: "signed", name: signatureName.trim(), timestamp: now },
         }),
       });
       const d = await res.json();
@@ -129,6 +135,9 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
           organiserSignedAt: null,
           contractSignedByOrganiser: false,
           organiserSignatureName: "",
+          // Server appends this to whatever log currently exists in the DB —
+          // never send the full array, since a stale client copy would drop history.
+          signatureLogEntry: { actor: "organiser", action: "unsigned", name: organiserSig?.name || "Organiser", timestamp: new Date().toISOString() },
         }),
       });
       const d = await res.json();
@@ -296,6 +305,63 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
               </div>
           </div>
         </div>
+
+        {/* Activity Log — full sign/unsign history, in chronological order */}
+        {(artist.agreement?.signatureLog?.length ?? 0) > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden ring-1 ring-slate-100 mt-6">
+            <div className="px-6 py-4 flex items-center gap-4 border-b border-slate-50">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-50">
+                <History className="h-5 w-5 text-pink-500" />
+              </div>
+              <h2 className="text-base font-bold text-slate-900">Activity Log</h2>
+              <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none ml-2">
+                {artist.agreement?.signatureLog?.length ?? 0}
+              </Badge>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
+                {[...(artist.agreement?.signatureLog ?? [])]
+                  .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                  .map((entry, idx) => {
+                    const isSigned = entry.action === "signed";
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "flex items-center justify-between rounded-xl border p-3.5 shadow-sm",
+                          isSigned ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200 bg-slate-50/50"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-full shrink-0",
+                            isSigned ? "bg-emerald-100" : "bg-slate-100"
+                          )}>
+                            {isSigned ? (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-slate-500" />
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-900 capitalize">
+                              {entry.actor} {isSigned ? "signed" : "removed their signature"}
+                              {entry.name ? ` · ${entry.name}` : ""}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(entry.timestamp).toLocaleString(undefined, {
+                                weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Agreement Chat Section */}
         {artist.agreement?.stageDiscussion && (

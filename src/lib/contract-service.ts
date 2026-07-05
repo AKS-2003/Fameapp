@@ -63,7 +63,13 @@ export class ContractService {
 		await connectToDatabase();
 		const artists = await this.getArtists(eventId);
 		let index = artists.findIndex((a: any) => a.id === artistId);
-		
+
+		// First-ever write for this artist — signatureLogEntry just becomes the sole entry.
+		if (index === -1 && updates.signatureLogEntry) {
+			updates.signatureLog = [updates.signatureLogEntry];
+			delete updates.signatureLogEntry;
+		}
+
 		if (index === -1) {
 			// If not in contract_artists blob, look in other sources (Drafts/FameLink)
 			console.log(`[ContractService] Artist ${artistId} not in blob, migrating from Drafts/FameLink...`);
@@ -119,7 +125,18 @@ export class ContractService {
 		} else {
 			// Update existing blob entry
 			const existingArtist = artists[index];
-			
+
+			// Append-only signature history: the caller sends a single new entry via
+			// `signatureLogEntry` and we append it to whatever is CURRENTLY in the DB,
+			// so a stale client-side copy of the log can never clobber earlier entries.
+			if (updates.signatureLogEntry) {
+				updates.signatureLog = [
+					...(existingArtist.signatureLog || []),
+					updates.signatureLogEntry,
+				];
+				delete updates.signatureLogEntry;
+			}
+
 			// Deep merge for 'agreement' to prevent overwriting other tabs (Contract/Schedule/Payment)
 			// We only overwrite fields that are explicitly provided in updates.agreement
 			if (updates.agreement && existingArtist.agreement) {

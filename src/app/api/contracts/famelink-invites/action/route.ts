@@ -102,14 +102,25 @@ export async function POST(request: NextRequest) {
 
 			case "accept_contract": {
 				const { signatureName } = data || {};
+				const existing = await ContractService.getArtist(eventId, artistContractId);
+				const now = new Date().toISOString();
+				// Only mark the contract fully "confirmed" once the ORGANISER has also signed —
+				// otherwise the artist's own signature must not flip the organiser's status to SIGNED.
+				const organiserAlreadySigned =
+					existing?.contractDocStatus === "confirmed" ||
+					existing?.contractDocStatus === "signed_by_organiser" ||
+					!!existing?.contractSignedByOrganiser;
+				const docStatus = organiserAlreadySigned ? "confirmed" : "signed";
 				await ContractService.updateArtist(
 					eventId,
 					artistContractId,
 					{
-						contractDocStatus: "signed",
-						contractSignedAt: new Date().toISOString(),
+						contractDocStatus: docStatus,
+						contractSignedAt: now,
 						contractSignedByArtist: true,
 						contractSignatureName: signatureName || "",
+						// Server appends this to whatever log currently exists in the DB.
+						signatureLogEntry: { actor: "artist", action: "signed", name: signatureName || "Artist", timestamp: now },
 					},
 				);
 				await ContractService.addConversationMessage(eventId, {
@@ -118,7 +129,7 @@ export async function POST(request: NextRequest) {
 					sender: "system",
 					senderName: "System",
 					text: `✅ Artist signed the contract${signatureName ? ` (Signed as: ${signatureName})` : "."}`,
-					timestamp: new Date().toISOString(),
+					timestamp: now,
 					type: "system",
 				});
 				return NextResponse.json({
@@ -128,14 +139,24 @@ export async function POST(request: NextRequest) {
 			}
 
 			case "withdraw_signature": {
+				const existing = await ContractService.getArtist(eventId, artistContractId);
+				// Revert to whatever status reflects only the organiser's signature (if any),
+				// never touching the organiser's own signed fields.
+				const organiserSigned =
+					existing?.contractDocStatus === "confirmed" ||
+					existing?.contractDocStatus === "signed_by_organiser" ||
+					!!existing?.contractSignedByOrganiser;
+				const docStatus = organiserSigned ? "signed_by_organiser" : "pending";
 				await ContractService.updateArtist(
 					eventId,
 					artistContractId,
 					{
-						contractDocStatus: "pending",
+						contractDocStatus: docStatus,
 						contractSignedAt: null,
 						contractSignedByArtist: false,
 						contractSignatureName: "",
+						// Server appends this to whatever log currently exists in the DB.
+						signatureLogEntry: { actor: "artist", action: "unsigned", name: existing?.contractSignatureName || "Artist", timestamp: new Date().toISOString() },
 					},
 				);
 				await ContractService.addConversationMessage(eventId, {

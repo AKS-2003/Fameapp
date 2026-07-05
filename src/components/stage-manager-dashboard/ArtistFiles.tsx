@@ -83,6 +83,7 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
           status: a.contractDocStatus === "confirmed" || a.contractSignedByOrganiser ? "SIGNED" : "PENDING",
         },
       },
+      signatureLog: a.signatureLog || [],
       schedule: agr.schedule || {
         deliverablesCount: 0,
         overview: { workshops: 0, shows: 0, tasks: 0, dateRange: "" },
