@@ -513,6 +513,7 @@ function FameLinkDashboardContent() {
 	const [error, setError] = useState<string | null>(null);
 	const [sessionConflict, setSessionConflict] = useState<"stage_manager" | "super_admin" | "dj" | null>(null);
 	const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+	const [duplicatingShowId, setDuplicatingShowId] = useState<string | null>(null);
 	const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 	const [activeSection, setActiveSection] = useState<"dashboard" | "event-tasks" | "shows" | "logistics" | "documents" | "messages" | "account">("dashboard");
 	const [selectedEventInviteId, setSelectedEventInviteId] = useState<string | null>(null);
@@ -679,6 +680,10 @@ function FameLinkDashboardContent() {
 	const [shareModalOpen, setShareModalOpen] = useState(false);
 	// Tracks whether we've already handled the ?justCreatedShow=true redirect this page load
 	const justCreatedShowRef = useRef(false);
+	// Track whether eventRequests/eventParticipations have finished their first fetch —
+	// these load independently of the main `loading` flag, so we can't rely on that alone.
+	const [eventRequestsLoaded, setEventRequestsLoaded] = useState(false);
+	const [eventParticipationsLoaded, setEventParticipationsLoaded] = useState(false);
 	// Dismissed is stored in localStorage so it persists across reloads, keyed by artistId
 	const onboardingStorageKey = `onboarding_dismissed_${artistId}`;
 	const [onboardingDismissed, setOnboardingDismissed] = useState(() =>
@@ -792,6 +797,12 @@ function FameLinkDashboardContent() {
 		if (onboardingOpen) return;   // already open
 		if (shareModalOpen) return;   // share popup is taking priority (e.g. just created a show)
 		if (justCreatedShowRef.current) return; // let the other effect decide first
+		if (
+			searchParams.get("justCreatedShow") === "true" &&
+			(!eventRequestsLoaded || !eventParticipationsLoaded)
+		) {
+			return; // still waiting on data before the justCreatedShow effect can decide
+		}
 
 		const pendingRequests = eventRequests.filter((r) => r.status === "pending");
 
@@ -813,7 +824,7 @@ function FameLinkDashboardContent() {
 		if (pendingRequests.length > 0 || unsubmittedParticipations.length > 0) {
 			setOnboardingOpen(true);
 		}
-	}, [loading, eventRequests, eventParticipations, shows, onboardingDismissed, onboardingOpen, shareModalOpen]);
+	}, [loading, eventRequests, eventParticipations, shows, onboardingDismissed, onboardingOpen, shareModalOpen, searchParams, eventRequestsLoaded, eventParticipationsLoaded]);
 
 	// Just created a show — if there are events still waiting on a show submission,
 	// jump straight to the "Where do you want to share?" popup instead of the tasks list.
@@ -821,6 +832,9 @@ function FameLinkDashboardContent() {
 	// so this only opens when the popup will actually have something to show.
 	useEffect(() => {
 		if (loading) return;
+		// eventRequests/eventParticipations load independently of `loading` — wait for both
+		// before deciding, otherwise we might see empty arrays and skip the popup incorrectly.
+		if (!eventRequestsLoaded || !eventParticipationsLoaded) return;
 		if (searchParams.get("justCreatedShow") !== "true") return;
 		if (justCreatedShowRef.current) return; // only handle this once per navigation
 		justCreatedShowRef.current = true;
@@ -839,7 +853,7 @@ function FameLinkDashboardContent() {
 
 		// Clean up the URL param so this doesn't re-trigger on refresh
 		window.history.replaceState({}, "", window.location.pathname + "?tab=shows");
-	}, [loading, eventRequests, eventParticipations, shows, searchParams]);
+	}, [loading, eventRequestsLoaded, eventParticipationsLoaded, eventRequests, eventParticipations, shows, searchParams]);
 
 	const fetchEventRequests = useCallback(async () => {
 		try {
@@ -850,6 +864,8 @@ function FameLinkDashboardContent() {
 			}
 		} catch (err) {
 			console.error("Error fetching event requests:", err);
+		} finally {
+			setEventRequestsLoaded(true);
 		}
 	}, []);
 
@@ -880,6 +896,8 @@ function FameLinkDashboardContent() {
 			}
 		} catch (err) {
 			console.error("Error fetching event participations:", err);
+		} finally {
+			setEventParticipationsLoaded(true);
 		}
 	}, [fetchEventShowCount]);
 
@@ -1243,6 +1261,28 @@ function FameLinkDashboardContent() {
 		}
 	};
 
+	// Duplicate a show: stash its full data and open the create-show page pre-filled with it
+	const handleDuplicateShow = async (showId: string) => {
+		setDuplicatingShowId(showId);
+		try {
+			const response = await fetch(`/api/shows/${showId}`);
+			const result = await response.json();
+			if (!result.success) {
+				throw new Error(result.error?.message || "Failed to load show");
+			}
+			const s = result.data.show || result.data;
+			sessionStorage.setItem("duplicateShowData", JSON.stringify(s));
+			router.push(`/famelink/${artistId}/shows/create`);
+			// Leave duplicatingShowId set — the overlay stays up until the new page mounts and navigates away
+		} catch (error) {
+			setDuplicatingShowId(null);
+			toast({
+				title: "Error",
+				description: "Failed to duplicate show",
+				variant: "destructive",
+			});
+		}
+	};
 
 	const toggleShowSelection = (requestId: string, showId: string) => {
 		setSelectedShowIds((prev) => {
@@ -2318,6 +2358,18 @@ function FameLinkDashboardContent() {
 																</Link>
 																<button onClick={() => setShareModalOpen(true)} className="flex items-center gap-1.5 text-[13px] font-semibold text-[#f472b6] hover:text-[#fbcfe8] transition-colors">
 																	<Share2 className="h-4 w-4" /> Share
+																</button>
+																<button
+																	onClick={() => handleDuplicateShow(show.id)}
+																	disabled={duplicatingShowId !== null}
+																	className="flex items-center gap-1.5 text-[13px] font-semibold text-white hover:text-purple-300 transition-colors disabled:opacity-50"
+																>
+																	{duplicatingShowId === show.id ? (
+																		<Loader2 className="h-4 w-4 text-[#a491b5] animate-spin" />
+																	) : (
+																		<Copy className="h-4 w-4 text-[#a491b5]" />
+																	)}
+																	Duplicate
 																</button>
 															</div>
 															<button onClick={() => handleDeleteShow(show.id)} className="text-[#e16875] hover:text-red-400 transition-colors p-1">
@@ -4038,6 +4090,15 @@ function FameLinkDashboardContent() {
 						router.push(`/famelink/${artistId}/shows/create`)
 					}
 				/>
+
+				{/* ── Duplicate Show Loading Overlay ────────────────── */}
+				{duplicatingShowId !== null && (
+					<div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-[#06020f]/90 backdrop-blur-sm">
+						<Loader2 className="h-10 w-10 text-purple-400 animate-spin" />
+						<p className="text-white font-semibold">Duplicating show...</p>
+						<p className="text-purple-300/50 text-sm">Opening the show creation page</p>
+					</div>
+				)}
 
 				{/* ── Footer ─────────────────────────────────────── */}
 				<footer className="border-t border-white/5 mt-12 py-8">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,6 +169,70 @@ export default function CreateShowPage() {
 	const handleInputChange = (field: string, value: string | number) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
+
+	// If we arrived here via "Duplicate", pre-fill the form with the source show's data
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const raw = sessionStorage.getItem("duplicateShowData");
+		if (!raw) return;
+		sessionStorage.removeItem("duplicateShowData");
+		try {
+			const s = JSON.parse(raw);
+			setFormData({
+				name: s.name ? `Copy of ${s.name}` : "",
+				real_name: s.realName || "",
+				email: s.email || "",
+				phone: s.phone || "",
+				managed_by: s.managedBy || "",
+				style: s.style || "",
+				performance_type: s.performanceType || "",
+				biography: s.biography || s.description || "",
+				notes: s.notes || "",
+				props_needed: s.equipment || s.techRider || "",
+				performance_duration: s.duration || 5,
+				costume_color: s.costumeColor || "",
+				costume_color_two: s.costumeColorTwo || "none",
+				costume_color_three: s.costumeColorThree || "none",
+				custom_costume_color: s.customCostumeColor || "",
+				manual_costume_color: s.manualCostumeColor || "",
+				manual_costume_color_two: s.manualCostumeColorTwo || "",
+				manual_costume_color_three: s.manualCostumeColorThree || "",
+				light_color_single: s.lightColorSingle || "trust",
+				light_color_two: s.lightColorTwo || "none",
+				light_color_three: s.lightColorThree || "none",
+				light_requests: s.lightRequests || "",
+				manual_light_color: s.manualLightColor || "",
+				manual_light_color_two: s.manualLightColorTwo || "",
+				manual_light_color_three: s.manualLightColorThree || "",
+				show_link: s.showLink || "",
+				stage_position_start: s.stagePositionStart || "",
+				stage_position_end: s.stagePositionEnd || "",
+				custom_stage_position: s.customStagePosition || "",
+				mc_notes: s.mcNotes || "",
+				stage_manager_notes: s.stageManagerNotes || "",
+				instagram_link: s.socialMedia?.instagram || "",
+				facebook_link: s.socialMedia?.facebook || "",
+				tiktok_link: s.socialMedia?.tiktok || "",
+				youtube_link: s.socialMedia?.youtube || "",
+				website_link: s.socialMedia?.website || "",
+				country_living: s.countryLiving || "",
+				home_country: s.homeCountry || "",
+			});
+			if (s.members?.length) setMembers(s.members);
+			if (s.tshirtSizes?.length) setTshirtSizes(s.tshirtSizes);
+			if (s.musicTrack) setMusicTrack(s.musicTrack);
+			if (s.galleryFiles) setGalleryFiles(s.galleryFiles);
+			if (s.profileImage) setProfileImage(s.profileImage);
+			if (s.rehearsalVideo) setRehearsalVideo(s.rehearsalVideo);
+			toast({
+				title: "Show Duplicated",
+				description: "Review the details below, then save to create your copy.",
+			});
+		} catch (err) {
+			console.error("Error pre-filling duplicated show:", err);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	// Upload handlers
 	const handleProfileImageUpload = async (
