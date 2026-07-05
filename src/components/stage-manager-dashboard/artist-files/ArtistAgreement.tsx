@@ -82,13 +82,16 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
     if (!signatureName.trim()) return;
     setSigning(true);
     try {
+      // Only mark the contract as fully "confirmed" once the ARTIST has also signed.
+      // Otherwise the organiser's own signature must not flip the artist's status to SIGNED.
+      const docStatus = isArtistSigned ? "confirmed" : "signed_by_organiser";
       const res = await fetch(`/api/contracts/${eventId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           artistId: artist.id,
-          contractDocStatus: "confirmed",
-          status: "confirmed",
+          contractDocStatus: docStatus,
+          status: docStatus === "confirmed" ? "confirmed" : artist.status,
           organiserSignedAt: new Date().toISOString(),
           contractSignedByOrganiser: true,
           organiserSignatureName: signatureName.trim(),
@@ -104,6 +107,39 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
     } catch (err) {
       console.error(err);
       alert("Failed to sign contract");
+    } finally {
+      setSigning(false);
+    }
+  };
+
+  const handleUnsignContract = async () => {
+    if (!confirm("Remove the organiser's signature from this agreement?")) return;
+    setSigning(true);
+    try {
+      // Revert to whatever status reflects only the artist's signature (if any),
+      // never touching the artist's own signed fields.
+      const docStatus = isArtistSigned ? "signed" : "pending";
+      const res = await fetch(`/api/contracts/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          artistId: artist.id,
+          contractDocStatus: docStatus,
+          status: artist.status === "confirmed" ? "pending" : artist.status,
+          organiserSignedAt: null,
+          contractSignedByOrganiser: false,
+          organiserSignatureName: "",
+        }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        if (onRefresh) onRefresh();
+      } else {
+        alert(d.error || "Failed to remove signature");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to remove signature");
     } finally {
       setSigning(false);
     }
@@ -165,7 +201,18 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
                         <span className="text-xs text-slate-500">Signed on {organiserSig?.date ? new Date(organiserSig.date).toLocaleDateString() : ""}</span>
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600">Signed</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600">Signed</span>
+                      <Button
+                        onClick={handleUnsignContract}
+                        disabled={signing}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg border-slate-200 bg-white text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 shadow-sm"
+                      >
+                        Unsign
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-white p-4 shadow-sm">

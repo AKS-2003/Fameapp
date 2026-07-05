@@ -26,6 +26,7 @@ export type ContractDocStatus =
 	| "sent"
 	| "awaiting_signature"
 	| "signed"
+	| "signed_by_organiser"
 	| "confirmed";
 export type PaymentStatus = "unpaid" | "downpayment" | "paid";
 
@@ -376,6 +377,7 @@ export const contractDocStatusLabels: Record<ContractDocStatus, string> = {
 	sent: "Sent to Artist",
 	awaiting_signature: "Awaiting Signature",
 	signed: "Signed",
+	signed_by_organiser: "Signed by Organiser",
 	confirmed: "Confirmed",
 };
 
