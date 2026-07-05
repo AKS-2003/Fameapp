@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { APIResponse } from "@/types";
-import { sendArtistVerificationEmail } from "@/lib/email-service";
+import { sendArtistVerificationEmail, sendArtistCredentialsEmail } from "@/lib/email-service";
 import {
 	getEventShowsByEvent,
 	getEventParticipationsByEvent,
+	getFameLinkArtistByEmail,
+	createFameLinkArtist,
 } from "@/lib/data-access";
+import { hashPassword } from "@/lib/auth";
 import { connectToDatabase } from "@/database/mongodb";
 import { EventArtistModel } from "@/database/models/FameLinkModels";
+import crypto from "crypto";
 
 /** Safely parse snapshotJson — it may be stored as a JSON string or already an object */
 function parseSnapshot(raw: any): any {
@@ -453,8 +457,52 @@ export async function POST(
 			});
 		}
 
-		// Send verification email
-		if (artistData.email) {
+		// If this email has no existing FameLink login account, create a real one now
+		// with a generated password so the artist can log in immediately. Use the
+		// famelinkArtistId already stored on the draft (and baked into the invite/magic
+		// link) as the new account's id, so the existing link keeps resolving correctly —
+		// NOT artistId, which is a separate id generated for the EventArtist draft record.
+		let generatedPassword: string | null = null;
+		if (normalizedEmail) {
+			try {
+				const existingFameLinkAccount = await getFameLinkArtistByEmail(normalizedEmail);
+				if (!existingFameLinkAccount) {
+					const newAccountId = artistData.famelinkArtistId || artistId;
+					generatedPassword = crypto.randomBytes(9).toString("base64").replace(/[+/=]/g, "").slice(0, 12);
+					const hashedPassword = await hashPassword(generatedPassword);
+					const verificationToken = crypto.randomBytes(32).toString("hex");
+
+					await createFameLinkArtist({
+						id: newAccountId,
+						email: normalizedEmail,
+						passwordHash: hashedPassword,
+						artistName: artistData.artistName,
+						realName: artistData.realName || "",
+						phone: artistData.phone || "",
+						tier: "free",
+						emailVerified: true,
+						verificationToken,
+						verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					});
+
+					await sendArtistCredentialsEmail({
+						email: artistData.email,
+						artistName: artistData.artistName,
+						password: generatedPassword,
+						eventName: artistData.eventName || "",
+					});
+					console.log(`✅ Login credentials created and emailed to ${artistData.email}`);
+				}
+			} catch (accountError) {
+				console.error("Failed to create FameLink login account:", accountError);
+			}
+		}
+
+		// Send the legacy "claim your draft" verification email only when we did NOT just
+		// create a fresh login account above (otherwise the artist gets two conflicting emails).
+		if (artistData.email && !generatedPassword) {
 			try {
 				await sendArtistVerificationEmail({
 					artistName: artistData.artistName,
@@ -471,7 +519,7 @@ export async function POST(
 
 		return NextResponse.json<APIResponse>({
 			success: true,
-			data: { id: artistId, artist },
+			data: { id: artistId, artist, generatedPassword },
 		});
 	} catch (error) {
 		console.error("Create artist error:", error);

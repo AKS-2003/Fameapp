@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Save, Loader2, Search, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Plus, Save, Loader2, Search, CheckCircle2, KeyRound, Copy, Check } from "lucide-react";
 
 interface CreateArtistFileProps {
   onBack: () => void;
@@ -29,6 +29,11 @@ export function CreateArtistFile({ onBack, onCreated, defaultEventId }: CreateAr
   const [searchingFL, setSearchingFL] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // When creating a brand-new artist, the server generates login credentials —
+  // shown here once so the stage manager can copy/share them before moving on.
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [pendingCreatedArtist, setPendingCreatedArtist] = useState<any>(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   useEffect(() => {
     fetch("/api/events")
@@ -133,7 +138,14 @@ export function CreateArtistFile({ onBack, onCreated, defaultEventId }: CreateAr
       });
       const data = await res.json();
       if (data.success) {
-        onCreated({ ...payload, id: data.data?.id, eventId: selectedEventId });
+        const createdArtist = { ...payload, id: data.data?.id, eventId: selectedEventId };
+        if (data.data?.generatedPassword) {
+          // Hold off notifying the parent until the stage manager has seen the password
+          setCreatedCredentials({ email: form.email, password: data.data.generatedPassword });
+          setPendingCreatedArtist(createdArtist);
+        } else {
+          onCreated(createdArtist);
+        }
       } else {
         setError(data.error?.message || "Failed to create artist file.");
       }
@@ -141,6 +153,23 @@ export function CreateArtistFile({ onBack, onCreated, defaultEventId }: CreateAr
       setError("Network error. Please try again.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    if (!createdCredentials) return;
+    navigator.clipboard?.writeText(createdCredentials.password).then(() => {
+      setCopiedPassword(true);
+      setTimeout(() => setCopiedPassword(false), 2000);
+    });
+  };
+
+  const handleDismissCredentials = () => {
+    setCreatedCredentials(null);
+    setCopiedPassword(false);
+    if (pendingCreatedArtist) {
+      onCreated(pendingCreatedArtist);
+      setPendingCreatedArtist(null);
     }
   };
 
@@ -393,6 +422,66 @@ export function CreateArtistFile({ onBack, onCreated, defaultEventId }: CreateAr
           </div>
         </div>
       </div>
+
+      {/* Generated login credentials — shown once right after creating a brand-new artist */}
+      {createdCredentials && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fuchsia-50 shrink-0">
+                <KeyRound className="h-5 w-5 text-fuchsia-600" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">Artist Account Created</h2>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              A new FameLink login was created for this artist. We&apos;ve emailed these credentials to them —
+              you can also share them directly now.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>Email</label>
+                <div className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800">
+                  {createdCredentials.email}
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Temporary Password</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800">
+                    {createdCredentials.password}
+                  </div>
+                  <button
+                    onClick={handleCopyPassword}
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 shrink-0"
+                  >
+                    {copiedPassword ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-500" /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" /> Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs text-slate-400">
+              The artist can log in with these credentials right away, and reset the password anytime from the login page.
+            </p>
+
+            <button
+              onClick={handleDismissCredentials}
+              className="mt-5 w-full rounded-xl bg-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-fuchsia-700 shadow-sm"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

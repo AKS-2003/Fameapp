@@ -3130,3 +3130,90 @@ export async function sendArtistPasswordResetEmail(data: {
 		text: `Hi ${artistName}, click this link to reset your password: ${resetUrl} — This link expires in 1 hour.`,
 	});
 }
+
+/**
+ * Send login credentials to an artist whose account was created directly by a
+ * stage manager (e.g. from the Artist Files "Create Artist" flow) with a
+ * brand-new email that had no existing FameLink account.
+ */
+export async function sendArtistCredentialsEmail(data: {
+	email: string;
+	artistName: string;
+	password: string;
+	eventName?: string;
+}): Promise<boolean> {
+	const { email, artistName, password, eventName } = data;
+	const baseUrl = getBaseUrl();
+	const loginUrl = `${baseUrl}/famelink-auth`;
+
+	const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your FameLink Account is Ready</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0f0520;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0520;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:linear-gradient(135deg,#1a0a2e 0%,#16082b 100%);border-radius:16px;border:1px solid rgba(139,92,246,0.2);overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding:32px 32px 0;text-align:center;">
+              <div style="width:56px;height:56px;background:linear-gradient(135deg,#9333ea,#ec4899);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                <span style="color:white;font-size:20px;font-weight:800;">FM</span>
+              </div>
+              <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 8px;">Your FameLink Account is Ready</h1>
+              <p style="color:#a78bfa;font-size:14px;margin:0;">
+                Hi ${artistName}, an account has been created for you${eventName ? ` for <strong style="color:#e9d5ff;">${eventName}</strong>` : ""} on FameLink.
+              </p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:28px 32px;">
+              <p style="color:#d1d5db;font-size:14px;line-height:1.6;margin:0 0 20px;">
+                You can log in now using the credentials below:
+              </p>
+              <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:16px 20px;margin-bottom:24px;">
+                <p style="color:#9ca3af;font-size:12px;margin:0 0 4px;">Email</p>
+                <p style="color:#ffffff;font-size:15px;font-weight:600;margin:0 0 14px;word-break:break-all;">${email}</p>
+                <p style="color:#9ca3af;font-size:12px;margin:0 0 4px;">Temporary Password</p>
+                <p style="color:#ffffff;font-size:15px;font-weight:600;margin:0;font-family:monospace;">${password}</p>
+              </div>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#9333ea,#ec4899);color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:12px;font-size:15px;font-weight:600;letter-spacing:0.3px;">
+                      Log In to FameLink
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color:#9ca3af;font-size:12px;line-height:1.5;margin:24px 0 0;text-align:center;">
+                For your security, we recommend resetting your password after logging in. You can do this anytime from the login page using "Forgot password".
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px;border-top:1px solid rgba(139,92,246,0.1);text-align:center;">
+              <p style="color:#6b7280;font-size:11px;margin:0;">Powered by FAME &middot; FameLink Artist Platform</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+	return sendEmail({
+		to: email,
+		subject: "Your FameLink Account is Ready — Login Details Inside",
+		html,
+		text: `Hi ${artistName}, an account has been created for you on FameLink.\n\nEmail: ${email}\nTemporary Password: ${password}\n\nLog in at: ${loginUrl}\n\nWe recommend resetting your password after logging in via "Forgot password" on the login page.`,
+	});
+}
