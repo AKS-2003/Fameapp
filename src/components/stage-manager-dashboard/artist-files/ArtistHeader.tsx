@@ -177,8 +177,11 @@ export function ArtistHeader({
     }
   };
 
+  // Agreement is always mandatory — never editable, regardless of any stored value.
+  const withMandatoryContract = (wf: WorkflowState): WorkflowState => ({ ...wf, contract: "Required" });
+
   // Local draft of workflow — committed to parent on Save
-  const defaultWorkflow: WorkflowState = artistWorkflow || { contract: "Required", logistics: "Required", show: "Required" };
+  const defaultWorkflow: WorkflowState = withMandatoryContract(artistWorkflow || { contract: "Required", logistics: "Required", show: "Required" });
   const [draft, setDraft] = useState<WorkflowState>(defaultWorkflow);
   const [committed, setCommitted] = useState<WorkflowState>(defaultWorkflow);
   const [imageError, setImageError] = useState(false);
@@ -189,7 +192,7 @@ export function ArtistHeader({
 
   // Sync when parent resets (artist switch)
   useEffect(() => {
-    const next: WorkflowState = artistWorkflow || { contract: "Required", logistics: "Required", show: "Required" };
+    const next: WorkflowState = withMandatoryContract(artistWorkflow || { contract: "Required", logistics: "Required", show: "Required" });
     setDraft(next);
     setCommitted(next);
   }, [artist.id, artistWorkflow?.contract, artistWorkflow?.logistics, artistWorkflow?.show]);
@@ -225,17 +228,18 @@ export function ArtistHeader({
 
   /**
    * Build the modules string for the magic link.
-   * Rules (event-level AND per-artist):
-   *   - event toggle must be true  AND  per-artist status must NOT be "Not Required"
+   * `wf` is already resolved with artist-override-first, event-toggle-fallback priority
+   * (see ArtistFiles.tsx's resolveArtistWorkflow), so it alone decides:
+   *   - "Not Required"             → EXCLUDE from magic link
    *   - "Completed Outside System" → still include in link (artist still navigates there)
    *   - "Not Ready Yet"            → still include (just informational label)
-   *   - "Not Required"             → EXCLUDE from magic link
+   *   - explicit "Required"        → always included, even if the event has it disabled
    */
   const getModulesPath = (wf: WorkflowState = committed) => {
     const modules: string[] = [];
-    if (eventData?.contractEnabled !== false && wf.contract !== "Not Required") modules.push("contract");
-    if (eventData?.logisticsEnabled !== false && wf.logistics !== "Not Required") modules.push("logistics");
-    if (eventData?.showInfoEnabled !== false && wf.show !== "Not Required") modules.push("showinfo");
+    if (wf.contract !== "Not Required") modules.push("contract");
+    if (wf.logistics !== "Not Required") modules.push("logistics");
+    if (wf.show !== "Not Required") modules.push("showinfo");
     return modules.join(",");
   };
 
@@ -344,11 +348,6 @@ export function ArtistHeader({
         <div className="mb-4 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-3 shadow-sm">
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Workflow</span>
           <div className="flex flex-wrap items-center gap-4 flex-1">
-            <WorkflowDropdown
-              label="Agreement"
-              value={draft.contract}
-              onChange={v => setDraft(d => ({ ...d, contract: v }))}
-            />
             <WorkflowDropdown
               label="Logistics"
               value={draft.logistics}

@@ -218,10 +218,12 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
         notesData: [],
       };
     })(),
-    // Workflow status (per-artist, saved by stage manager)
+    // Workflow status (per-artist, saved by stage manager).
+    // Leave logistics/show undefined when the artist has no explicit override — the
+    // caller falls back to the EVENT's own logisticsEnabled/showInfoEnabled toggle in that case.
     workflowContract: a.workflowContract || a.overrides?.workflowContract || "Required",
-    workflowLogistics: a.workflowLogistics || a.overrides?.workflowLogistics || "Required",
-    workflowShow: a.workflowShow || a.overrides?.workflowShow || "Required",
+    workflowLogistics: a.workflowLogistics || a.overrides?.workflowLogistics,
+    workflowShow: a.workflowShow || a.overrides?.workflowShow,
     artists_page_color: a.artists_page_color || a.artistsPageColor || "",
     artists_page_tag: a.artists_page_tag || a.artistsPageTag || "",
     sectionStatuses: a.sectionStatuses || {},
@@ -275,34 +277,43 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
     contract: "Required", logistics: "Required", show: "Required",
   });
 
-  // Reset workflow when artist changes
+  // Resolve an artist's workflow: check their explicit override first, then fall back
+  // to the EVENT's own toggle for that module rather than assuming "Required".
+  const resolveArtistWorkflow = (a: Artist | null): WorkflowState => ({
+    contract: (a as any)?.workflowContract || "Required",
+    logistics: (a as any)?.workflowLogistics
+      || (eventData?.logisticsEnabled === false ? "Not Required" : "Required"),
+    show: (a as any)?.workflowShow
+      || (eventData?.showInfoEnabled === false ? "Not Required" : "Required"),
+  });
+
+  // Select an artist and resolve its workflow in the SAME update, so ArtistHeader
+  // never mounts with a stale workflow value from the previously-selected artist.
+  const selectArtist = (a: Artist | null) => {
+    setSelectedArtist(a);
+    setArtistWorkflow(resolveArtistWorkflow(a));
+  };
+
+  // Keep workflow in sync if the event's own toggles change while an artist is selected
   useEffect(() => {
     if (selectedArtist) {
-      setArtistWorkflow({
-        contract: (selectedArtist as any).workflowContract || "Required",
-        logistics: (selectedArtist as any).workflowLogistics || "Required",
-        show: (selectedArtist as any).workflowShow || "Required",
-      });
+      setArtistWorkflow(resolveArtistWorkflow(selectedArtist));
     }
-  }, [selectedArtist?.id]);
+  }, [eventData?.logisticsEnabled, eventData?.showInfoEnabled]);
 
-  // Update active tab if per-artist workflow makes it unavailable
+  // Update active tab if per-artist workflow makes it unavailable.
+  // artistWorkflow is already resolved with artist-override-first, event-toggle-fallback
+  // priority (see resolveArtistWorkflow), so it alone decides — an explicit per-artist
+  // "Required" must not be overridden by the event having that module disabled.
   useEffect(() => {
     const isTabEnabled = (tab: string) => {
-      if (tab === "Contract") return eventData?.contractEnabled !== false && artistWorkflow.contract !== "Not Required";
-      if (tab === "Logistics") return eventData?.logisticsEnabled !== false && artistWorkflow.logistics !== "Not Required";
-      if (tab === "Show Management") return eventData?.showInfoEnabled !== false && artistWorkflow.show !== "Not Required";
+      if (tab === "Contract") return artistWorkflow.contract !== "Not Required";
+      if (tab === "Logistics") return artistWorkflow.logistics !== "Not Required";
+      if (tab === "Show Management") return artistWorkflow.show !== "Not Required";
       return true;
     };
     if (!isTabEnabled(activeTab)) setActiveTab(defaultTab);
-  }, [artistWorkflow, eventData, activeTab, defaultTab]);
-
-  // Update active tab if the currently selected tab becomes disabled (event-level)
-  useEffect(() => {
-    if (activeTab === "Contract" && eventData?.contractEnabled === false) setActiveTab(defaultTab);
-    else if (activeTab === "Logistics" && eventData?.logisticsEnabled === false) setActiveTab(defaultTab);
-    else if (activeTab === "Show Management" && eventData?.showInfoEnabled === false) setActiveTab(defaultTab);
-  }, [eventData, activeTab, defaultTab]);
+  }, [artistWorkflow, activeTab, defaultTab]);
 
   // Fetch shows when selected artist changes
   useEffect(() => {
@@ -338,18 +349,18 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
           );
           setArtists(mapped);
           const initial = initialArtistId ? mapped.find(a => a.id === initialArtistId) : null;
-          setSelectedArtist(initial || (mapped.length > 0 ? mapped[0] : null));
+          selectArtist(initial || (mapped.length > 0 ? mapped[0] : null));
         } else {
           setError(d.error || "Failed to load artists");
           setArtists([]);
-          setSelectedArtist(null);
+          selectArtist(null);
         }
       })
       .catch((err) => {
         console.error("Error loading contract artists:", err);
         setError("Failed to load artists");
         setArtists([]);
-        setSelectedArtist(null);
+        selectArtist(null);
       })
       .finally(() => setLoading(false));
   }, [providedEventId]);
@@ -364,13 +375,11 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
       );
       const d = await res.json();
       if (d.success) {
-        setArtists((prev) => {
-          const remaining = prev.filter((a) => a.id !== artist.id);
-          setSelectedArtist((current) =>
-            current?.id === artist.id ? (remaining[0] || null) : current
-          );
-          return remaining;
-        });
+        setArtists((prev) => prev.filter((a) => a.id !== artist.id));
+        if (selectedArtist?.id === artist.id) {
+          const remaining = artists.filter((a) => a.id !== artist.id);
+          selectArtist(remaining[0] || null);
+        }
       } else {
         console.error("Failed to delete artist:", d.error);
         window.alert(d.error || "Failed to delete artist");
@@ -392,10 +401,10 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
           mapContractArtistToArtist(a, providedEventId)
         );
         setArtists(mapped);
-        
+
         // Update selected artist with new data
         const updated = mapped.find((a) => a.id === artistId);
-        if (updated) setSelectedArtist(updated);
+        if (updated) selectArtist(updated);
       }
     } catch (err) {
       console.error("Error refreshing artist data:", err);
@@ -428,9 +437,9 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
         <ArtistSidebar
           artists={artists}
           selectedArtist={creating ? null : selectedArtist}
-          onSelect={(a) => { setSelectedArtist(a); setCreating(false); }}
+          onSelect={(a) => { selectArtist(a); setCreating(false); }}
           onBack={onBack}
-          onAdd={() => { setCreating(true); setSelectedArtist(null); }}
+          onAdd={() => { setCreating(true); selectArtist(null); }}
           onDelete={handleDeleteArtist}
         />
 
@@ -453,7 +462,7 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
                         setArtists(mapped);
                         // Select the newly added artist
                         const created = mapped.find((a) => a.id === newArtist.id) || mapped[mapped.length - 1];
-                        setSelectedArtist(created || null);
+                        selectArtist(created || null);
                       }
                     })
                     .catch(console.error);
@@ -484,10 +493,9 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
                 artistWorkflow={artistWorkflow}
                 onWorkflowChange={setArtistWorkflow}
               />
-              <ArtistTabs 
-                activeTab={activeTab} 
-                onTabChange={setActiveTab} 
-                eventData={eventData}
+              <ArtistTabs
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
                 artistWorkflow={artistWorkflow}
               />
               {activeTab === "Contract" ? (

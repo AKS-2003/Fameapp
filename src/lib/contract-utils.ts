@@ -134,10 +134,12 @@ export async function getUnifiedArtistsForEvent(eventId: string) {
 				eventVenueAddress: "", eventVenueMapLink: "",
 			},
 			eventQuestions: [],
-			// ── Persist workflow fields saved by stage manager ──
+			// ── Persist workflow fields saved by stage manager. Leave logistics/show
+			// undefined when there's no explicit override so callers fall back to the
+			// event's own logisticsEnabled/showInfoEnabled toggle instead of assuming Required. ──
 			workflowContract: a.workflowContract || "Required",
-			workflowLogistics: a.workflowLogistics || "Required",
-			workflowShow: a.workflowShow || "Required",
+			workflowLogistics: a.workflowLogistics || undefined,
+			workflowShow: a.workflowShow || undefined,
 			// ── Persist color/tag fields ──
 			artists_page_color: a.artists_page_color || a.artistsPageColor || undefined,
 			artists_page_tag: a.artists_page_tag || a.artistsPageTag || undefined,
@@ -202,10 +204,12 @@ export async function getUnifiedArtistsForEvent(eventId: string) {
 			isFameLinkArtist: true,
 			logistics: getLogisticsForArtist(es.artistId, freshProfile?.email) || freshProfile?.logistics || null,
 			eventShowId: es.id,
-			// ── Workflow fields saved in EventShow.overrides by stage manager ──
+			// ── Workflow fields saved in EventShow.overrides by stage manager. Leave
+			// logistics/show undefined when there's no explicit override so callers
+			// fall back to the event's own logisticsEnabled/showInfoEnabled toggle. ──
 			workflowContract: es.overrides?.workflowContract || "Required",
-			workflowLogistics: es.overrides?.workflowLogistics || "Required",
-			workflowShow: es.overrides?.workflowShow || "Required",
+			workflowLogistics: es.overrides?.workflowLogistics || undefined,
+			workflowShow: es.overrides?.workflowShow || undefined,
 			// ── Color/tag fields saved in EventShow.overrides ──
 			artists_page_color: es.overrides?.artistsPageColor || undefined,
 			artists_page_tag: es.overrides?.artistsPageTag || undefined,

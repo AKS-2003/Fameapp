@@ -3211,9 +3211,13 @@ function FameLinkDashboardContent() {
 												.map((p, idx) => {
 													const isExpanded =
 														expandedParticipationId === p.id;
-													const isContractEnabled = p.event?.contractEnabled !== false && String(p.event?.contractEnabled) !== "false" && ((p as any).workflowContract ?? "Required") !== "Not Required";
-													const isLogisticsEnabled = p.event?.logisticsEnabled !== false && String(p.event?.logisticsEnabled) !== "false" && ((p as any).workflowLogistics ?? "Required") !== "Not Required";
-													const isShowInfoEnabled = p.event?.showInfoEnabled !== false && String(p.event?.showInfoEnabled) !== "false" && ((p as any).workflowShow ?? "Required") !== "Not Required";
+													// workflowContract/Logistics/Show are already resolved server-side with
+													// artist-override-first, event-toggle-fallback priority (see
+													// event-participations route's enrichment), so they alone decide —
+													// an explicit per-artist "Required" isn't overridden by the event's toggle.
+													const isContractEnabled = ((p as any).workflowContract ?? "Required") !== "Not Required";
+													const isLogisticsEnabled = ((p as any).workflowLogistics ?? "Required") !== "Not Required";
+													const isShowInfoEnabled = ((p as any).workflowShow ?? "Required") !== "Not Required";
 
 													const getContractStatusAndAction = () => {
 														const docStatus = (p as any).contractDocStatus;

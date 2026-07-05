@@ -10,39 +10,30 @@ interface WorkflowState { contract: WorkflowStatus; logistics: WorkflowStatus; s
 interface ArtistTabsProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  eventData?: any;
   artistWorkflow?: WorkflowState;
 }
 
-/** A tab is visible when: event has it enabled AND per-artist status is not "Not Required" */
+/**
+ * A tab is visible unless its resolved workflow status is "Not Required".
+ * `artistWorkflow` is already resolved with artist-override-first, event-toggle-fallback
+ * priority upstream (see ArtistFiles.tsx's resolveArtistWorkflow), so an explicit
+ * per-artist "Required" here always wins even if the event has that module disabled.
+ */
 function isTabVisible(
   name: "Contract" | "Logistics" | "Show Management",
-  eventData: any,
   workflow: WorkflowState | undefined,
 ) {
-  if (name === "Contract") {
-    if (eventData?.contractEnabled === false) return false;
-    if (workflow?.contract === "Not Required") return false;
-    return true;
-  }
-  if (name === "Logistics") {
-    if (eventData?.logisticsEnabled === false) return false;
-    if (workflow?.logistics === "Not Required") return false;
-    return true;
-  }
-  if (name === "Show Management") {
-    if (eventData?.showInfoEnabled === false) return false;
-    if (workflow?.show === "Not Required") return false;
-    return true;
-  }
+  if (name === "Contract") return workflow?.contract !== "Not Required";
+  if (name === "Logistics") return workflow?.logistics !== "Not Required";
+  if (name === "Show Management") return workflow?.show !== "Not Required";
   return true;
 }
 
-export function ArtistTabs({ activeTab, onTabChange, eventData, artistWorkflow }: ArtistTabsProps) {
+export function ArtistTabs({ activeTab, onTabChange, artistWorkflow }: ArtistTabsProps) {
   const tabs = [
-    ...(isTabVisible("Contract", eventData, artistWorkflow) ? [{ name: "Contract", icon: FileText }] : []),
-    ...(isTabVisible("Logistics", eventData, artistWorkflow) ? [{ name: "Logistics", icon: Truck }] : []),
-    ...(isTabVisible("Show Management", eventData, artistWorkflow) ? [{ name: "Show Management", icon: Music }] : []),
+    ...(isTabVisible("Contract", artistWorkflow) ? [{ name: "Contract", icon: FileText }] : []),
+    ...(isTabVisible("Logistics", artistWorkflow) ? [{ name: "Logistics", icon: Truck }] : []),
+    ...(isTabVisible("Show Management", artistWorkflow) ? [{ name: "Show Management", icon: Music }] : []),
   ];
 
   return (

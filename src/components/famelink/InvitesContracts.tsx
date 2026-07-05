@@ -3570,9 +3570,18 @@ function InviteRow({
 }) {
 	const [expanded, setExpanded] = useState(defaultExpanded);
 	
-	const isContractEnabled = invite.event?.contractEnabled !== false && String(invite.event?.contractEnabled) !== "false" && invite.artist?.workflowContract !== "Not Required";
-	const isLogisticsEnabled = invite.event?.logisticsEnabled !== false && String(invite.event?.logisticsEnabled) !== "false" && invite.artist?.workflowLogistics !== "Not Required";
-	const isShowInfoEnabled = invite.event?.showInfoEnabled !== false && String(invite.event?.showInfoEnabled) !== "false" && invite.artist?.workflowShow !== "Not Required";
+	// Check the artist-specific override first; only fall back to the event's own
+	// toggle when the artist has no explicit workflow value for that module. An explicit
+	// per-artist "Required" must win even if the event has that module disabled.
+	const isContractEnabled = invite.artist?.workflowContract
+		? invite.artist.workflowContract !== "Not Required"
+		: invite.event?.contractEnabled !== false && String(invite.event?.contractEnabled) !== "false";
+	const isLogisticsEnabled = invite.artist?.workflowLogistics
+		? invite.artist.workflowLogistics !== "Not Required"
+		: invite.event?.logisticsEnabled !== false && String(invite.event?.logisticsEnabled) !== "false";
+	const isShowInfoEnabled = invite.artist?.workflowShow
+		? invite.artist.workflowShow !== "Not Required"
+		: invite.event?.showInfoEnabled !== false && String(invite.event?.showInfoEnabled) !== "false";
 
 	const [activeSection, setActiveSection] = useState<
 		"contract" | "logistics" | "show_info"

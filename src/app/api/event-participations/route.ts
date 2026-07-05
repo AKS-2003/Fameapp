@@ -261,11 +261,13 @@ export async function GET(request: NextRequest) {
 					(searchEmail && a.email?.toLowerCase().trim() === searchEmail)
 				);
 				if (matched) {
+					// Check the artist-specific override first; if there isn't one,
+					// fall back to the event's own logisticsEnabled/showInfoEnabled toggle.
 					return {
 						...p,
 						workflowContract: matched.workflowContract || "Required",
-						workflowLogistics: matched.workflowLogistics || "Required",
-						workflowShow: matched.workflowShow || "Required",
+						workflowLogistics: matched.workflowLogistics || (p.event?.logisticsEnabled === false ? "Not Required" : "Required"),
+						workflowShow: matched.workflowShow || (p.event?.showInfoEnabled === false ? "Not Required" : "Required"),
 						artists_page_color: matched.artists_page_color || matched.artistsPageColor || null,
 						artists_page_tag: matched.artists_page_tag || matched.artistsPageTag || null,
 						contractDocStatus: matched.contractDocStatus || "draft",
@@ -279,8 +281,8 @@ export async function GET(request: NextRequest) {
 			return {
 				...p,
 				workflowContract: "Required",
-				workflowLogistics: "Required",
-				workflowShow: "Required",
+				workflowLogistics: p.event?.logisticsEnabled === false ? "Not Required" : "Required",
+				workflowShow: p.event?.showInfoEnabled === false ? "Not Required" : "Required",
 				contractDocStatus: "draft",
 				contractSignedByArtist: false,
 				contractSignedByOrganiser: false,
