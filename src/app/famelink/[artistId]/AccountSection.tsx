@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, LogOut, User, Check, Camera, Upload, Trash2 } from "lucide-react";
+import { Loader2, LogOut, User, Check, Camera, Upload, Trash2, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToGCS } from "@/lib/upload-utils";
 
@@ -37,6 +37,18 @@ export function AccountSection({ artistId, profile, onUpdateProfile, onLogout }:
 		taskApproved: profile?.notifications?.taskApproved ?? true,
 		marketing: profile?.notifications?.marketing ?? false,
 	});
+
+	// Change password state
+	const [pwData, setPwData] = useState({
+		currentPassword: "",
+		newPassword: "",
+		confirmPassword: "",
+	});
+	const [pwSaving, setPwSaving] = useState(false);
+	const [pwError, setPwError] = useState("");
+	const [showCurrentPw, setShowCurrentPw] = useState(false);
+	const [showNewPw, setShowNewPw] = useState(false);
+	const [showConfirmPw, setShowConfirmPw] = useState(false);
 
 	// Sync state when profile is loaded asynchronously
 	useEffect(() => {
@@ -97,6 +109,47 @@ export function AccountSection({ artistId, profile, onUpdateProfile, onLogout }:
 			});
 		} finally {
 			setSaving(false);
+		}
+	};
+
+	const handleChangePassword = async () => {
+		setPwError("");
+
+		if (!pwData.currentPassword || !pwData.newPassword || !pwData.confirmPassword) {
+			setPwError("Please fill in all fields");
+			return;
+		}
+		if (pwData.newPassword !== pwData.confirmPassword) {
+			setPwError("New passwords do not match");
+			return;
+		}
+		if (pwData.newPassword.length < 8) {
+			setPwError("New password must be at least 8 characters");
+			return;
+		}
+
+		setPwSaving(true);
+		try {
+			const res = await fetch("/api/auth/artist/change-password", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					currentPassword: pwData.currentPassword,
+					newPassword: pwData.newPassword,
+				}),
+			});
+			const result = await res.json();
+
+			if (result.success) {
+				toast({ title: "Password updated successfully" });
+				setPwData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+			} else {
+				setPwError(result.error?.message || "Failed to change password");
+			}
+		} catch (error) {
+			setPwError("Network error. Please try again.");
+		} finally {
+			setPwSaving(false);
 		}
 	};
 
@@ -297,6 +350,109 @@ export function AccountSection({ artistId, profile, onUpdateProfile, onLogout }:
 						className="border-white/10 hover:bg-white/5 text-white bg-transparent rounded-xl h-10 px-6 font-medium shrink-0"
 					>
 						Edit profile
+					</Button>
+				</div>
+			</div>
+
+			{/* Change Password Card */}
+			<div className="rounded-2xl border border-white/5 bg-[#1a1429] p-6 shadow-xl space-y-4">
+				<div className="flex items-center gap-2">
+					<Lock className="h-5 w-5 text-purple-400" />
+					<h3 className="text-lg font-bold text-white">Change Password</h3>
+				</div>
+
+				<div className="space-y-4 max-w-md">
+					<div className="space-y-2">
+						<Label className="text-purple-100/80 text-sm">Current Password</Label>
+						<div className="relative">
+							<Input
+								type={showCurrentPw ? "text" : "password"}
+								value={pwData.currentPassword}
+								onChange={(e) => setPwData({ ...pwData, currentPassword: e.target.value })}
+								placeholder="Enter your current password"
+								className="bg-white/5 border-white/10 text-white focus:border-[#bf1ed4] pr-10"
+							/>
+							<button
+								type="button"
+								className="absolute inset-y-0 right-0 pr-3 flex items-center"
+								onClick={() => setShowCurrentPw(!showCurrentPw)}
+							>
+								{showCurrentPw ? (
+									<EyeOff className="h-4 w-4 text-purple-300/50 hover:text-purple-200" />
+								) : (
+									<Eye className="h-4 w-4 text-purple-300/50 hover:text-purple-200" />
+								)}
+							</button>
+						</div>
+					</div>
+
+					<div className="space-y-2">
+						<Label className="text-purple-100/80 text-sm">New Password</Label>
+						<div className="relative">
+							<Input
+								type={showNewPw ? "text" : "password"}
+								value={pwData.newPassword}
+								onChange={(e) => setPwData({ ...pwData, newPassword: e.target.value })}
+								placeholder="At least 8 characters"
+								className="bg-white/5 border-white/10 text-white focus:border-[#bf1ed4] pr-10"
+							/>
+							<button
+								type="button"
+								className="absolute inset-y-0 right-0 pr-3 flex items-center"
+								onClick={() => setShowNewPw(!showNewPw)}
+							>
+								{showNewPw ? (
+									<EyeOff className="h-4 w-4 text-purple-300/50 hover:text-purple-200" />
+								) : (
+									<Eye className="h-4 w-4 text-purple-300/50 hover:text-purple-200" />
+								)}
+							</button>
+						</div>
+					</div>
+
+					<div className="space-y-2">
+						<Label className="text-purple-100/80 text-sm">Confirm New Password</Label>
+						<div className="relative">
+							<Input
+								type={showConfirmPw ? "text" : "password"}
+								value={pwData.confirmPassword}
+								onChange={(e) => setPwData({ ...pwData, confirmPassword: e.target.value })}
+								placeholder="Re-enter new password"
+								className="bg-white/5 border-white/10 text-white focus:border-[#bf1ed4] pr-10"
+							/>
+							<button
+								type="button"
+								className="absolute inset-y-0 right-0 pr-3 flex items-center"
+								onClick={() => setShowConfirmPw(!showConfirmPw)}
+							>
+								{showConfirmPw ? (
+									<EyeOff className="h-4 w-4 text-purple-300/50 hover:text-purple-200" />
+								) : (
+									<Eye className="h-4 w-4 text-purple-300/50 hover:text-purple-200" />
+								)}
+							</button>
+						</div>
+					</div>
+
+					{pwError && (
+						<div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-2.5">
+							<AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+							<p className="text-sm text-red-300/80">{pwError}</p>
+						</div>
+					)}
+
+					<Button
+						onClick={handleChangePassword}
+						disabled={pwSaving}
+						className="bg-gradient-to-r from-[#bf1ed4] to-[#ff66e5] hover:opacity-90 text-white rounded-xl border-0 h-10 px-6"
+					>
+						{pwSaving ? (
+							<>
+								<Loader2 className="w-4 h-4 animate-spin mr-2" /> Updating...
+							</>
+						) : (
+							"Update Password"
+						)}
 					</Button>
 				</div>
 			</div>
