@@ -305,6 +305,37 @@ export class ContractService {
 		return await this.saveInvitations(eventId, invitations);
 	}
 
+	static async getInvitationById(
+		invitationId: string,
+	): Promise<{ invitation: any; eventId: string } | null> {
+		await connectToDatabase();
+		const doc = await EventDataModel.findOne({
+			key: "contract_invitations",
+			"data.invitations.id": invitationId,
+		}).lean() as any;
+
+		if (!doc?.data?.invitations) return null;
+		const invitation = doc.data.invitations.find((inv: any) => inv.id === invitationId);
+		if (!invitation) return null;
+		return { invitation, eventId: doc.eventId };
+	}
+
+	static async updateInvitation(
+		eventId: string,
+		invitationId: string,
+		updates: any,
+	): Promise<boolean> {
+		const invitations = await this.getInvitations(eventId);
+		const index = invitations.findIndex((inv: any) => inv.id === invitationId);
+		if (index === -1) return false;
+		invitations[index] = {
+			...invitations[index],
+			...updates,
+			updatedAt: new Date().toISOString(),
+		};
+		return await this.saveInvitations(eventId, invitations);
+	}
+
 	// ===================== CONVERSATIONS =====================
 
 	static async getConversations(eventId: string): Promise<any[]> {

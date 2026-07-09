@@ -176,6 +176,18 @@ export default function InviteLandingPage() {
 								<span className="text-sm text-white font-medium capitalize">{value}</span>
 							</div>
 						))}
+						{invitation.artistEmail && (
+							<div className="flex justify-between items-center py-2 border-b border-purple-500/10">
+								<span className="text-sm text-purple-400">Login Email</span>
+								<span className="text-sm text-white font-medium font-mono">
+									{(() => {
+										const [local, domain] = invitation.artistEmail.split("@");
+										const masked = local.slice(0, 2) + "*".repeat(Math.max(local.length - 2, 2));
+										return `${masked}@${domain}`;
+									})()}
+								</span>
+							</div>
+						)}
 						{invitation.message && (
 							<div className="pt-2">
 								<span className="text-sm text-purple-400 block mb-1">Personal Message</span>

@@ -304,7 +304,7 @@ function MagicLinkInviteContent() {
           </div>
 
           {/* Details Row */}
-          <div className="flex justify-between items-center mb-8 px-2">
+          <div className="flex justify-between items-center mb-6 px-2">
             <div>
               <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1.5 flex items-center gap-1.5">
                 <Calendar className="w-3 h-3" /> Date
@@ -323,6 +323,35 @@ function MagicLinkInviteContent() {
               </p>
             </div>
           </div>
+
+          {/* Login Email hint */}
+          {artistData?.email && (
+            <div className="relative mb-6 rounded-xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-pink-600/10" />
+              <div className="relative flex items-center gap-3 px-4 py-3 border border-purple-500/25 rounded-xl">
+                <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] text-slate-500 font-bold tracking-widest uppercase mb-0.5">
+                    This invite was sent to
+                  </p>
+                  <p className="text-sm font-mono font-semibold text-purple-200 truncate">
+                    {(() => {
+                      const [local, domain] = artistData.email.split("@");
+                      const start = local.slice(0, 4);
+                      const end = local.slice(-2);
+                      const dots = "*".repeat(Math.max(local.length - 6, 2));
+                      return `${start}${dots}${end}@${domain}`;
+                    })()}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Sign in with this email to accept & get started</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Message Block */}
           <div className="bg-purple-900/20 border border-purple-500/20 rounded-xl p-5 mb-6">

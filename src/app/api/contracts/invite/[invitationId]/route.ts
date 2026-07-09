@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ContractService } from "@/lib/contract-service";
 import { EventDataService } from "@/lib/storage-service";
+import { connectToDatabase } from "@/database/mongodb";
+import { EventArtistModel } from "@/database/models/FameLinkModels";
 
 // GET /api/contracts/invite/[invitationId] — Public: look up invitation details
 export async function GET(
@@ -21,12 +23,31 @@ export async function GET(
 
 		const { invitation, eventId } = result;
 
+		// Resolve artist email — prefer stored artistEmail, then look up by artist id
+		let artistEmail = invitation.artistEmail || "";
+		if (!artistEmail) {
+			await connectToDatabase();
+			// invitation.id == artist id in the draft system
+			const artist = await EventArtistModel.findOne({
+				id: invitationId,
+				eventId,
+			}).lean() as any;
+			if (artist?.email) {
+				artistEmail = artist.email;
+			} else {
+				// Fallback: FameLink artists table
+				const FameLinkArtistModel = (await import("@/database/models/FameLinkArtist")).default;
+				const fameLinkArtist = await FameLinkArtistModel.findOne({ id: invitationId }).lean() as any;
+				if (fameLinkArtist?.email) artistEmail = fameLinkArtist.email;
+			}
+		}
+
 		// Get event details
 		const eventData = await EventDataService.getEvent(eventId);
 
 		return NextResponse.json({
 			success: true,
-			invitation,
+			invitation: { ...invitation, artistEmail },
 			event: eventData ? {
 				id: eventData.id,
 				name: eventData.name || eventData.eventName,
