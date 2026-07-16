@@ -53,29 +53,35 @@ export async function POST(request: NextRequest) {
 
 		const body = await request.json();
 		const {
+			label,
+			linkType,
 			showId,
 			showName,
 			showSlug,
+			thumbnail,
 			organizerName,
 			organizerEmail,
+			emailRestriction,
 			eventDate,
 			expiryDate,
+			logisticsPerson,
+			visibilityLevel,
 		} = body;
 
-		if (!organizerName?.trim()) {
+		if (!label?.trim()) {
 			return NextResponse.json(
 				{
 					success: false,
-					error: { message: "Organizer name is required" },
+					error: { message: "Label is required" },
 				},
 				{ status: 400 },
 			);
 		}
-		if (!eventDate) {
+		if (!showId) {
 			return NextResponse.json(
 				{
 					success: false,
-					error: { message: "Event date is required" },
+					error: { message: "A show must be selected" },
 				},
 				{ status: 400 },
 			);
@@ -86,13 +92,19 @@ export async function POST(request: NextRequest) {
 
 		const link = {
 			id: crypto.randomUUID(),
+			label: label.trim(),
+			linkType: linkType || "show_info",
 			showId,
 			showName: showName || "",
 			showSlug: showSlug || "",
+			thumbnail: thumbnail || "",
 			token,
-			organizerName: organizerName.trim(),
+			organizerName: organizerName?.trim() || "",
 			organizerEmail: organizerEmail?.trim() || "",
-			eventDate,
+			emailRestriction: emailRestriction?.trim() || "",
+			logisticsPerson: logisticsPerson || "",
+			visibilityLevel: visibilityLevel || "L1",
+			eventDate: eventDate || "",
 			requestDate: now,
 			expiryDate: expiryDate || "",
 			status: "sent",
@@ -156,7 +168,19 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const body = await request.json();
-		const { linkId, organizerName, organizerEmail, eventDate, expiryDate } = body;
+		const {
+			linkId,
+			label,
+			linkType,
+			thumbnail,
+			organizerName,
+			organizerEmail,
+			emailRestriction,
+			eventDate,
+			expiryDate,
+			logisticsPerson,
+			visibilityLevel,
+		} = body;
 
 		if (!linkId) {
 			return NextResponse.json(
@@ -166,10 +190,16 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const updates: Record<string, any> = {};
+		if (label !== undefined) updates.label = label;
+		if (linkType !== undefined) updates.linkType = linkType;
+		if (thumbnail !== undefined) updates.thumbnail = thumbnail;
 		if (organizerName !== undefined) updates.organizerName = organizerName;
 		if (organizerEmail !== undefined) updates.organizerEmail = organizerEmail;
+		if (emailRestriction !== undefined) updates.emailRestriction = emailRestriction;
 		if (eventDate !== undefined) updates.eventDate = eventDate;
 		if (expiryDate !== undefined) updates.expiryDate = expiryDate;
+		if (logisticsPerson !== undefined) updates.logisticsPerson = logisticsPerson;
+		if (visibilityLevel !== undefined) updates.visibilityLevel = visibilityLevel;
 
 		const updated = await updateShareLink(session.userId, linkId, updates);
 		return NextResponse.json({ success: true, data: { link: updated } });

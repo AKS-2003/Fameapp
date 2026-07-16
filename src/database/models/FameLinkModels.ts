@@ -177,8 +177,25 @@ const ShareLinkSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   artistId: { type: String, required: true, index: true },
   token: { type: String, required: true, unique: true },
+  label: { type: String },
+  linkType: { type: String, enum: ['show_info', 'logistics_info', 'both'], default: 'show_info' },
+  showId: { type: String },
+  showName: { type: String },
+  showSlug: { type: String },
+  thumbnail: { type: String },
+  organizerName: { type: String },
+  organizerEmail: { type: String },
+  emailRestriction: { type: String },
+  logisticsPerson: { type: String },
+  visibilityLevel: { type: String, enum: ['L1', 'L2', 'L3'], default: 'L1' },
+  eventDate: { type: String },
+  requestDate: { type: String },
+  expiryDate: { type: String },
+  status: { type: String, enum: ['sent', 'viewed', 'downloaded'], default: 'sent' },
+  viewedAt: { type: Date, default: null },
+  downloadedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
-}, { timestamps: true });
+}, { timestamps: true, strict: false });
 
 const EventDataSchema = new mongoose.Schema({
   eventId: { type: String, required: true, index: true },

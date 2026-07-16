@@ -304,6 +304,11 @@ class DataAccess {
 		return BaseShowModel.findOne({ id: showId, artistId }).lean() as unknown as BaseShow | null;
 	}
 
+	async getBaseShowById(showId: string): Promise<BaseShow | null> {
+		await connectToDatabase();
+		return BaseShowModel.findOne({ id: showId }).lean() as unknown as BaseShow | null;
+	}
+
 	async getBaseShowBySlug(slug: string): Promise<BaseShow | null> {
 		await connectToDatabase();
 		return BaseShowModel.findOne({ slug }).lean() as unknown as BaseShow | null;
@@ -673,6 +678,7 @@ export const deleteFameLinkArtist = (artistId: string) => dataAccess.deleteFameL
 // Base Shows
 export const getBaseShowsByArtist = (artistId: string) => dataAccess.getBaseShowsByArtist(artistId);
 export const getBaseShow = (showId: string, artistId: string) => dataAccess.getBaseShow(showId, artistId);
+export const getBaseShowById = (showId: string) => dataAccess.getBaseShowById(showId);
 export const getBaseShowBySlug = (slug: string) => dataAccess.getBaseShowBySlug(slug);
 export const isSlugUnique = (slug: string, excludeShowId?: string) => dataAccess.isSlugUnique(slug, excludeShowId);
 export const generateUniqueSlug = (name: string, excludeShowId?: string) => dataAccess.generateUniqueSlug(name, excludeShowId);

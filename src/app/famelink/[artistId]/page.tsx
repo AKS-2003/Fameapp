@@ -79,6 +79,7 @@ import { useCheckIn } from "@/hooks/use-checkin";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { InvitesContracts, ShowInfoPanel } from "@/components/famelink/InvitesContracts";
 import { OnboardingFlowModal, FinishSettingUpBanner } from "@/components/famelink/OnboardingFlowModal";
+import { GeneratePrivateLinkModal } from "@/components/famelink/GeneratePrivateLinkModal";
 
 // ── Animation hook ──────────────────────────────────────────────
 function useAnimateIn(delay = 0) {
@@ -400,12 +401,18 @@ interface BaseShow {
 
 interface ShareLink {
 	id: string;
+	label?: string;
+	linkType?: "show_info" | "logistics_info" | "both";
 	showId: string;
 	showName: string;
 	showSlug: string;
+	thumbnail?: string;
 	token: string;
 	organizerName: string;
 	organizerEmail: string;
+	emailRestriction?: string;
+	logisticsPerson?: string;
+	visibilityLevel?: "L1" | "L2" | "L3";
 	eventDate: string;
 	requestDate: string;
 	expiryDate: string;
@@ -678,6 +685,7 @@ function FameLinkDashboardContent() {
 	// Onboarding flow modal state
 	const [onboardingOpen, setOnboardingOpen] = useState(false);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
+	const [generateLinkModalOpen, setGenerateLinkModalOpen] = useState(false);
 	// Tracks whether we've already handled the ?justCreatedShow=true redirect this page load
 	const justCreatedShowRef = useRef(false);
 	// Track whether eventRequests/eventParticipations have finished their first fetch —
@@ -1438,7 +1446,7 @@ function FameLinkDashboardContent() {
 
 
 	const copyShareLink = (link: ShareLink) => {
-		const url = `${window.location.origin}/show/${link.showSlug}`;
+		const url = `${window.location.origin}/private-link/${link.token}`;
 		navigator.clipboard.writeText(url);
 		setCopiedLinkId(link.id);
 		toast({
@@ -3412,7 +3420,7 @@ function FameLinkDashboardContent() {
 									</p>
 								</div>
 								<Button
-									onClick={() => setShareModalOpen(true)}
+									onClick={() => setGenerateLinkModalOpen(true)}
 									className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl gap-2 shadow-lg shadow-purple-500/20 transition-all duration-300 hover:shadow-purple-500/40 hover:-translate-y-0.5 w-full sm:w-auto shrink-0"
 									disabled={shows.length === 0}
 								>
@@ -4044,6 +4052,20 @@ function FameLinkDashboardContent() {
 						onRequestResponded={() => {
 							fetchEventRequests();
 							fetchEventParticipations();
+						}}
+					/>
+				)}
+
+				{/* ── Generate Private Link Modal (Send Show Info in Private Event Requests) ── */}
+				{generateLinkModalOpen && (
+					<GeneratePrivateLinkModal
+						artistId={artistId}
+						artistName={profile?.artistName || "Main Artist"}
+						shows={shows}
+						onDismiss={() => setGenerateLinkModalOpen(false)}
+						onCreated={(link) => {
+							setShareLinks((prev) => [link, ...prev]);
+							setGenerateLinkModalOpen(false);
 						}}
 					/>
 				)}
