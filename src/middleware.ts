@@ -77,6 +77,7 @@ const PUBLIC_ROUTES = [
 	"/event", // Event management pages (confirmed-lineup, logistics, analytics, workshop-schedule)
 	"/show", // Public show page
 	"/private-link", // Public, token-scoped private share link viewer (no login required)
+	"/u", // Public artist "Me" profile page (no login required)
 	"/super-admin-login", // Super admin login page
 	"/famelink-admin", // FameLink admin dashboard (requested public)
 ];

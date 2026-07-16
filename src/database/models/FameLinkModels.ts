@@ -197,6 +197,59 @@ const ShareLinkSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true, strict: false });
 
+// ArtistMeProfile: the artist's public "Me" profile — Basics, Bio, Known For,
+// Events, Photos, Social. One document per artist, shown publicly via a slug.
+const ArtistMeProfileSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  artistId: { type: String, required: true, unique: true, index: true },
+  slug: { type: String, required: true, unique: true },
+
+  // Basics
+  stageName: { type: String },
+  tagline: { type: String },
+  city: { type: String },
+  country: { type: String },
+  profileImage: { type: String },
+  bannerImage: { type: String },
+
+  // Bio
+  biography: { type: String },
+  languages: { type: String },
+  performanceStyles: { type: String },
+
+  // Known For — signature shows
+  knownFor: [{
+    title: { type: String },
+    description: { type: String },
+    thumbnail: { type: String },
+    video: { type: String },
+  }],
+
+  // Events — public event history
+  events: [{
+    year: { type: String },
+    name: { type: String },
+    role: { type: String },
+    location: { type: String },
+  }],
+
+  // Photos
+  photos: [{ type: String }],
+
+  // Social
+  socialMedia: {
+    instagram: { type: String },
+    facebook: { type: String },
+    youtube: { type: String },
+    website: { type: String },
+  },
+
+  isPublic: { type: Boolean, default: true },
+
+  createdAt: { type: String },
+  updatedAt: { type: String },
+}, { timestamps: true, strict: false });
+
 const EventDataSchema = new mongoose.Schema({
   eventId: { type: String, required: true, index: true },
   key: { type: String, required: true }, // e.g., 'emergency-broadcasts', 'chat'
@@ -289,6 +342,7 @@ export const PerformanceModel = mongoose.models.Performance || mongoose.model('P
 export const NotificationModel = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema, 'famelink_notifications');
 export const ShowInfoRequestModel = mongoose.models.ShowInfoRequest || mongoose.model('ShowInfoRequest', ShowInfoRequestSchema, 'famelink_showinforequests');
 export const ShareLinkModel = mongoose.models.ShareLink || mongoose.model('ShareLink', ShareLinkSchema, 'famelink_sharelinks');
+export const ArtistMeProfileModel = mongoose.models.ArtistMeProfile || mongoose.model('ArtistMeProfile', ArtistMeProfileSchema, 'famelink_me_profiles');
 export const MediaFileModel = mongoose.models.MediaFile || mongoose.model('MediaFile', MediaFileSchema, 'famelink_mediafiles');
 export const EventDataModel = mongoose.models.EventData || mongoose.model('EventData', EventDataSchema, 'famelink_eventdata');
 export const EventArtistModel = mongoose.models.EventArtist || mongoose.model('EventArtist', EventArtistSchema, 'famelink_event_artists');

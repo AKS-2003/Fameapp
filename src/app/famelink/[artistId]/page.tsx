@@ -6,6 +6,7 @@ import Link from "next/link";
 import DocumentsSection from "./DocumentsSection";
 import LogisticsSection from "./LogisticsSection";
 import { AccountSection } from "./AccountSection";
+import { MeProfileSection } from "./MeProfileSection";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -522,7 +523,7 @@ function FameLinkDashboardContent() {
 	const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
 	const [duplicatingShowId, setDuplicatingShowId] = useState<string | null>(null);
 	const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-	const [activeSection, setActiveSection] = useState<"dashboard" | "event-tasks" | "shows" | "logistics" | "documents" | "messages" | "account">("dashboard");
+	const [activeSection, setActiveSection] = useState<"dashboard" | "event-tasks" | "shows" | "logistics" | "documents" | "messages" | "account" | "me">("dashboard");
 	const [selectedEventInviteId, setSelectedEventInviteId] = useState<string | null>(null);
 	const [initialSection, setInitialSection] = useState<"contract" | "logistics" | "show_info" | null>(null);
 	const [modalTriggerKey, setModalTriggerKey] = useState(0);
@@ -557,7 +558,8 @@ function FameLinkDashboardContent() {
 			tab === "logistics" ||
 			tab === "documents" ||
 			tab === "messages" ||
-			tab === "account"
+			tab === "account" ||
+			tab === "me"
 		) {
 			setActiveSection(tab);
 		}
@@ -1903,6 +1905,7 @@ function FameLinkDashboardContent() {
 						{ id: "logistics" as const, label: "My Logistics Profile", icon: <CalendarDays className="h-4 w-4" />, badge: 0 },
 						{ id: "documents" as const, label: "My Documents", icon: <FileText className="h-4 w-4" />, badge: 0 },
 						{ id: "account" as const, label: "Account", icon: <Settings className="h-4 w-4" />, badge: 0 },
+						{ id: "me" as const, label: "Me", icon: <User className="h-4 w-4" />, badge: 0 },
 					]).map((item) => (
 						<button
 							key={item.id}
@@ -2199,6 +2202,9 @@ function FameLinkDashboardContent() {
 							onLogout={handleLogout}
 						/>
 					)}
+
+					{/* Me */}
+					{activeSection === "me" && <MeProfileSection artistId={artistId} />}
 
 					{/* Dashboard + Shows */}
 					{(activeSection === "dashboard" || activeSection === "shows") && (

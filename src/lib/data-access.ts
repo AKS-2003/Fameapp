@@ -30,7 +30,8 @@ import {
 	EventCateringModel,
 	EventCurrencyModel,
 	EventCustomQuestionModel,
-	EventLogisticsNoteModel
+	EventLogisticsNoteModel,
+	ArtistMeProfileModel
 } from "@/database/models/FameLinkModels";
 
 // Data access layer fully backed by MongoDB
@@ -501,6 +502,52 @@ class DataAccess {
 		return ShareLinkModel.findOne({ token }).lean();
 	}
 
+	// ── Artist "Me" Profile ──────────────────────────────────────────────
+
+	async getMeProfileByArtist(artistId: string): Promise<any | null> {
+		await connectToDatabase();
+		return ArtistMeProfileModel.findOne({ artistId }).lean();
+	}
+
+	async getMeProfileBySlug(slug: string): Promise<any | null> {
+		await connectToDatabase();
+		return ArtistMeProfileModel.findOne({ slug }).lean();
+	}
+
+	async isMeProfileSlugUnique(slug: string, excludeArtistId?: string): Promise<boolean> {
+		await connectToDatabase();
+		const existing = await ArtistMeProfileModel.findOne({ slug, artistId: { $ne: excludeArtistId } });
+		return !existing;
+	}
+
+	async generateUniqueMeProfileSlug(name: string, excludeArtistId?: string): Promise<string> {
+		let baseSlug = generateSlug(name);
+		let slug = baseSlug;
+		let counter = 1;
+		while (!(await this.isMeProfileSlugUnique(slug, excludeArtistId))) {
+			slug = baseSlug + "-" + counter;
+			counter++;
+		}
+		return slug;
+	}
+
+	async upsertMeProfile(artistId: string, updates: any): Promise<any> {
+		await connectToDatabase();
+		const now = new Date().toISOString();
+		const doc = await ArtistMeProfileModel.findOneAndUpdate(
+			{ artistId },
+			{
+				$set: { ...updates, artistId, updatedAt: now },
+				$setOnInsert: {
+					id: updates.id || `me-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+					createdAt: now,
+				},
+			},
+			{ new: true, upsert: true, lean: true },
+		);
+		return doc;
+	}
+
 	async getEventParticipationsByEvent(eventId: string): Promise<EventParticipation[]> {
 		await connectToDatabase();
 		return EventParticipationModel.find({ eventId }).lean() as unknown as EventParticipation[];
@@ -719,6 +766,12 @@ export const createShareLink = (artistId: string, link: any) => dataAccess.creat
 export const updateShareLink = (artistId: string, linkId: string, updates: any) => dataAccess.updateShareLink(artistId, linkId, updates);
 export const deleteShareLink = (artistId: string, linkId: string) => dataAccess.deleteShareLink(artistId, linkId);
 export const getShareLinkByToken = (token: string) => dataAccess.getShareLinkByToken(token);
+
+// Artist "Me" Profile
+export const getMeProfileByArtist = (artistId: string) => dataAccess.getMeProfileByArtist(artistId);
+export const getMeProfileBySlug = (slug: string) => dataAccess.getMeProfileBySlug(slug);
+export const generateUniqueMeProfileSlug = (name: string, excludeArtistId?: string) => dataAccess.generateUniqueMeProfileSlug(name, excludeArtistId);
+export const upsertMeProfile = (artistId: string, updates: any) => dataAccess.upsertMeProfile(artistId, updates);
 
 // Participations
 export const getEventParticipationsByEvent = (eventId: string) => dataAccess.getEventParticipationsByEvent(eventId);
