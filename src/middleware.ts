@@ -76,6 +76,7 @@ const PUBLIC_ROUTES = [
 	"/event-request/invitation", // Event invitation form page
 	"/event", // Event management pages (confirmed-lineup, logistics, analytics, workshop-schedule)
 	"/show", // Public show page
+	"/private-link", // Public, token-scoped private share link viewer (no login required)
 	"/super-admin-login", // Super admin login page
 	"/famelink-admin", // FameLink admin dashboard (requested public)
 ];
