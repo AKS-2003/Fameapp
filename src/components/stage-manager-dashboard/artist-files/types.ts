@@ -20,6 +20,8 @@ export interface Artist {
   phone?: string;
   internalOwner?: string;
   notes?: string;
+  /** True when the artist only joined via magic link/invite and hasn't submitted a show yet */
+  isParticipationOnly?: boolean;
 }
 
 export interface Logistics {

@@ -81,6 +81,7 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { InvitesContracts, ShowInfoPanel } from "@/components/famelink/InvitesContracts";
 import { OnboardingFlowModal, FinishSettingUpBanner } from "@/components/famelink/OnboardingFlowModal";
 import { GeneratePrivateLinkModal } from "@/components/famelink/GeneratePrivateLinkModal";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 // ── Animation hook ──────────────────────────────────────────────
 function useAnimateIn(delay = 0) {
@@ -851,7 +852,7 @@ function FameLinkDashboardContent() {
 
 		const pendingRequests = eventRequests.filter((r) => r.status === "pending");
 		const unsubmittedParticipations = eventParticipations.filter((p) => {
-			const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+			const perfSlots = (p as any).performanceDates?.length || 0;
 			const submitted = (p as any).showCount ?? 0;
 			return perfSlots > 0 ? submitted < perfSlots : submitted === 0;
 		});
@@ -1961,12 +1962,15 @@ function FameLinkDashboardContent() {
 						<FameLinkLogo width={24} height={24} />
 						<span className="font-bold text-sm tracking-wide bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">FameLink</span>
 					</div>
-					<div className="w-9" />
+					<NotificationBell />
 				</header>
 
 				{/* Profile Header */}
 				{activeSection === "dashboard" && (
 					<div className="px-4 sm:px-6 pt-6 sm:pt-10 pb-6">
+						<div className="hidden md:flex justify-end mb-2">
+							<NotificationBell />
+						</div>
 						<div className="flex flex-col gap-6">
 							{/* Top row: Avatar + Details */}
 							<div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
@@ -2044,7 +2048,7 @@ function FameLinkDashboardContent() {
 							shows={shows}
 							pendingRequests={eventRequests.filter((r) => r.status === "pending")}
 						pendingParticipations={eventParticipations.filter((p) => {
-									const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+									const perfSlots = (p as any).performanceDates?.length || 0;
 									const submitted = (p as any).showCount ?? 0;
 									// Show if there are unfilled slots, or no slots defined but no show submitted yet
 									return perfSlots > 0 ? submitted < perfSlots : submitted === 0;
@@ -3204,6 +3208,30 @@ function FameLinkDashboardContent() {
 										</p>
 									</div>
 
+									{(() => {
+										const waitingCount = eventParticipations.filter((p) => {
+											if (p.status === "declined" || p.status === "confirmed") return false;
+											const perfCount = (p as any).performanceDates?.length || 0;
+											return perfCount === 0;
+										}).length;
+										if (waitingCount === 0) return null;
+										return (
+											<div className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-white/5 border border-yellow-500/20 mb-4">
+												<div className="w-9 h-9 rounded-xl bg-yellow-500/15 flex items-center justify-center shrink-0 border border-yellow-500/20">
+													<Clock className="h-4 w-4 text-yellow-300" />
+												</div>
+												<div className="flex-1 min-w-0">
+													<p className="text-sm font-semibold text-white">
+														Waiting for performance date assignment
+													</p>
+													<p className="text-xs text-purple-300/50 mt-0.5">
+														{waitingCount} event{waitingCount > 1 ? "s" : ""} pending — management will assign your performance date soon.
+													</p>
+												</div>
+											</div>
+										);
+									})()}
+
 									{eventParticipations.filter(
 										(p) => p.status !== "declined",
 									).length === 0 ? (
@@ -3308,7 +3336,7 @@ function FameLinkDashboardContent() {
 																		)}
 																		{/* Performance count badge */}
 																		{(() => {
-																			const perfCount = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+																			const perfCount = (p as any).performanceDates?.length || 0;
 																			return perfCount > 0 ? (
 																				<span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/25 text-[10px] font-bold">
 																					<Music className="h-2.5 w-2.5" />
@@ -3332,20 +3360,40 @@ function FameLinkDashboardContent() {
 																			</div>
 																		)}
 
-																		{p.status !== "pending" ? (
-																			<Button onClick={() => {
-																				setOpenShowInfoMode("submit");
-																				setOpenShowInfoEventId(p.eventId);
-																			}} className="w-full bg-[#26193b] hover:bg-[#31204d] border border-white/5 text-white rounded-xl h-11 gap-2 transition-all mb-5 font-medium text-sm mt-3">
-																				<Edit className="h-4 w-4" />
-																				Edit Shows & Tasks
-																			</Button>
-																		) : (
-																			<Button onClick={() => router.push(`/join-event/${p.eventId}/confirm`)} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl h-11 gap-2 shadow-lg shadow-purple-500/20 transition-all font-medium text-sm mb-5 mt-3">
-																				<Music className="h-4 w-4" />
-																				Complete Setup
-																			</Button>
-																		)}
+																		{(() => {
+																			const hasPerfDates = ((p as any).performanceDates?.length || 0) > 0;
+																			if (p.status !== "confirmed" && !hasPerfDates) {
+																				return (
+																					<div className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-white/5 border border-yellow-500/20 mb-5 mt-3">
+																						<div className="w-9 h-9 rounded-xl bg-yellow-500/15 flex items-center justify-center shrink-0 border border-yellow-500/20">
+																							<Clock className="h-4 w-4 text-yellow-300" />
+																						</div>
+																						<div className="flex-1 min-w-0">
+																							<p className="text-sm font-semibold text-white">
+																								Waiting to assign performance dates
+																							</p>
+																							<p className="text-xs text-purple-300/50 mt-0.5">
+																								Management will assign your performance date soon.
+																							</p>
+																						</div>
+																					</div>
+																				);
+																			}
+																			return p.status !== "pending" ? (
+																				<Button onClick={() => {
+																					setOpenShowInfoMode("submit");
+																					setOpenShowInfoEventId(p.eventId);
+																				}} className="w-full bg-[#26193b] hover:bg-[#31204d] border border-white/5 text-white rounded-xl h-11 gap-2 transition-all mb-5 font-medium text-sm mt-3">
+																					<Edit className="h-4 w-4" />
+																					Edit Shows & Tasks
+																				</Button>
+																			) : (
+																				<Button onClick={() => router.push(`/join-event/${p.eventId}/confirm`)} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl h-11 gap-2 shadow-lg shadow-purple-500/20 transition-all font-medium text-sm mb-5 mt-3">
+																					<Music className="h-4 w-4" />
+																					Complete Setup
+																				</Button>
+																			);
+																		})()}
 
 																		{p.status !== "pending" && (
 																			<div className="border-t border-white/5 pt-4">
@@ -4040,7 +4088,7 @@ function FameLinkDashboardContent() {
 						shows={shows}
 						pendingRequests={eventRequests.filter((r) => r.status === "pending")}
 						pendingParticipations={eventParticipations.filter((p) => {
-									const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+									const perfSlots = (p as any).performanceDates?.length || 0;
 									const submitted = (p as any).showCount ?? 0;
 									// Show if there are unfilled slots, or no slots defined but no show submitted yet
 									return perfSlots > 0 ? submitted < perfSlots : submitted === 0;
@@ -4083,7 +4131,7 @@ function FameLinkDashboardContent() {
 						shows={shows}
 						pendingRequests={eventRequests.filter((r) => r.status === "pending")}
 						pendingParticipations={eventParticipations.filter((p) => {
-									const perfSlots = (p as any).performanceDates?.length || p.event?.showDates?.length || 0;
+									const perfSlots = (p as any).performanceDates?.length || 0;
 									const submitted = (p as any).showCount ?? 0;
 									// Show if there are unfilled slots, or no slots defined but no show submitted yet
 									return perfSlots > 0 ? submitted < perfSlots : submitted === 0;

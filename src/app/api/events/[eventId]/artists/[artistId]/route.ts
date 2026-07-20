@@ -9,10 +9,12 @@ import {
 	getEventParticipation,
 	updateEventParticipation,
 	getFameLinkArtistById,
+	addNotification,
 } from "@/lib/data-access";
 import { connectToDatabase } from "@/database/mongodb";
 import { EventArtistModel } from "@/database/models/FameLinkModels";
 import { ContractService } from "@/lib/contract-service";
+import { sendPerformanceDateAssignedEmail } from "@/lib/email-service";
 
 /** snapshotJson may be stored as a JSON string or as a plain object */
 function parseSnapshot(raw: any): any {
@@ -414,6 +416,7 @@ export async function PATCH(
 				// This is a FameLink submission — route updates to EventShow.overrides
 				// Respects data separation: never writes to BaseShow or ArtistProfile
 				const overrideUpdates: Record<string, unknown> = {};
+				let assignedEventName: string | undefined;
 
 				if (
 					updateData.performance_date !== undefined ||
@@ -446,6 +449,7 @@ export async function PATCH(
 						// Validate against event showDates
 						const eventData =
 							await EventDataService.getEvent(eventId);
+						assignedEventName = eventData?.name;
 						if (eventData) {
 							const showDates = eventData.showDates || [];
 							const isValidDate = showDates.some(
@@ -645,6 +649,42 @@ export async function PATCH(
 					} catch (err) {
 						console.error(
 							"Error updating participation status:",
+							err,
+						);
+					}
+
+					try {
+						await addNotification(artistId, {
+							type: "performance_date_assigned",
+							title: "Performance date assigned",
+							message: assignedEventName
+								? `Your performance date for "${assignedEventName}" has been assigned: ${overrideUpdates.performanceDate}.`
+								: `Your performance date has been assigned: ${overrideUpdates.performanceDate}.`,
+							eventId,
+						});
+					} catch (err) {
+						console.error(
+							"Error creating performance date notification:",
+							err,
+						);
+					}
+
+					try {
+						const fameLinkArtist = await getFameLinkArtistById(artistId).catch(() => null) as any;
+						const artistEmail = fameLinkArtist?.email;
+						if (artistEmail) {
+							await sendPerformanceDateAssignedEmail({
+								email: artistEmail,
+								artistName: fameLinkArtist?.artistName || eventShow.snapshotJson?.name || "Artist",
+								artistId,
+								eventName: assignedEventName || "your event",
+								eventId,
+								performanceDates: [overrideUpdates.performanceDate as string],
+							});
+						}
+					} catch (err) {
+						console.error(
+							"Error sending performance date assigned email:",
 							err,
 						);
 					}

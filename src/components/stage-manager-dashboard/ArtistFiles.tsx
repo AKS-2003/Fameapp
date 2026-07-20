@@ -227,6 +227,7 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
     artists_page_color: a.artists_page_color || a.artistsPageColor || "",
     artists_page_tag: a.artists_page_tag || a.artistsPageTag || "",
     sectionStatuses: a.sectionStatuses || {},
+    isParticipationOnly: !!a.isParticipationOnly,
   } as any;
 }
 

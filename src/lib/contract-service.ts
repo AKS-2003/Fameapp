@@ -1,6 +1,6 @@
 import * as dataAccess from "./data-access";
 import { connectToDatabase } from "@/database/mongodb";
-import { EventDataModel, EventArtistModel, EventShowModel } from "@/database/models/FameLinkModels";
+import { EventDataModel, EventArtistModel, EventShowModel, EventParticipationModel } from "@/database/models/FameLinkModels";
 
 /**
  * ContractService — Purely MongoDB-driven service for Contracts and Negotiations.
@@ -115,9 +115,31 @@ export class ContractService {
 						updatedAt: new Date().toISOString(),
 					});
 					index = artists.length - 1;
+				} else {
+					// 3. Artist only joined via magic link/invite — no draft, no submitted
+					// show yet (raw EventParticipation). Migrate them into the contract
+					// blob too so schedule/agreement edits can be saved.
+					const participation = await EventParticipationModel.findOne({ eventId, artistId: sArtistId }).lean() as any;
+					if (participation) {
+						const FameLinkArtistModel = (await import("@/database/models/FameLinkArtist")).default;
+						const freshProfile = await FameLinkArtistModel.findOne({ id: sArtistId }).lean() as any;
+
+						artists.push({
+							id: sArtistId,
+							eventId,
+							stageName: freshProfile?.artistName || participation.artistName || "FameLink Artist",
+							legalName: freshProfile?.realName || participation.artistName || "",
+							email: freshProfile?.email || "",
+							phone: freshProfile?.phone || "",
+							status: participation.status === "confirmed" ? "confirmed" : "waiting_info",
+							...updates,
+							updatedAt: new Date().toISOString(),
+						});
+						index = artists.length - 1;
+					}
 				}
 			}
-			
+
 			if (index === -1) {
 				console.error(`[ContractService] Artist ${artistId} NOT FOUND in any source for event ${eventId}`);
 				return false;

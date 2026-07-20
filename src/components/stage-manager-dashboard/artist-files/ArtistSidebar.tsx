@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Plus, ChevronDown, Trash2 } from "lucide-react";
+import { Search, Plus, ChevronDown, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -135,6 +135,12 @@ export function ArtistSidebar({
                   <p className="truncate text-sm font-bold text-slate-900">{artist.name}</p>
                 </div>
                 <p className="text-[11px] text-slate-400">{artist.location}</p>
+                {artist.status !== "Confirmed" && artist.status !== "Declined" &&
+                  !(artist.agreement?.schedule?.performances?.length) && (
+                  <p className="mt-0.5 flex items-center gap-1 text-[10px] font-medium text-amber-600">
+                    <Clock className="h-2.5 w-2.5" /> Date not assigned
+                  </p>
+                )}
               </div>
               <Badge className={cn("rounded-full px-2 py-0 text-[9px] font-medium uppercase shadow-none shrink-0", getStatusColor(artist.status))}>
                 {artist.status}

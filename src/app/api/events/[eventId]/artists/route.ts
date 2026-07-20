@@ -304,8 +304,42 @@ export async function GET(
 			});
 		}
 
-		// ── 3. Merge draft + FameLink, preserving order (drafts first) ─────────
-		const allArtists = [...draftArtists, ...fameLinkArtists];
+		// ── 3. Artists who joined via magic link/invite but haven't submitted a
+		// show yet (raw EventParticipation, no EventShow, not manually drafted).
+		// Without this, they'd be invisible on the stage manager's pipeline until
+		// they submit a show.
+		const eventShowArtistIds = new Set(eventShows.map((es: any) => es.artistId));
+		const participationOnlyArtists: any[] = [];
+		for (const p of participations) {
+			if (!p.artistId) continue;
+			if (p.status === "declined") continue;
+			if (existingIds.has(p.artistId)) continue;
+			if (eventShowArtistIds.has(p.artistId)) continue;
+
+			const profile = artistProfileMap.get(p.artistId) as any;
+			const profileEmail = profile?.email?.toLowerCase().trim();
+			if (profileEmail && existingEmails.has(profileEmail)) continue;
+
+			participationOnlyArtists.push({
+				id: p.artistId,
+				eventId,
+				artistName: p.artistName || profile?.artistName || "FameLink Artist",
+				realName: profile?.artistName || "",
+				email: profile?.email || "",
+				phone: profile?.phone || "",
+				image_url: profile?.image_url || "",
+				status: p.status === "confirmed" ? "confirmed" : "pending",
+				performance_date: null,
+				performanceDate: null,
+				isFameLinkSubmission: false,
+				isParticipationOnly: true,
+				createdAt: p.joinedAt,
+				updatedAt: p.updatedAt,
+			});
+		}
+
+		// ── 4. Merge draft + FameLink + participation-only, preserving order ───
+		const allArtists = [...draftArtists, ...fameLinkArtists, ...participationOnlyArtists];
 
 		return NextResponse.json<APIResponse>({
 			success: true,

@@ -53,6 +53,7 @@ interface Participation {
 
 type Step =
 	| "loading"
+	| "joined"
 	| "select-show"
 	| "no-shows"
 	| "confirm"
@@ -200,6 +201,9 @@ export default function JoinEventConfirmPage() {
 						setStep("already-submitted");
 					}
 				}
+			} else if (!p) {
+				// Fresh join — artist just accepted the invite for the first time
+				setStep("joined");
 			} else if ((data.data.shows || []).length === 0) {
 				setStep("no-shows");
 			} else {
@@ -234,7 +238,12 @@ export default function JoinEventConfirmPage() {
 	};
 
 	useEffect(() => {
-		if ((step === "select-show" || step === "no-shows") && !participation) {
+		if (
+			(step === "joined" ||
+				step === "select-show" ||
+				step === "no-shows") &&
+			!participation
+		) {
 			handleJoinEvent();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -548,6 +557,35 @@ export default function JoinEventConfirmPage() {
 									Update Shows
 								</Button>
 							</div>
+						</motion.div>
+					)}
+
+					{/* STEP: Just joined — thank-you screen */}
+					{step === "joined" && (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.2 }}
+							className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-6 space-y-4 text-center"
+						>
+							<div className="w-14 h-14 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+								<CheckCircle className="h-7 w-7 text-green-400" />
+							</div>
+							<div>
+								<h3 className="text-lg font-semibold text-white">
+									Thanks for joining the event!
+								</h3>
+								<p className="text-sm text-gray-400 mt-1.5">
+									Management will share the details with you
+									soon.
+								</p>
+							</div>
+							<Button
+								onClick={handleGoToDashboard}
+								className="w-full py-5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl text-base font-semibold shadow-lg shadow-purple-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+							>
+								Return to Dashboard
+							</Button>
 						</motion.div>
 					)}
 

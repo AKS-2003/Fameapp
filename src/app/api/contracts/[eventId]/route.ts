@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { ContractService } from "@/lib/contract-service";
 import { connectToDatabase } from "@/database/mongodb";
 import { EventArtistModel, EventShowModel, EventParticipationModel } from "@/database/models/FameLinkModels";
-import { getEventShowsByEvent, getEventParticipationsByEvent, getAllFameLinkArtists } from "@/lib/data-access";
+import { getEventShowsByEvent, getEventParticipationsByEvent, getAllFameLinkArtists, getFameLinkArtistById, addNotification } from "@/lib/data-access";
 import { getUnifiedArtistsForEvent, migrateBase64Screenshots } from "@/lib/contract-utils";
+import { EventDataService } from "@/lib/storage-service";
+import { sendPerformanceDateAssignedEmail } from "@/lib/email-service";
+
+/** Extract YYYY-MM-DD performance dates from a schedule's performances list */
+function extractPerfDates(schedule: any): string[] {
+	const perfs: any[] = schedule?.performances || [];
+	return perfs.map((p: any) => (p?.date || "").toString().substring(0, 10)).filter(Boolean);
+}
 
 /** Safely parse snapshotJson — may be stored as a JSON string or already an object */
 function parseSnapshot(raw: any): any {
@@ -90,6 +98,10 @@ export async function PUT(
 			);
 		}
 
+		// Snapshot performance dates before the update so we can detect newly-assigned ones
+		const priorArtist = updates.agreement ? await ContractService.getArtist(eventId, artistId) : null;
+		const priorDates = new Set(extractPerfDates(priorArtist?.agreement?.schedule));
+
 		const success = await ContractService.updateArtist(eventId, artistId, updates);
 		if (success) {
 			// Also persist the agreement into EventArtistModel so the stage manager
@@ -113,6 +125,43 @@ export async function PUT(
 			}
 
 			const updatedArtist = await ContractService.getArtist(eventId, artistId);
+
+			// Notify the artist (in-app + email) if a new performance date was just assigned
+			if (updates.agreement) {
+				const newDates = extractPerfDates(updatedArtist?.agreement?.schedule).filter((d) => !priorDates.has(d));
+				if (newDates.length > 0) {
+					try {
+						const eventData = await EventDataService.getEvent(eventId);
+						const eventName = eventData?.name;
+						const fameLinkArtist = await getFameLinkArtistById(artistId).catch(() => null) as any;
+						const artistEmail = fameLinkArtist?.email || updatedArtist?.email;
+						const artistName = fameLinkArtist?.artistName || updatedArtist?.stageName || "Artist";
+
+						await addNotification(artistId, {
+							type: "performance_date_assigned",
+							title: "Performance date assigned",
+							message: eventName
+								? `Your performance date for "${eventName}" has been assigned: ${newDates.join(", ")}.`
+								: `Your performance date has been assigned: ${newDates.join(", ")}.`,
+							eventId,
+						});
+
+						if (artistEmail) {
+							await sendPerformanceDateAssignedEmail({
+								email: artistEmail,
+								artistName,
+								artistId,
+								eventName: eventName || "your event",
+								eventId,
+								performanceDates: newDates,
+							});
+						}
+					} catch (notifyErr) {
+						console.error("[PUT /api/contracts] Failed to notify artist of new performance date:", notifyErr);
+					}
+				}
+			}
+
 			return NextResponse.json({ success: true, artist: updatedArtist });
 		}
 		return NextResponse.json(

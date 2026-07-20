@@ -218,6 +218,70 @@ export async function getUnifiedArtistsForEvent(eventId: string) {
 		});
 		coveredIds.add(es.artistId);
 	}
+
+	// Artists who joined via magic link/invite but haven't submitted a show yet
+	// (raw EventParticipation, no EventShow). Without this, they'd be invisible
+	// on the Artist Files page until they submit a show.
+	const participationOnlyContractArtists: any[] = [];
+	for (const p of participations) {
+		if (!p.artistId || coveredIds.has(p.artistId)) continue;
+		if ((p as any).status === "declined") continue;
+
+		const freshProfile = artistProfileMap.get(p.artistId) as any;
+		participationOnlyContractArtists.push({
+			id: p.artistId,
+			eventId,
+			stageName: freshProfile?.artistName || p.artistName || "FameLink Artist",
+			legalName: freshProfile?.realName || p.artistName || "",
+			email: freshProfile?.email || "",
+			phone: freshProfile?.phone || "",
+			image: freshProfile?.image_url || "",
+			country: (freshProfile?.country && freshProfile.country !== "null") ? freshProfile.country :
+					 (freshProfile?.countryLiving && freshProfile.countryLiving !== "null") ? freshProfile.countryLiving : "",
+			city: (freshProfile?.city && freshProfile.city !== "null") ? freshProfile.city : "",
+			nationality: "",
+			nearestAirport: "",
+			travelPreferences: "",
+			dietaryPreferences: "",
+			hotelRoomPreference: "",
+			role: "solo",
+			requestTemplate: "dancer",
+			status: p.status === "confirmed" ? "confirmed" : "waiting_info",
+			contractDocStatus: "draft",
+			profileStatus: "requested",
+			missingItems: [],
+			agreement: {
+				agreedFee: "", paymentSchedule: "", paymentMethod: "",
+				workshopsConfirmed: 0, workshopDaysAgreed: 0, showsConfirmed: 0,
+				djSets: 0, panels: 0, hotelNights: 0, roomSharing: "",
+				airportTransfer: false, foodVouchers: false, flightBudget: "",
+				travelClass: "", arrivalDate: "", departureDate: "",
+				promoObligations: "", socialMediaPosts: 0, ambassadorTasks: "",
+				payments: { feePaid: false, flightsPaid: false, hotelPaid: false, transportPaid: false, foodPaid: false },
+			},
+			groupMembers: [],
+			travelLogistics: {
+				flights: [], hotelBookingFile: "", workshopSchedule: "",
+				pickupInfo: "", dropoffInfo: "", additionalNotes: "",
+				driverName: "", driverPhone: "", driverNotes: "",
+				hotelId: "", hotelName: "", hotelAddress: "",
+				hotelMapLink: "", hotelCheckIn: "", hotelCheckOut: "",
+				hotelNotes: "", hotelRooms: [], eventVenueName: "",
+				eventVenueAddress: "", eventVenueMapLink: "",
+			},
+			eventQuestions: [],
+			isFameLinkArtist: true,
+			isParticipationOnly: true,
+			logistics: getLogisticsForArtist(p.artistId, freshProfile?.email) || freshProfile?.logistics || null,
+			workflowContract: "Required",
+			workflowLogistics: undefined,
+			workflowShow: undefined,
+			createdAt: (p as any).joinedAt || new Date().toISOString(),
+			updatedAt: (p as any).updatedAt || new Date().toISOString(),
+		});
+		coveredIds.add(p.artistId);
+	}
+
 	// Enrich contract artists with fresh FameLink profile data (city, country, etc.)
 	let hasDbUpdates = false;
 	const enrichedContractArtists = contractArtists.map((a: any) => {
@@ -291,9 +355,9 @@ export async function getUnifiedArtistsForEvent(eventId: string) {
 		return a;
 	});
 
-	console.log(`[getUnifiedArtistsForEvent] Event=${eventId}: enriched ${enrichedContractArtists.length} contract, ${enrichedDraftArtists.length} draft, ${fameLinkContractArtists.length} famelink artists.`);
-	
-	return [...enrichedContractArtists, ...enrichedDraftArtists, ...fameLinkContractArtists];
+	console.log(`[getUnifiedArtistsForEvent] Event=${eventId}: enriched ${enrichedContractArtists.length} contract, ${enrichedDraftArtists.length} draft, ${fameLinkContractArtists.length} famelink, ${participationOnlyContractArtists.length} participation-only artists.`);
+
+	return [...enrichedContractArtists, ...enrichedDraftArtists, ...fameLinkContractArtists, ...participationOnlyContractArtists];
 }
 
 /**

@@ -328,6 +328,85 @@ export async function sendArtistReminderEmail(
 }
 
 /**
+ * Send email to artist when a stage manager assigns them a performance date
+ */
+export async function sendPerformanceDateAssignedEmail(data: {
+	email: string;
+	artistName: string;
+	artistId: string;
+	eventName: string;
+	eventId: string;
+	performanceDates: string[];
+}): Promise<boolean> {
+	const { email, artistName, artistId, eventName, performanceDates } = data;
+
+	const baseUrl = getBaseUrl();
+	const dashboardUrl = `${baseUrl}/famelink/${encodeURIComponent(artistId)}`;
+
+	const formattedDates = performanceDates
+		.map((d) => {
+			try {
+				return new Date(d).toLocaleDateString("en-US", {
+					weekday: "long",
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+				});
+			} catch {
+				return d;
+			}
+		})
+		.join(", ");
+
+	const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Performance Date Assigned - FAME</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <h1 style="color: #9333ea;">Your Performance Date is Set!</h1>
+    <p>Hi ${artistName},</p>
+    <p>Great news — you've been assigned a performance date for <strong>${eventName}</strong>.</p>
+    <div style="background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <div style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; margin-bottom: 5px;">Performance Date${performanceDates.length > 1 ? "s" : ""}</div>
+      <div style="font-size: 16px; color: #1f2937;">${formattedDates}</div>
+    </div>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">
+        View Your Dashboard
+      </a>
+    </div>
+    <p style="color: #6b7280; font-size: 14px;">If you have any questions, please contact the event organizers.</p>
+  </div>
+</body>
+</html>
+  `;
+
+	const text = `Your Performance Date is Set!
+
+Hi ${artistName},
+
+You've been assigned a performance date for ${eventName}.
+
+Performance Date${performanceDates.length > 1 ? "s" : ""}: ${formattedDates}
+
+View your dashboard: ${dashboardUrl}
+
+If you have any questions, please contact the event organizers.
+  `;
+
+	return sendEmail({
+		to: email,
+		subject: `Performance Date Assigned - ${eventName}`,
+		html,
+		text,
+	});
+}
+
+/**
  * Send password reset request email to admin and stage manager
  */
 interface PasswordResetRequestData {

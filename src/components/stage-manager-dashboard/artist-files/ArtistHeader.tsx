@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { LayoutGrid, Copy, ExternalLink, UserPlus, Check, ChevronDown, Info } from "lucide-react";
+import { LayoutGrid, Copy, ExternalLink, UserPlus, Check, ChevronDown, Info, Clock } from "lucide-react";
 import { InviteArtistDialog } from "@/components/stage-manager/InviteArtistDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -300,6 +300,16 @@ export function ArtistHeader({
                 <Info className="h-3 w-3" />
                 Basic Info
               </button>
+              {artist.status !== "Confirmed" && artist.status !== "Declined" &&
+                !(artist.agreement?.schedule?.performances?.length) && (
+                <span
+                  title="Assign a performance date under Agreement → Schedule to confirm this artist."
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-700"
+                >
+                  <Clock className="h-3 w-3" />
+                  Performance dates not assigned
+                </span>
+              )}
             </h1>
             <p className="text-sm text-slate-400 font-medium">
               {artist.realName}{artist.location ? ` • ${artist.location}` : ""}

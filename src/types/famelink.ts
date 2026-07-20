@@ -217,6 +217,20 @@ export interface EventParticipation {
 	updatedAt: string;
 }
 
+// ---- Artist Notifications ----
+
+export interface ArtistNotification {
+	id: string;
+	userId: string;
+	type: "event_request" | "event_update" | "message" | "system" | "performance_date_assigned";
+	title: string;
+	message: string;
+	eventId?: string;
+	read: boolean;
+	readAt?: string;
+	createdAt: string;
+}
+
 // ---- Create Event Show Request ----
 
 export interface CreateEventShowRequest {
