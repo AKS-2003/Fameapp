@@ -19,6 +19,7 @@ import {
 	XCircle,
 	AlertCircle,
 	Edit,
+	ImageIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -39,6 +40,16 @@ interface BaseShow {
 	slug: string;
 	style?: string;
 	duration: number;
+	description?: string;
+	profileImage?: string;
+}
+
+interface PerformanceSlot {
+	date: string; // YYYY-MM-DD
+	label?: string;
+	time?: string;
+	endTime?: string;
+	location?: string;
 	description?: string;
 }
 
@@ -80,6 +91,9 @@ export default function JoinEventConfirmPage() {
 	const [existingShowIds, setExistingShowIds] = useState<string[]>([]);
 	const [activeEventShows, setActiveEventShows] = useState<{ baseShowId: string; performanceDate: string | null; showName: string }[]>([]);
 	const [performanceSlots, setPerformanceSlots] = useState<string[]>([]); // YYYY-MM-DD dates from contract
+	const [slotDetails, setSlotDetails] = useState<PerformanceSlot[]>([]); // Full slot metadata (label/time/location)
+	const [slotShowMap, setSlotShowMap] = useState<Record<number, string>>({}); // slot index -> baseShowId
+	const [loadingSlots, setLoadingSlots] = useState(false);
 
 	const fetchData = useCallback(async () => {
 		try {
@@ -122,65 +136,75 @@ export default function JoinEventConfirmPage() {
 			const p = data.data.participation;
 			setParticipation(p);
 
-			if (p && (p.status === "submitted" || p.status === "confirmed")) {
-				// Check if the artist still has Event_Shows for this event
-				// If not (e.g. show was deleted), allow re-registration
-				let hasActiveEventShows = false;
-				let submittedBaseShowIds: string[] = [];
-				let enrichedShows: { baseShowId: string; performanceDate: string | null; showName: string }[] = [];
-				try {
-					const esRes = await fetch(
-						`/api/event-shows?eventId=${eventId}`,
-					);
-					const esData = await esRes.json();
-					const activeShows = esData.data?.eventShows || [];
-					hasActiveEventShows =
-						esData.success && activeShows.length > 0;
-					submittedBaseShowIds = activeShows
-						.map((es: any) => es.baseShowId)
-						.filter(Boolean);
-					enrichedShows = activeShows.map((es: any) => ({
+			// Fetch already-submitted event shows and performance slot details —
+			// needed regardless of participation status so the per-slot show
+			// picker can render correctly on first-time submission too.
+			let hasActiveEventShows = false;
+			let submittedBaseShowIds: string[] = [];
+			try {
+				const esRes = await fetch(`/api/event-shows?eventId=${eventId}`);
+				const esData = await esRes.json();
+				const activeShows = esData.data?.eventShows || [];
+				hasActiveEventShows = esData.success && activeShows.length > 0;
+				submittedBaseShowIds = activeShows
+					.map((es: any) => es.baseShowId)
+					.filter(Boolean);
+				setActiveEventShows(
+					activeShows.map((es: any) => ({
 						baseShowId: es.baseShowId || "",
 						performanceDate: es.overrides?.performanceDate || es.performanceDate || null,
 						showName: es.overrides?.name || (typeof es.snapshotJson === "object" ? es.snapshotJson?.name : null) || "Show",
-					}));
-				} catch {}
+					})),
+				);
+			} catch {}
 
-				setActiveEventShows(enrichedShows);
-
-				// Fetch performance slots from the event/contract
-				try {
-					const eventData = data.data.event;
-					const slots: string[] = [];
-					// Try contract first
-					const contractRes = await fetch(`/api/contracts/${eventId}`);
-					const contractData = await contractRes.json();
-					const authRes2 = await fetch("/api/auth/me?role=artist");
-					const authData2 = await authRes2.json();
-					const myId = authData2.data?.userId;
-					const artists: any[] = contractData.artists || [];
-					const myEntry = artists.find((a: any) => a.id === myId || a.famelinkArtistId === myId || a.email === authData2.data?.email);
-					const perfs: any[] = myEntry?.agreement?.schedule?.performances || [];
-					const toYMD = (raw: string) => {
-						if (!raw) return null;
-						if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-						const iso = raw.substring(0, 10);
-						return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
-					};
-					for (const perf of perfs) {
-						const ymd = toYMD(perf.date || "");
-						if (ymd && !slots.includes(ymd)) slots.push(ymd);
+			setLoadingSlots(true);
+			try {
+				const eventData = data.data.event;
+				const toYMD = (raw: string): string | null => {
+					if (!raw) return null;
+					if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+					const iso = raw.substring(0, 10);
+					return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+				};
+				const slots: PerformanceSlot[] = [];
+				// Try contract first
+				const contractRes = await fetch(`/api/contracts/${eventId}`);
+				const contractData = await contractRes.json();
+				const authRes2 = await fetch("/api/auth/me?role=artist");
+				const authData2 = await authRes2.json();
+				const myId = authData2.data?.userId;
+				const artists: any[] = contractData.artists || [];
+				const myEntry = artists.find((a: any) => a.id === myId || a.famelinkArtistId === myId || a.email === authData2.data?.email);
+				const perfs: any[] = myEntry?.agreement?.schedule?.performances || [];
+				for (const perf of perfs) {
+					const ymd = toYMD(perf.date || "");
+					if (ymd && !slots.some((s) => s.date === ymd)) {
+						slots.push({
+							date: ymd,
+							label: perf.title || undefined,
+							time: perf.time || undefined,
+							endTime: perf.endTime || undefined,
+							location: perf.location || undefined,
+							description: perf.description || undefined,
+						});
 					}
-					// Fall back to event showDates
-					if (slots.length === 0 && eventData?.showDates?.length) {
-						for (const d of eventData.showDates) {
-							const ymd = toYMD(d);
-							if (ymd && !slots.includes(ymd)) slots.push(ymd);
-						}
+				}
+				// Fall back to event showDates
+				if (slots.length === 0 && eventData?.showDates?.length) {
+					for (const d of eventData.showDates) {
+						const ymd = toYMD(d);
+						if (ymd && !slots.some((s) => s.date === ymd)) slots.push({ date: ymd });
 					}
-					setPerformanceSlots(slots);
-				} catch {}
+				}
+				setSlotDetails(slots);
+				setPerformanceSlots(slots.map((s) => s.date));
+			} catch {
+			} finally {
+				setLoadingSlots(false);
+			}
 
+			if (p && (p.status === "submitted" || p.status === "confirmed")) {
 				if (!hasActiveEventShows) {
 					// Old participation exists but no Event_Shows — allow re-registration
 					setIsResubmit(true);
@@ -337,6 +361,74 @@ export default function JoinEventConfirmPage() {
 		} finally {
 			setSubmitting(false);
 		}
+	};
+
+	// Submit one show per performance-date slot (used when the contract defines
+	// specific dates — mirrors the "Which show do you want to share?" picker).
+	const handleSubmitSlots = async () => {
+		const slotEntries = Object.entries(slotShowMap)
+			.filter(([, showId]) => Boolean(showId))
+			.map(([idxStr, showId]) => {
+				const idx = Number(idxStr);
+				return { showId, performanceDate: slotDetails[idx]?.date || "" };
+			});
+		if (slotEntries.length === 0) return;
+
+		setSubmitting(true);
+		try {
+			const results = await Promise.all(
+				slotEntries.map(({ showId, performanceDate }) =>
+					fetch("/api/event-shows", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ eventId, baseShowId: showId, performanceDate }),
+					}).then((r) => r.json()),
+				),
+			);
+
+			if (results.some((r) => r.success)) {
+				// Refresh participation + active event shows
+				const res = await fetch(`/api/join-event/${eventId}`);
+				const data = await res.json();
+				if (data.success) setParticipation(data.data.participation);
+
+				const esRes = await fetch(`/api/event-shows?eventId=${eventId}`);
+				const esData = await esRes.json();
+				const activeShows = esData.data?.eventShows || [];
+				setActiveEventShows(
+					activeShows.map((es: any) => ({
+						baseShowId: es.baseShowId || "",
+						performanceDate: es.overrides?.performanceDate || es.performanceDate || null,
+						showName: es.overrides?.name || (typeof es.snapshotJson === "object" ? es.snapshotJson?.name : null) || "Show",
+					})),
+				);
+				setSlotShowMap({});
+				setStep("already-submitted");
+			} else {
+				toast({
+					title: "Error",
+					description: "Failed to submit shows",
+					variant: "destructive",
+				});
+			}
+		} catch (err) {
+			console.error("Error submitting slot shows:", err);
+			toast({
+				title: "Error",
+				description: "Failed to submit shows",
+				variant: "destructive",
+			});
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const fmtSlotDate = (d: string): string => {
+		const parts = d.split("-");
+		if (parts.length < 3) return d;
+		const dt = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+		if (isNaN(dt.getTime())) return d;
+		return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 	};
 
 	const handleDecline = async () => {
@@ -646,78 +738,305 @@ export default function JoinEventConfirmPage() {
 						>
 							<div>
 								<h3 className="text-lg font-semibold text-white">
-									{isResubmit
-										? "Edit Your Show Selection"
-										: "Select Your Shows"}
+									Which show do you want to share?
 								</h3>
 								<p className="text-sm text-gray-400 mt-1">
-									{isResubmit
-										? "Change which shows to offer for this event."
-										: "Choose one or more shows for this event, or create a new one."}
+									To {event?.name || "this event"}
 								</p>
 							</div>
 
-							{selectedShowIds.length > 0 && (
-								<Badge className="bg-green-500/15 text-green-300 border border-green-500/20">
-									{selectedShowIds.length} show
-									{selectedShowIds.length > 1 ? "s" : ""}{" "}
-									selected
-								</Badge>
+							{loadingSlots && (
+								<div className="flex items-center justify-center py-6 gap-2 text-gray-400">
+									<Loader2 className="h-4 w-4 animate-spin" />
+									<span className="text-sm">Loading performance dates…</span>
+								</div>
 							)}
 
-							<div className="space-y-2.5">
-								{shows.map((show) => {
-									const isSelected = selectedShowIds.includes(
-										show.id,
-									);
-									const wasAlreadySubmitted = existingShowIds.includes(show.id);
-									return (
-										<div
-											key={show.id}
-											onClick={() =>
-												toggleShowSelection(show.id)
-											}
-											className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-												isSelected
-													? "border-pink-500/50 bg-pink-500/10 shadow-lg shadow-pink-500/5"
-													: "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
-											}`}
-										>
-											<div className="flex items-center justify-between">
-												<div>
-													<h4 className="font-medium flex items-center gap-2 text-white">
-														<Music className="h-4 w-4 text-pink-400" />
-														{show.name}
-														{wasAlreadySubmitted && (
-															<span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20">
-																Already submitted
-															</span>
-														)}
-													</h4>
-													<p className="text-sm text-gray-500 mt-1">
-														{show.style && (
-															<>{show.style} · </>
-														)}
-														<Clock className="inline h-3 w-3 mr-1" />
-														{show.duration} min
-													</p>
-												</div>
+							{!loadingSlots && shows.length === 0 && (
+								<div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] text-sm text-gray-400 text-center">
+									No shows yet. Create a show first to share it.
+								</div>
+							)}
+
+							{!loadingSlots && shows.length > 0 && slotDetails.length > 0 ? (
+								<>
+									{slotDetails.length > 1 && (
+										<div className="flex items-start gap-3 p-3.5 rounded-xl bg-pink-500/8 border border-pink-500/20 text-sm text-pink-200/80">
+											<Calendar className="h-4 w-4 text-pink-400 shrink-0 mt-0.5" />
+											<span>
+												From your contract: the organiser allocated{" "}
+												<span className="font-semibold text-pink-300">{slotDetails.length} performance slots</span>.
+												Assign a show to each date.
+											</span>
+										</div>
+									)}
+
+									<div className="space-y-3">
+										{slotDetails.map((slot, idx) => {
+											const selectedId = slotShowMap[idx] || "";
+											const alreadySubmitted = activeEventShows.find(
+												(es) => es.performanceDate?.substring(0, 10) === slot.date,
+											);
+											const alreadySubmittedShow = alreadySubmitted
+												? shows.find((s) => s.id === alreadySubmitted.baseShowId)
+												: undefined;
+											const isSlotDone = !!alreadySubmitted;
+											const availableShows = shows.filter(
+												(s) => !activeEventShows.some((es) => es.baseShowId === s.id),
+											);
+											return (
 												<div
-													className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-														isSelected
-															? "border-pink-400 bg-pink-500"
-															: "border-white/20"
-													}`}
+													key={idx}
+													className={`rounded-xl border overflow-hidden ${isSlotDone ? "border-green-500/30 bg-green-500/5" : "border-white/[0.06] bg-white/[0.02]"}`}
 												>
-													{isSelected && (
-														<Check className="h-3 w-3 text-white" />
+													{/* Slot header */}
+													<div className={`flex items-center gap-3 px-4 py-3 border-b ${isSlotDone ? "border-green-500/20 bg-green-500/10" : "border-white/[0.06] bg-white/[0.03]"}`}>
+														<div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shrink-0 ${isSlotDone ? "bg-green-500/30 text-green-300 border-green-500/40" : "bg-pink-500/30 text-pink-300 border-pink-500/30"}`}>
+															{isSlotDone ? <CheckCircle className="h-3.5 w-3.5" /> : idx + 1}
+														</div>
+														<div className="flex-1 min-w-0">
+															<p className="text-sm font-semibold text-white flex items-center gap-1.5 flex-wrap">
+																<Calendar className={`h-3.5 w-3.5 ${isSlotDone ? "text-green-400" : "text-pink-400"}`} />
+																{fmtSlotDate(slot.date)}
+																{(slot.time || slot.endTime) && (
+																	<span className="text-xs font-normal text-gray-400">
+																		{[slot.time, slot.endTime].filter(Boolean).join(" – ")}
+																	</span>
+																)}
+															</p>
+															{slot.label && (
+																<p className="text-xs text-gray-400 mt-0.5">{slot.label}</p>
+															)}
+															{slot.location && (
+																<p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+																	<MapPin className="h-3 w-3" />
+																	{slot.location}
+																</p>
+															)}
+															{slot.description && (
+																<p className="text-xs text-gray-500 mt-0.5">{slot.description}</p>
+															)}
+														</div>
+														{isSlotDone && (
+															<span className="text-xs text-green-400 font-semibold shrink-0">Submitted</span>
+														)}
+														{!isSlotDone && selectedId && (
+															<CheckCircle className="h-4 w-4 text-pink-400 shrink-0" />
+														)}
+													</div>
+
+													{isSlotDone ? (
+														<div className="flex items-center gap-3 px-4 py-3">
+															<div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-600/30 to-emerald-600/30 flex items-center justify-center shrink-0 border border-green-500/20">
+																<CheckCircle className="h-4 w-4 text-green-400" />
+															</div>
+															<div className="flex-1 min-w-0">
+																<p className="text-sm font-semibold text-green-300 truncate">
+																	{alreadySubmittedShow?.name || "Show submitted"}
+																</p>
+																<p className="text-xs text-green-400/60 mt-0.5">Show info submitted for this date</p>
+															</div>
+														</div>
+													) : (
+														<div className="flex flex-col divide-y divide-white/[0.05]">
+															{availableShows.length === 0 ? (
+																<div className="px-4 py-3 text-xs text-gray-500 text-center">
+																	All shows already submitted for this event.
+																</div>
+															) : (
+																availableShows.map((show) => {
+																	const isSelected = selectedId === show.id;
+																	return (
+																		<button
+																			key={show.id}
+																			onClick={() =>
+																				setSlotShowMap((prev) => ({
+																					...prev,
+																					[idx]: isSelected ? "" : show.id,
+																				}))
+																			}
+																			className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
+																				isSelected
+																					? "bg-pink-500/15 border-l-2 border-pink-400"
+																					: "hover:bg-white/5 border-l-2 border-transparent"
+																			}`}
+																		>
+																			<div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-600/40 to-pink-600/40 flex items-center justify-center shrink-0 border border-purple-500/20 overflow-hidden">
+																				{show.profileImage ? (
+																					<img src={show.profileImage} alt={show.name} className="w-full h-full object-cover" />
+																				) : (
+																					<ImageIcon className="h-4 w-4 text-purple-300/60" />
+																				)}
+																			</div>
+																			<div className="flex-1 min-w-0">
+																				<p className={`text-sm font-semibold truncate ${isSelected ? "text-pink-200" : "text-white"}`}>
+																					{show.name}
+																				</p>
+																				{show.style && (
+																					<p className="text-xs text-gray-500 truncate mt-0.5">{show.style}</p>
+																				)}
+																			</div>
+																			<div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${
+																				isSelected ? "border-pink-400 bg-pink-400" : "border-white/30"
+																			}`}>
+																				{isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+																			</div>
+																		</button>
+																	);
+																})
+															)}
+														</div>
 													)}
 												</div>
-											</div>
-										</div>
-									);
-								})}
-							</div>
+											);
+										})}
+									</div>
+
+									<div className="flex gap-3 pt-1">
+										{!isResubmit && (
+											<Button
+												onClick={handleDecline}
+												variant="ghost"
+												className="text-gray-400 hover:text-white hover:bg-white/[0.04] rounded-xl"
+												disabled={submitting}
+											>
+												Decline
+											</Button>
+										)}
+										<Button
+											onClick={handleSubmitSlots}
+											disabled={
+												Object.values(slotShowMap).filter(Boolean).length === 0 ||
+												submitting
+											}
+											className="flex-1 py-5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl text-base font-semibold shadow-lg shadow-green-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
+										>
+											{submitting ? (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											) : (
+												<Check className="mr-2 h-4 w-4" />
+											)}
+											Submit Show Info
+										</Button>
+									</div>
+								</>
+							) : !loadingSlots && shows.length > 0 ? (
+								<>
+									<div>
+										<h3 className="text-lg font-semibold text-white">
+											{isResubmit
+												? "Edit Your Show Selection"
+												: "Select Your Shows"}
+										</h3>
+										<p className="text-sm text-gray-400 mt-1">
+											{isResubmit
+												? "Change which shows to offer for this event."
+												: "Choose one or more shows for this event, or create a new one."}
+										</p>
+									</div>
+
+									{selectedShowIds.length > 0 && (
+										<Badge className="bg-green-500/15 text-green-300 border border-green-500/20">
+											{selectedShowIds.length} show
+											{selectedShowIds.length > 1 ? "s" : ""}{" "}
+											selected
+										</Badge>
+									)}
+
+									<div className="space-y-2.5">
+										{shows.map((show) => {
+											const isSelected = selectedShowIds.includes(
+												show.id,
+											);
+											const wasAlreadySubmitted = existingShowIds.includes(show.id);
+											return (
+												<div
+													key={show.id}
+													onClick={() =>
+														toggleShowSelection(show.id)
+													}
+													className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+														isSelected
+															? "border-pink-500/50 bg-pink-500/10 shadow-lg shadow-pink-500/5"
+															: "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
+													}`}
+												>
+													<div className="flex items-center justify-between">
+														<div>
+															<h4 className="font-medium flex items-center gap-2 text-white">
+																<Music className="h-4 w-4 text-pink-400" />
+																{show.name}
+																{wasAlreadySubmitted && (
+																	<span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20">
+																		Already submitted
+																	</span>
+																)}
+															</h4>
+															<p className="text-sm text-gray-500 mt-1">
+																{show.style && (
+																	<>{show.style} · </>
+																)}
+																<Clock className="inline h-3 w-3 mr-1" />
+																{show.duration} min
+															</p>
+														</div>
+														<div
+															className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+																isSelected
+																	? "border-pink-400 bg-pink-500"
+																	: "border-white/20"
+															}`}
+														>
+															{isSelected && (
+																<Check className="h-3 w-3 text-white" />
+															)}
+														</div>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+
+									<div className="flex gap-3 pt-1">
+										{!isResubmit && (
+											<Button
+												onClick={handleDecline}
+												variant="ghost"
+												className="text-gray-400 hover:text-white hover:bg-white/[0.04] rounded-xl"
+												disabled={submitting}
+											>
+												Decline
+											</Button>
+										)}
+										{isResubmit && (
+											<Button
+												onClick={handleGoToDashboard}
+												variant="ghost"
+												className="text-gray-400 hover:text-white hover:bg-white/[0.04] rounded-xl"
+											>
+												Cancel
+											</Button>
+										)}
+										<Button
+											onClick={handleSubmitShow}
+											disabled={
+												selectedShowIds.length === 0 ||
+												submitting
+											}
+											className="flex-1 py-5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl text-base font-semibold shadow-lg shadow-green-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
+										>
+											{submitting ? (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											) : (
+												<Check className="mr-2 h-4 w-4" />
+											)}
+											{isResubmit
+												? `Update Shows (${selectedShowIds.length})`
+												: `Submit ${selectedShowIds.length > 1 ? `${selectedShowIds.length} Shows` : "Show"}`}
+										</Button>
+									</div>
+								</>
+							) : null}
 
 							<Button
 								onClick={handleCreateShow}
@@ -727,45 +1046,6 @@ export default function JoinEventConfirmPage() {
 								<Plus className="mr-2 h-4 w-4" />
 								Create New Show
 							</Button>
-
-							<div className="flex gap-3 pt-1">
-								{!isResubmit && (
-									<Button
-										onClick={handleDecline}
-										variant="ghost"
-										className="text-gray-400 hover:text-white hover:bg-white/[0.04] rounded-xl"
-										disabled={submitting}
-									>
-										Decline
-									</Button>
-								)}
-								{isResubmit && (
-									<Button
-										onClick={handleGoToDashboard}
-										variant="ghost"
-										className="text-gray-400 hover:text-white hover:bg-white/[0.04] rounded-xl"
-									>
-										Cancel
-									</Button>
-								)}
-								<Button
-									onClick={handleSubmitShow}
-									disabled={
-										selectedShowIds.length === 0 ||
-										submitting
-									}
-									className="flex-1 py-5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl text-base font-semibold shadow-lg shadow-green-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
-								>
-									{submitting ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<Check className="mr-2 h-4 w-4" />
-									)}
-									{isResubmit
-										? `Update Shows (${selectedShowIds.length})`
-										: `Submit ${selectedShowIds.length > 1 ? `${selectedShowIds.length} Shows` : "Show"}`}
-								</Button>
-							</div>
 						</motion.div>
 					)}
 
