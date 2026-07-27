@@ -18,9 +18,10 @@ interface ArtistLogisticsProps {
   selectedShow?: any;
   eventId: string;
   onRefresh?: () => void;
+  onUnreadDiscussionChange?: (count: number) => void;
 }
 
-export function ArtistLogistics({ artist, selectedShow, eventId, onRefresh }: ArtistLogisticsProps) {
+export function ArtistLogistics({ artist, selectedShow, eventId, onRefresh, onUnreadDiscussionChange }: ArtistLogisticsProps) {
   const [innerTab, setInnerTab] = useState("Overview");
   const logistics = artist.logistics;
 
@@ -239,6 +240,7 @@ export function ArtistLogistics({ artist, selectedShow, eventId, onRefresh }: Ar
           artistId={artist.id}
           artistName={artist.name}
           activeTab={innerTab}
+          onUnreadChange={onUnreadDiscussionChange}
         />
       </div>
     </div>

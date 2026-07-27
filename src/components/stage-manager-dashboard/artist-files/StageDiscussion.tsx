@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DiscussionMessage } from "./types";
 import { WebSocketManager, createWebSocketManager } from "@/lib/websocket-manager";
+import { markDiscussionSeen } from "./unread-utils";
 
 interface StageDiscussionProps {
   messages: DiscussionMessage[];
@@ -120,6 +121,8 @@ export function StageDiscussion({ messages: initialMessages, artistName, eventId
 
       if (response.ok) {
         setInputValue("");
+        // Replying is what clears the unread marker — not just viewing the thread.
+        markDiscussionSeen(eventId, artistId, "agreement", messages.filter((m) => !m.isMe).length);
         // No local update here - wait for WebSocket broadcast to avoid duplicates
       }
     } catch (error) {

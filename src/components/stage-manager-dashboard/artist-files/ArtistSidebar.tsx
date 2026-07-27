@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { Search, Plus, ChevronDown, Trash2, Clock } from "lucide-react";
+import { Search, Plus, ChevronDown, Trash2, Clock, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Artist } from "./types";
+import { countUnseenArtistMessages } from "./unread-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ interface ArtistSidebarProps {
   onBack: () => void;
   onAdd: () => void;
   onDelete?: (artist: Artist) => void;
+  eventId: string;
 }
 
 
@@ -35,6 +37,7 @@ export function ArtistSidebar({
   onBack,
   onAdd,
   onDelete,
+  eventId,
 }: ArtistSidebarProps) {
 
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -131,8 +134,13 @@ export function ArtistSidebar({
                 </div>
               )}
               <div className="flex-1 min-w-0 text-left">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-bold text-slate-900">{artist.name}</p>
+                  {countUnseenArtistMessages(eventId, artist.id, "agreement", artist.agreement?.stageDiscussion) > 0 && (
+                    <span title="Unread agreement chat message" className="shrink-0">
+                      <Bell className="h-3.5 w-3.5 fill-red-500 text-red-500 animate-pulse" />
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-slate-400">{artist.location}</p>
                 {artist.status !== "Confirmed" && artist.status !== "Declined" &&

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MessageSquare, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { countUnseenArtistMessages, markDiscussionSeen } from "./unread-utils";
 
 type LogTag = "general" | "flight" | "hotel" | "transport" | "schedule";
 
@@ -48,6 +49,7 @@ interface LogisticsDiscussionProps {
   artistId: string;
   artistName: string;
   activeTab: string; // current inner logistics tab
+  onUnreadChange?: (count: number) => void;
 }
 
 function formatTime(ts: string) {
@@ -65,7 +67,7 @@ function formatTime(ts: string) {
   } catch { return ts; }
 }
 
-export function LogisticsDiscussion({ eventId, artistId, artistName, activeTab }: LogisticsDiscussionProps) {
+export function LogisticsDiscussion({ eventId, artistId, artistName, activeTab, onUnreadChange }: LogisticsDiscussionProps) {
   const defaultTag = TAB_TAG_MAP[activeTab] ?? "general";
   const [activeTag, setActiveTag] = useState<LogTag>(defaultTag);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -158,6 +160,14 @@ export function LogisticsDiscussion({ eventId, artistId, artistName, activeTab }
     };
   }, [loadMessages]);
 
+  // Report unread count to parent. It stays until the stage manager replies
+  // (see handleSend) — merely viewing the thread does not clear it.
+  useEffect(() => {
+    if (loading) return;
+    const unread = countUnseenArtistMessages(eventId, artistId, "logistics", messages);
+    onUnreadChange?.(unread);
+  }, [loading, messages, eventId, artistId, onUnreadChange]);
+
   const handleSend = async () => {
     if (!draft.trim() || sending) return;
     setSending(true);
@@ -174,6 +184,8 @@ export function LogisticsDiscussion({ eventId, artistId, artistName, activeTab }
       category: activeTag,
     };
     setMessages(prev => [...prev, optimistic]);
+    // Replying is what clears the unread marker — not just viewing the thread.
+    markDiscussionSeen(eventId, artistId, "logistics", messages.filter((m) => !m.isMe).length);
 
     try {
       await fetch(`/api/contracts/${eventId}/discussion`, {

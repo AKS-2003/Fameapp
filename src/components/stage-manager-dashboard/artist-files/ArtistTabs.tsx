@@ -11,6 +11,8 @@ interface ArtistTabsProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   artistWorkflow?: WorkflowState;
+  agreementUnread?: number;
+  logisticsUnread?: number;
 }
 
 /**
@@ -29,11 +31,11 @@ function isTabVisible(
   return true;
 }
 
-export function ArtistTabs({ activeTab, onTabChange, artistWorkflow }: ArtistTabsProps) {
+export function ArtistTabs({ activeTab, onTabChange, artistWorkflow, agreementUnread = 0, logisticsUnread = 0 }: ArtistTabsProps) {
   const tabs = [
-    ...(isTabVisible("Contract", artistWorkflow) ? [{ name: "Contract", icon: FileText }] : []),
-    ...(isTabVisible("Logistics", artistWorkflow) ? [{ name: "Logistics", icon: Truck }] : []),
-    ...(isTabVisible("Show Management", artistWorkflow) ? [{ name: "Show Management", icon: Music }] : []),
+    ...(isTabVisible("Contract", artistWorkflow) ? [{ name: "Contract", icon: FileText, unread: agreementUnread }] : []),
+    ...(isTabVisible("Logistics", artistWorkflow) ? [{ name: "Logistics", icon: Truck, unread: logisticsUnread }] : []),
+    ...(isTabVisible("Show Management", artistWorkflow) ? [{ name: "Show Management", icon: Music, unread: 0 }] : []),
   ];
 
   return (
@@ -43,7 +45,7 @@ export function ArtistTabs({ activeTab, onTabChange, artistWorkflow }: ArtistTab
           key={tab.name}
           onClick={() => onTabChange(tab.name)}
           className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-all",
+            "relative flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-all",
             activeTab === tab.name
               ? "bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-200"
               : "bg-slate-100 text-slate-500 hover:bg-slate-200"
@@ -51,6 +53,11 @@ export function ArtistTabs({ activeTab, onTabChange, artistWorkflow }: ArtistTab
         >
           <tab.icon className="h-4 w-4" />
           {tab.name === "Contract" ? "Agreement" : tab.name}
+          {tab.unread > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-pulse">
+              {tab.unread}
+            </span>
+          )}
         </button>
       ))}
     </div>

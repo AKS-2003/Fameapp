@@ -9,6 +9,7 @@ import { ArtistLogistics } from "./artist-files/ArtistLogistics";
 import { ArtistShowManagement } from "./artist-files/ArtistShowManagement";
 import { CreateArtistFile } from "./artist-files/CreateArtistFile";
 import { Artist } from "./artist-files/types";
+import { countUnseenArtistMessages } from "./artist-files/unread-utils";
 
 
 interface ArtistFilesProps {
@@ -270,6 +271,13 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
   
   const [allShows, setAllShows] = useState<any[]>([]);
   const [selectedShowIndex, setSelectedShowIndex] = useState(0);
+  const [logisticsUnread, setLogisticsUnread] = useState(0);
+
+  // Reset the logistics unread badge whenever the selected artist changes,
+  // so a stale count from the previous artist doesn't flash on the tab.
+  useEffect(() => {
+    setLogisticsUnread(0);
+  }, [selectedArtist?.id]);
 
   // Per-artist workflow state (lifted so ArtistHeader + ArtistTabs share it)
   type WorkflowStatus = "Required" | "Not Required" | "Not Ready Yet" | "Completed Outside System";
@@ -442,6 +450,7 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
           onBack={onBack}
           onAdd={() => { setCreating(true); selectArtist(null); }}
           onDelete={handleDeleteArtist}
+          eventId={providedEventId}
         />
 
         {/* Main Content Area */}
@@ -498,17 +507,19 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 artistWorkflow={artistWorkflow}
+                agreementUnread={countUnseenArtistMessages(providedEventId, selectedArtist.id, "agreement", selectedArtist.agreement?.stageDiscussion)}
+                logisticsUnread={logisticsUnread}
               />
               {activeTab === "Contract" ? (
-                <ArtistAgreement 
-                  artist={selectedArtist} 
-                  eventId={providedEventId} 
+                <ArtistAgreement
+                  artist={selectedArtist}
+                  eventId={providedEventId}
                   selectedShow={allShows[selectedShowIndex]}
                   allShows={allShows}
                   onRefresh={() => refreshArtistData(selectedArtist.id)}
                 />
               ) : activeTab === "Logistics" ? (
-                <ArtistLogistics artist={selectedArtist} selectedShow={allShows[selectedShowIndex]} eventId={providedEventId} onRefresh={() => refreshArtistData(selectedArtist.id)} />
+                <ArtistLogistics artist={selectedArtist} selectedShow={allShows[selectedShowIndex]} eventId={providedEventId} onRefresh={() => refreshArtistData(selectedArtist.id)} onUnreadDiscussionChange={setLogisticsUnread} />
               ) : activeTab === "Show Management" ? (
                 <ArtistShowManagement 
                   artist={selectedArtist} 
