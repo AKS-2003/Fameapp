@@ -216,6 +216,15 @@ export interface ScheduleItem {
   level?: WorkshopLevel;
   /** Free-text label used when level === "custom" */
   customLevel?: string;
+  endTime?: string;
+  /** Room / venue placement — used by the Workshop Creator board */
+  room?: string;
+  venue?: string;
+  color?: string;
+  /** Card thumbnail (Workshop Creator "Add Workshop" modal) */
+  thumbnailUrl?: string;
+  /** True for a non-workshop label/break block (e.g. Lunch Break) rendered on the same board */
+  isBreak?: boolean;
 }
 
 export interface ScheduleTask {
