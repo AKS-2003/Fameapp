@@ -121,6 +121,7 @@ interface Cue {
 	type: string;
 	title: string;
 	duration: number;
+	extraTime?: number; // buffer time in seconds, added on top of duration
 	performance_order: number;
 	notes?: string;
 	color?: string;
@@ -1457,7 +1458,7 @@ export default function LivePerformanceBoard() {
 					: (item.artist.performance_duration || 0) * 60; // Convert minutes to seconds
 				return total + durationSeconds;
 			} else if (item.type === "cue" && item.cue) {
-				return total + (item.cue.duration || 0) * 60;
+				return total + (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0);
 			}
 			return total;
 		}, 0);
@@ -1547,7 +1548,7 @@ export default function LivePerformanceBoard() {
 							(item.artist.performance_duration || 0) * 60;
 						currentTimeSeconds += durationSeconds;
 					} else if (item.type === "cue" && item.cue) {
-						currentTimeSeconds += (item.cue.duration || 0) * 60;
+						currentTimeSeconds += (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0);
 					}
 				}
 			}
@@ -1568,7 +1569,7 @@ export default function LivePerformanceBoard() {
 						(item.artist.performance_duration || 0) * 60;
 					currentTimeSeconds += durationSeconds;
 				} else if (item.type === "cue" && item.cue) {
-					currentTimeSeconds += (item.cue.duration || 0) * 60;
+					currentTimeSeconds += (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0);
 				}
 			}
 		}
@@ -1590,7 +1591,7 @@ export default function LivePerformanceBoard() {
 					(item.artist.performance_duration || 0) * 60;
 				totalSeconds += durationSeconds;
 			} else if (item.type === "cue" && item.cue) {
-				totalSeconds += (item.cue.duration || 0) * 60;
+				totalSeconds += (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0);
 			}
 		});
 		return totalSeconds;
@@ -1637,7 +1638,7 @@ export default function LivePerformanceBoard() {
 					currentItem.artist.actual_duration ||
 					(currentItem.artist.performance_duration || 0) * 60;
 			} else if (currentItem.type === "cue" && currentItem.cue) {
-				cumulativeSeconds += (currentItem.cue.duration || 0) * 60;
+				cumulativeSeconds += (currentItem.cue.duration || 0) * 60 + (currentItem.cue.extraTime || 0);
 			}
 		}
 
@@ -1694,7 +1695,7 @@ export default function LivePerformanceBoard() {
 				? currentItem.artist.actual_duration
 				: (currentItem.artist.performance_duration || 0) * 60;
 		} else if (currentItem.type === "cue" && currentItem.cue) {
-			totalDuration = (currentItem.cue.duration || 0) * 60;
+			totalDuration = (currentItem.cue.duration || 0) * 60 + (currentItem.cue.extraTime || 0);
 		}
 
 		return Math.max(0, totalDuration - elapsedTime);
@@ -2977,7 +2978,7 @@ export default function LivePerformanceBoard() {
 																	: item.type ===
 																				"cue" &&
 																		  item.cue
-																		? `${item.cue.duration || 5}:00`
+																		? formatDuration((item.cue.duration || 5) * 60 + (item.cue.extraTime || 0))
 																		: ""}
 															</span>
 														</div>
@@ -3481,7 +3482,7 @@ function LiveBoard2Component({
 				? currentItem.artist.actual_duration
 				: (currentItem.artist.performance_duration || 0) * 60;
 		} else if (currentItem.type === "cue" && currentItem.cue) {
-			totalDuration = (currentItem.cue.duration || 0) * 60;
+			totalDuration = (currentItem.cue.duration || 0) * 60 + (currentItem.cue.extraTime || 0);
 		}
 		return Math.max(0, totalDuration - elapsedTime);
 	};
@@ -3493,7 +3494,7 @@ function LiveBoard2Component({
 				? currentItem.artist.actual_duration
 				: (currentItem.artist.performance_duration || 0) * 60;
 		} else if (currentItem.type === "cue" && currentItem.cue) {
-			return (currentItem.cue.duration || 0) * 60;
+			return (currentItem.cue.duration || 0) * 60 + (currentItem.cue.extraTime || 0);
 		}
 		return 0;
 	};
@@ -3965,7 +3966,7 @@ function LiveBoard2Component({
 											<span className={isLightMode ? "text-[10px] text-purple-600 font-mono mt-1" : "text-[10px] text-purple-400 font-mono mt-1"}>
 												{item.type === "artist" && item.artist 
 													? formatDuration(item.artist.actual_duration || item.artist.performance_duration * 60) 
-													: `${item.cue?.duration || 5}:00`}
+													: formatDuration((item.cue?.duration || 5) * 60 + (item.cue?.extraTime || 0))}
 											</span>
 										</div>
 									</div>
@@ -4124,6 +4125,7 @@ function LiveBoard3Component({
 					type: cue.type,
 					title: cue.title || "Cue",
 					duration: cue.duration || 5,
+					extraTime: cue.extraTime || 0,
 					performance_order: cue.performance_order,
 					notes: cue.notes,
 					color: cue.color,
@@ -4166,7 +4168,7 @@ function LiveBoard3Component({
 	const totalDuration = performanceItems.reduce((acc, item) => {
 		const dur = item.type === "artist" && item.artist
 			? (item.artist.actual_duration || item.artist.performance_duration * 60)
-			: (item.cue?.duration || 5) * 60;
+			: (item.cue?.duration || 5) * 60 + (item.cue?.extraTime || 0);
 		return acc + dur;
 	}, 0);
 
@@ -4175,7 +4177,7 @@ function LiveBoard3Component({
 		.reduce((acc, item) => {
 			const dur = item.type === "artist" && item.artist
 				? (item.artist.actual_duration || item.artist.performance_duration * 60)
-				: (item.cue?.duration || 5) * 60;
+				: (item.cue?.duration || 5) * 60 + (item.cue?.extraTime || 0);
 			return acc + dur;
 		}, 0);
 
@@ -4524,7 +4526,7 @@ function LiveBoard3Component({
 													<Clock className={`h-4 w-4 ${isLightMode ? "text-purple-600" : "text-purple-600"}`} />
 													{artist
 														? formatDuration(artist.actual_duration || artist.performance_duration * 60)
-														: `${cue?.duration || 5}:00`}
+														: formatDuration((cue?.duration || 5) * 60 + (cue?.extraTime || 0))}
 												</span>
 											</div>
 										</div>

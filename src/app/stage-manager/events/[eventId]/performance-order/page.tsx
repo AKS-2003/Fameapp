@@ -119,6 +119,9 @@ import {
 } from "@/components/ui/whatsapp-input";
 import { getCountryName, getCountryFlag } from "@/components/ui/country-select";
 import { CueColorPicker, isLightColor } from "@/components/ui/cue-color-picker";
+import { ExtraTimePicker } from "@/components/ui/extra-time-picker";
+import { MMSSInput } from "@/components/ui/mmss-input";
+import { formatMinutesToMMSS, parseMMSSToMinutes, formatExtraTime } from "@/lib/timing-utils";
 import { QRCodeSVG } from "qrcode.react";
 import { QRCodeDialog } from "@/components/ui/qr-code-dialog";
 import { usePerformanceOrderPDF } from "@/hooks/usePerformanceOrderPDF";
@@ -229,6 +232,7 @@ interface Cue {
 		| "animation";
 	title: string;
 	duration?: number;
+	extraTime?: number; // buffer time in seconds, added on top of duration
 	performance_order: number;
 	notes?: string;
 	color?: string;
@@ -361,6 +365,7 @@ export default function PerformanceOrder({
 	const [cueForm, setCueForm] = useState({
 		cueNo: "",
 		duration: "",
+		extraTime: 0,
 		title: "",
 		description: "",
 		label: "",
@@ -569,6 +574,7 @@ export default function PerformanceOrder({
 	const [addCueForm, setAddCueForm] = useState({
 		title: "",
 		duration: 5,
+		extraTime: 0,
 		notes: "",
 		color: "",
 	});
@@ -1562,7 +1568,7 @@ export default function PerformanceOrder({
 						type: "cue" as const,
 						order: index + 1,
 						name: item.cue.title,
-						duration: (item.cue.duration || 0) * 60,
+						duration: (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0),
 						cueType: item.cue.type,
 					};
 				}
@@ -2187,6 +2193,7 @@ export default function PerformanceOrder({
 						setCueForm({
 							cueNo,
 							duration: String(item.artist.actual_duration || item.artist.performance_duration || 0),
+							extraTime: 0,
 							title: artist.artistName || artist.artist_name || "",
 							description: artist.notes || artist.biography || "",
 							label: artist.label || artist.style || "",
@@ -2222,6 +2229,7 @@ export default function PerformanceOrder({
 			setCueForm({
 				cueNo,
 				duration: String(item.cue.duration || 0),
+				extraTime: item.cue.extraTime || 0,
 				title: item.cue.title || "",
 				description: item.cue.notes || "",
 				label: item.cue.label || item.cue.type || "",
@@ -2388,6 +2396,7 @@ export default function PerformanceOrder({
 						performanceDate: selectedPerformanceDate,
 						title: cueForm.title,
 						duration: parseFloat(cueForm.duration) || 0,
+						extraTime: cueForm.extraTime || 0,
 						notes: cueForm.description,
 						color: cueForm.color,
 						label: cueForm.label,
@@ -2411,6 +2420,7 @@ export default function PerformanceOrder({
 												...item.cue!,
 												title: cueForm.title,
 												duration: parseFloat(cueForm.duration) || 0,
+												extraTime: cueForm.extraTime || 0,
 												notes: cueForm.description,
 												color: cueForm.color,
 												label: cueForm.label,
@@ -2442,6 +2452,7 @@ export default function PerformanceOrder({
 									...editingShowItem.cue!,
 									title: cueForm.title,
 									duration: parseFloat(cueForm.duration) || 0,
+									extraTime: cueForm.extraTime || 0,
 									notes: cueForm.description,
 									color: cueForm.color,
 									label: cueForm.label,
@@ -2637,6 +2648,7 @@ export default function PerformanceOrder({
 		setAddCueForm({
 			title: cueLabels[cueType],
 			duration: 5,
+			extraTime: 0,
 			notes: "",
 			color: "",
 		});
@@ -2658,6 +2670,7 @@ export default function PerformanceOrder({
 			type: addCueType,
 			title: addCueForm.title,
 			duration: addCueForm.duration,
+			extraTime: addCueForm.extraTime,
 			color: addCueForm.color,
 			notes: addCueForm.notes,
 			performance_order: showOrderItems.length + 1,
@@ -2729,6 +2742,49 @@ export default function PerformanceOrder({
 
 	const saveCueEdit = async () => {
 		await saveShowItemEdit();
+	};
+
+	// Quick inline update for a cue's extra/buffer time, without opening the full edit panel
+	const updateCueExtraTime = async (cue: Cue, extraTime: number) => {
+		setShowOrderItems((prev) =>
+			prev.map((item) =>
+				item.id === cue.id && item.type === "cue"
+					? { ...item, cue: { ...item.cue!, extraTime } }
+					: item
+			)
+		);
+
+		try {
+			const response = await fetch(`/api/events/${eventId}/cues`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					id: cue.id,
+					performanceDate: selectedPerformanceDate,
+					extraTime,
+				}),
+			});
+
+			if (response.ok) {
+				const wsManager = (window as any).performanceOrderWsManager;
+				if (wsManager) {
+					wsManager.emit("cue_updated", {
+						eventId,
+						cueId: cue.id,
+						action: "updated",
+						cue: { ...cue, extraTime },
+						performanceDate: selectedPerformanceDate,
+					});
+				}
+			}
+		} catch (error) {
+			console.error("Error updating cue extra time:", error);
+			toast({
+				title: "Error saving",
+				description: "Failed to save extra time. Please try again.",
+				variant: "destructive",
+			});
+		}
 	};
 
 	const getCueIcon = (cueType: Cue["type"]) => {
@@ -3135,12 +3191,12 @@ export default function PerformanceOrder({
 				// Only update state if second value actually incremented to prevent unnecessary renders
 				if (prev === currentElapsed) return prev;
 				
-				const duration = currentItem.type === "artist" 
-					? (currentItem.artist?.performance_duration ?? 0) 
-					: (currentItem.cue?.duration ?? 0);
-				
+				const durationSec = currentItem.type === "artist"
+					? (currentItem.artist?.performance_duration ?? 0) * 60
+					: (currentItem.cue?.duration ?? 0) * 60 + (currentItem.cue?.extraTime ?? 0);
+
 				// Handle auto-advance
-				if (autoAdvance && currentElapsed >= duration * 60) {
+				if (autoAdvance && currentElapsed >= durationSec) {
 					clearInterval(interval);
 					const nextIdx = showOrderItemsRef.current.findIndex((i, idx) => idx > currentIdx && i.status !== "completed" && i.status !== "currently_on_stage");
 					if (nextIdx !== -1) {
@@ -3859,9 +3915,7 @@ export default function PerformanceOrder({
 								(item.artist?.performance_duration
 									? item.artist.performance_duration * 60
 									: 0)
-							: item.cue?.duration
-								? item.cue.duration * 60
-								: 0,
+							: (item.cue?.duration ? item.cue.duration * 60 : 0) + (item.cue?.extraTime || 0),
 					nationality: nationality
 						? getCountryName(nationality)
 						: undefined,
@@ -5936,12 +5990,8 @@ export default function PerformanceOrder({
 																								: "text-muted-foreground"
 																						}`}
 																					>
-																						{
-																							item
-																								.cue
-																								.duration
-																						}{" "}
-																						min
+																						{formatMinutesToMMSS(item.cue.duration || 0)}
+																						{item.cue.extraTime ? ` (${formatExtraTime(item.cue.extraTime)} extra)` : ""}
 																						{item
 																							.cue
 																							.notes && (
@@ -5963,6 +6013,14 @@ export default function PerformanceOrder({
 																<div className="flex items-center gap-4 ml-auto shrink-0">
 																	{/* Action Buttons Container - Left aligned but fixed width to align all rows */}
 																	<div className="flex items-center gap-1.5 w-[264px] shrink-0 justify-start">
+																		{item.type === "cue" && (
+																			<ExtraTimePicker
+																				compact
+																				value={item.cue?.extraTime || 0}
+																				onChange={(seconds) => updateCueExtraTime(item.cue!, seconds)}
+																				className={`${btnClassBase} ${btnClass}`}
+																			/>
+																		)}
 																		{item.type === "cue" && (
 																			<Button
 																				size="sm"
@@ -6127,7 +6185,10 @@ export default function PerformanceOrder({
 				const currentTiming = currentIdx !== -1 ? liveTimings[currentIdx] : null;
 
 				const getName = (item: ShowOrderItem) => item.type === "artist" ? (item.artist?.artist_name ?? "") : (item.cue?.title ?? "");
-				const getDur = (item: ShowOrderItem) => item.type === "artist" ? (item.artist?.performance_duration ?? 0) : (item.cue?.duration ?? 0);
+				// Duration in seconds, including a cue's extra/buffer time on top of its base duration
+				const getDurSeconds = (item: ShowOrderItem) => item.type === "artist"
+					? (item.artist?.performance_duration ?? 0) * 60
+					: (item.cue?.duration ?? 0) * 60 + (item.cue?.extraTime ?? 0);
 
 				// Format elapsed time (HH:MM:SS)
 				const formatElapsed = (totalSecs: number) => {
@@ -6138,8 +6199,7 @@ export default function PerformanceOrder({
 				};
 
 				// Calculate duration in seconds
-				const activeDurationMins = currentItem ? getDur(currentItem) : 0;
-				const activeDurationSecs = activeDurationMins * 60;
+				const activeDurationSecs = currentItem ? getDurSeconds(currentItem) : 0;
 				const remainingSecs = Math.max(0, activeDurationSecs - elapsedSeconds);
 
 				// Format remaining time (HH:MM:SS)
@@ -6213,7 +6273,10 @@ export default function PerformanceOrder({
 										// Formatted duration helper matching the screenshot specs:
 										const getFormattedDuration = (it: ShowOrderItem) => {
 											if (it.type === "cue") {
-												return `${it.cue?.duration ?? 0} min`;
+												const cueSec = (it.cue?.duration ?? 0) * 60 + (it.cue?.extraTime ?? 0);
+												const m = Math.floor(cueSec / 60);
+												const s = cueSec % 60;
+												return `${m}:${String(s).padStart(2, "0")}`;
 											} else {
 												const durSec = it.artist?.actual_duration
 													? it.artist.actual_duration
@@ -6520,7 +6583,7 @@ export default function PerformanceOrder({
 														<p className="text-slate-400 text-[10px] font-bold tracking-wider mb-6">
 															{currentTiming ? `${currentTiming.startTime} → ${currentTiming.endTime}` : "--:-- → --:--"}
 															<span className="mx-1.5 text-slate-300">·</span>
-															{activeDurationMins} min
+															{formatMinutesToMMSS(activeDurationSecs / 60)}
 														</p>
 														
 														{/* Double Column Department Notes Panel */}
@@ -6572,7 +6635,7 @@ export default function PerformanceOrder({
 																		{getName(nextIt).toUpperCase()}
 																	</div>
 																	<div className="text-xs text-slate-400 font-semibold">
-																		{liveTimings[nextIdx]?.startTime || "--:--"} · {getDur(nextIt)} min
+																		{liveTimings[nextIdx]?.startTime || "--:--"} · {formatMinutesToMMSS(getDurSeconds(nextIt) / 60)}
 																	</div>
 																</div>
 															</div>
@@ -6606,10 +6669,10 @@ export default function PerformanceOrder({
 								<div className="w-full h-1.5 flex overflow-hidden bg-slate-100 shrink-0">
 									{(() => {
 										const totalShowSeconds = showOrderItems.reduce((acc, item) => {
-											const dur = item.type === "artist" 
-												? (item.artist?.performance_duration ?? 0) 
-												: (item.cue?.duration ?? 0);
-											return acc + dur * 60;
+											const durSec = item.type === "artist"
+												? (item.artist?.performance_duration ?? 0) * 60
+												: (item.cue?.duration ?? 0) * 60 + (item.cue?.extraTime ?? 0);
+											return acc + durSec;
 										}, 0);
 
 										if (totalShowSeconds === 0) return null;
@@ -6617,10 +6680,9 @@ export default function PerformanceOrder({
 										return showOrderItems.map((item, idx) => {
 											const isLive = item.status === "currently_on_stage";
 											const isDone = item.status === "completed";
-											const dur = item.type === "artist" 
-												? (item.artist?.performance_duration ?? 0) 
-												: (item.cue?.duration ?? 0);
-											const itemSeconds = dur * 60;
+											const itemSeconds = item.type === "artist"
+												? (item.artist?.performance_duration ?? 0) * 60
+												: (item.cue?.duration ?? 0) * 60 + (item.cue?.extraTime ?? 0);
 
 											if (isDone) {
 												const pct = (itemSeconds / totalShowSeconds) * 100;
@@ -6852,18 +6914,27 @@ export default function PerformanceOrder({
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="add-cue-duration">
-									Duration (minutes)
-								</Label>
-								<Input
+								<div className="flex items-center justify-between">
+									<Label htmlFor="add-cue-duration">
+										Duration (mm:ss)
+									</Label>
+									<ExtraTimePicker
+										value={addCueForm.extraTime}
+										onChange={(seconds) =>
+											setAddCueForm({
+												...addCueForm,
+												extraTime: seconds,
+											})
+										}
+									/>
+								</div>
+								<MMSSInput
 									id="add-cue-duration"
-									type="number"
-									value={addCueForm.duration}
-									onChange={(e) =>
+									minutes={addCueForm.duration}
+									onChange={(mins) =>
 										setAddCueForm({
 											...addCueForm,
-											duration:
-												parseInt(e.target.value) || 0,
+											duration: mins,
 										})
 									}
 								/>
@@ -8340,10 +8411,14 @@ export default function PerformanceOrder({
 										{(() => {
 											const itemIndex = showOrderItems.findIndex((i) => i.id === editingShowItem.id);
 											const timing = itemIndex !== -1 ? liveTimings[itemIndex] : null;
+											const baseMins = parseFloat(cueForm.duration) || 0;
+											const durationLabel = editingShowItem.type === "cue" && cueForm.extraTime > 0
+												? `${formatMinutesToMMSS(baseMins)} + ${formatExtraTime(cueForm.extraTime)} extra`
+												: formatMinutesToMMSS(baseMins);
 											if (timing) {
-												return `Calculated Live: ${timing.startTime} - ${timing.endTime} (${cueForm.duration} min)`;
+												return `Calculated Live: ${timing.startTime} - ${timing.endTime} (${durationLabel})`;
 											}
-											return `${cueForm.duration} minutes`;
+											return durationLabel;
 										})()}
 									</p>
 								</div>
@@ -8402,15 +8477,21 @@ export default function PerformanceOrder({
 							{/* Duration & Category/Label Grid */}
 							<div className="grid grid-cols-2 gap-4">
 								<div className="space-y-1.5">
-									<Label htmlFor="item-duration" className="text-sm font-semibold text-gray-800">
-										Duration (min)
-									</Label>
-									<Input
+									<div className="flex items-center justify-between gap-2">
+										<Label htmlFor="item-duration" className="text-sm font-semibold text-gray-800">
+											Duration (mm:ss)
+										</Label>
+										{editingShowItem?.type === "cue" && (
+											<ExtraTimePicker
+												value={cueForm.extraTime}
+												onChange={(seconds) => setCueForm(prev => ({ ...prev, extraTime: seconds }))}
+											/>
+										)}
+									</div>
+									<MMSSInput
 										id="item-duration"
-										type="number"
-										value={cueForm.duration}
-										onChange={(e) => setCueForm(prev => ({ ...prev, duration: e.target.value }))}
-										placeholder="Duration in minutes..."
+										minutes={parseFloat(cueForm.duration) || 0}
+										onChange={(mins) => setCueForm(prev => ({ ...prev, duration: String(mins) }))}
 										className="bg-gray-50/50 border-gray-200 focus:bg-white transition-all text-sm rounded-lg"
 									/>
 								</div>

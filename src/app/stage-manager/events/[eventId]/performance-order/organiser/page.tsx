@@ -62,6 +62,7 @@ interface Cue {
 	type: string;
 	title: string;
 	duration: number;
+	extraTime?: number; // buffer time in seconds, added on top of duration
 	performance_order: number;
 	notes?: string;
 	color?: string;
@@ -380,6 +381,7 @@ export default function OrganiserDashboard() {
 					type: cue.type,
 					title: cue.title || "Cue",
 					duration: cue.duration || 5,
+					extraTime: cue.extraTime || 0,
 					performance_order: cue.performance_order,
 					notes: cue.notes,
 					color: cue.color,
@@ -704,7 +706,7 @@ export default function OrganiserDashboard() {
 
 							const durationDisplay = artist
 								? (artist.actual_duration ? formatDuration(artist.actual_duration) : `${artist.performance_duration} min`)
-								: `${cue?.duration || 5} min`;
+								: formatDuration((cue?.duration || 5) * 60 + (cue?.extraTime || 0));
 
 							return (
 								<div

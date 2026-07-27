@@ -205,6 +205,7 @@ interface LiveBoardCue {
 	type: string;
 	title: string;
 	duration: number;
+	extraTime?: number; // buffer time in seconds, added on top of duration
 	performance_order: number;
 	notes?: string;
 	color?: string;
@@ -595,7 +596,7 @@ export default function FameLinkEventDashboard({
 			if (item.type === "artist" && item.artist)
 				return total + (item.artist.performance_duration || 0);
 			if (item.type === "cue" && item.cue)
-				return total + (item.cue.duration || 0) * 60;
+				return total + (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0);
 			return total;
 		}, 0);
 
@@ -606,7 +607,7 @@ export default function FameLinkEventDashboard({
 				if (item.type === "artist" && item.artist)
 					return total + (item.artist.performance_duration || 0);
 				if (item.type === "cue" && item.cue)
-					return total + (item.cue.duration || 0) * 60;
+					return total + (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0);
 				return total;
 			}, 0);
 		return Math.max(0, remaining - elapsedTime);

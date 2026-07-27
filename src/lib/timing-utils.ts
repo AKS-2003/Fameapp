@@ -12,6 +12,7 @@ interface Cue {
 	id: string;
 	title: string;
 	duration?: number; // in minutes
+	extraTime?: number; // buffer time in seconds, added on top of duration
 }
 
 interface ShowOrderItem {
@@ -39,7 +40,7 @@ export function calculateTotalShowTime(items: ShowOrderItem[]): number {
 				: (item.artist.performance_duration || 0) * 60; // Convert minutes to seconds
 			return total + durationSeconds;
 		} else if (item.type === "cue" && item.cue) {
-			return total + (item.cue.duration || 0) * 60; // Convert minutes to seconds
+			return total + (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0); // Convert minutes to seconds, plus extra time
 		}
 		return total;
 	}, 0);
@@ -95,7 +96,7 @@ export function calculateItemTiming(
 				: item.artist.performance_duration || 0;
 			currentTime += duration;
 		} else if (item.type === "cue" && item.cue) {
-			currentTime += item.cue.duration || 0;
+			currentTime += (item.cue.duration || 0) + (item.cue.extraTime || 0) / 60;
 		}
 	}
 
@@ -114,7 +115,7 @@ export function calculateItemTiming(
 			actualDurationSeconds = duration * 60; // Convert minutes to seconds
 		}
 	} else if (item.type === "cue" && item.cue) {
-		duration = item.cue.duration || 0;
+		duration = (item.cue.duration || 0) + (item.cue.extraTime || 0) / 60;
 		actualDurationSeconds = duration * 60; // Convert minutes to seconds
 	}
 
@@ -141,6 +142,36 @@ export function formatDuration(seconds: number | null): string {
 	const mins = Math.floor(seconds / 60);
 	const secs = seconds % 60;
 	return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+/** Format a duration given in minutes (fractional allowed) as "mm:ss". */
+export function formatMinutesToMMSS(minutes: number): string {
+	const totalSeconds = Math.round((minutes || 0) * 60);
+	const mins = Math.floor(totalSeconds / 60);
+	const secs = totalSeconds % 60;
+	return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+/** Parse an "mm:ss" (or plain "mm") string back into minutes (fractional). */
+export function parseMMSSToMinutes(value: string): number {
+	if (!value) return 0;
+	const parts = value.split(":");
+	if (parts.length === 2) {
+		const mins = parseInt(parts[0], 10) || 0;
+		const secs = parseInt(parts[1], 10) || 0;
+		return mins + secs / 60;
+	}
+	return parseFloat(value) || 0;
+}
+
+/** Format a buffer/extra-time value given in seconds as a short label (e.g. "+1m 30s", "+45s"). */
+export function formatExtraTime(seconds: number): string {
+	if (!seconds) return "None";
+	const mins = Math.floor(seconds / 60);
+	const secs = seconds % 60;
+	if (mins > 0 && secs > 0) return `+${mins}m ${secs}s`;
+	if (mins > 0) return `+${mins}m`;
+	return `+${secs}s`;
 }
 
 export function getDisplayDuration(artist: Artist): string {
@@ -287,7 +318,7 @@ export function calculateLiveTimings(
 				? item.artist.actual_duration
 				: (item.artist.performance_duration || 0) * 60;
 		} else if (item.type === "cue" && item.cue) {
-			plannedSec = (item.cue.duration || 0) * 60;
+			plannedSec = (item.cue.duration || 0) * 60 + (item.cue.extraTime || 0);
 		}
 
 		const itemEnd =

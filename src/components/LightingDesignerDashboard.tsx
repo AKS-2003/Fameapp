@@ -81,6 +81,7 @@ interface ShowOrderItem {
 		type: string;
 		title: string;
 		duration?: number;
+		extraTime?: number; // buffer time, added on top of duration
 		performance_order: number;
 		notes?: string;
 		color?: string;
@@ -701,7 +702,7 @@ export default function LightingDesignerDashboard({
 			if (item.type === "artist" && item.artist) {
 				return acc + (item.artist.performance_duration || (item.artist as any).performanceDuration || 0);
 			} else if (item.type === "cue" && item.cue?.duration) {
-				return acc + item.cue.duration;
+				return acc + item.cue.duration + (item.cue?.extraTime || 0);
 			}
 			return acc;
 		}, 0);
