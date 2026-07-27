@@ -877,6 +877,16 @@ export function ContractPanel({
 		return `€${num.toLocaleString()}`;
 	};
 
+	const parseNum = (val: any) => {
+		if (!val) return 0;
+		const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+		return isNaN(num) ? 0 : num;
+	};
+
+	const customLinesTotal = (payment.customLines || []).reduce((sum: number, line: any) => sum + parseNum(line.value), 0);
+	const totalCost = parseNum(performanceFee) + customLinesTotal;
+	const remainingBalance = Math.max(0, totalCost - parseNum(downpayment) - parseNum(amountPaid));
+
 	// ── Dynamic Resolution of Contract Fields ──
 	const getPerformanceAgreement = () => {
 		if (artist.agreement?.performance) {
@@ -1220,11 +1230,21 @@ export function ContractPanel({
 									{payment.customLines?.map((line: any) => (
 										<div key={line.id}>
 											<p className={`text-[10px] ${textTertiary} uppercase tracking-wider font-semibold mb-1`}>{line.name}</p>
-											<p className={`text-sm ${textPrimary} leading-relaxed`}>{line.value || "—"}</p>
+											<p className={`text-sm ${textPrimary} leading-relaxed`}>{formatCurrency(line.value)}</p>
 										</div>
 									))}
 								</div>
 							)}
+							<div className={`mt-5 pt-5 border-t ${isLight ? "border-slate-200" : "border-white/5"} space-y-2`}>
+								<div className="flex items-center justify-between text-sm">
+									<span className={`${textTertiary} font-medium`}>Total Cost</span>
+									<span className={`${textPrimary} font-bold`}>{formatCurrency(totalCost)}</span>
+								</div>
+								<div className="flex items-center justify-between text-sm">
+									<span className="text-[#ff66e5] font-bold">Remaining Balance</span>
+									<span className="text-[#ff66e5] font-bold">{formatCurrency(remainingBalance)}</span>
+								</div>
+							</div>
 						</div>
 					)}
 				</div>
@@ -1591,11 +1611,21 @@ export function ContractPanel({
 														{payment.customLines?.map((line: any) => (
 															<div key={line.id}>
 																<p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">{line.name}</p>
-																<p className="text-sm text-slate-800 leading-relaxed font-medium">{line.value || "—"}</p>
+																<p className="text-sm text-slate-800 leading-relaxed font-medium">{formatCurrency(line.value)}</p>
 															</div>
 														))}
 													</div>
 												)}
+												<div className="mt-5 pt-5 border-t border-slate-200 space-y-2">
+													<div className="flex items-center justify-between text-sm">
+														<span className="text-slate-500 font-semibold">Total Cost</span>
+														<span className="text-slate-900 font-bold">{formatCurrency(totalCost)}</span>
+													</div>
+													<div className="flex items-center justify-between text-sm">
+														<span className="text-fuchsia-600 font-bold">Remaining Balance</span>
+														<span className="text-fuchsia-600 font-bold">{formatCurrency(remainingBalance)}</span>
+													</div>
+												</div>
 											</div>
 										)}
 									</div>

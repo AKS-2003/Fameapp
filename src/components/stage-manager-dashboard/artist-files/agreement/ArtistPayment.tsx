@@ -101,7 +101,9 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
   const performanceFee = parseVal(paymentData.details.performanceFee);
   const downpayment = parseVal(paymentData.details.downpayment);
   const amountPaid = parseVal(paymentData.details.amountPaid);
-  const remainingBalance = performanceFee - downpayment - amountPaid;
+  const customLinesTotal = (paymentData.customLines || []).reduce((sum, line) => sum + parseVal(line.value), 0);
+  const totalCost = performanceFee + customLinesTotal;
+  const remainingBalance = totalCost - downpayment - amountPaid;
 
   const handleSave = async () => {
     setSaving(true);
@@ -109,7 +111,9 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
       const fee = parseVal(paymentData.details.performanceFee);
       const down = parseVal(paymentData.details.downpayment);
       const paid = parseVal(paymentData.details.amountPaid);
-      const remaining = fee - down - paid;
+      const extras = (paymentData.customLines || []).reduce((sum, line) => sum + parseVal(line.value), 0);
+      const total = fee + extras;
+      const remaining = total - down - paid;
 
       // Count completed fields
       const detailFields = Object.values(paymentData.details).filter(v => v && v !== "Select method" && v !== "Unpaid").length;
@@ -329,7 +333,7 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
         <div className="space-y-3 pt-2">
           {paymentData.customLines?.map((line) => (
             <div key={line.id} className="flex gap-3 items-start">
-              <input 
+              <input
                 disabled={!isEditing}
                 value={line.name}
                 onChange={(e) => {
@@ -340,20 +344,24 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
                 className="w-[200px] shrink-0 h-11 rounded-xl bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-pink-500/10 disabled:bg-slate-50/50 disabled:border-slate-100"
               />
               <div className="flex-1 flex gap-3">
-                <input 
-                  disabled={!isEditing}
-                  value={line.value}
-                  onChange={(e) => {
-                    const newLines = paymentData.customLines?.map(l => l.id === line.id ? { ...l, value: e.target.value } : l);
-                    setPaymentData({ ...paymentData, customLines: newLines });
-                  }}
-                  placeholder="Value"
-                  className="flex-1 h-11 rounded-xl bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-pink-500/10 disabled:bg-slate-50/50 disabled:border-slate-100"
-                />
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400 pointer-events-none">€</span>
+                  <input
+                    type="number"
+                    disabled={!isEditing}
+                    value={line.value}
+                    onChange={(e) => {
+                      const newLines = paymentData.customLines?.map(l => l.id === line.id ? { ...l, value: e.target.value } : l);
+                      setPaymentData({ ...paymentData, customLines: newLines });
+                    }}
+                    placeholder="Amount"
+                    className="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-8 pr-4 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-pink-500/10 disabled:bg-slate-50/50 disabled:border-slate-100"
+                  />
+                </div>
                 {isEditing && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => {
                       const newLines = paymentData.customLines?.filter(l => l.id !== line.id);
                       setPaymentData({ ...paymentData, customLines: newLines });
@@ -367,8 +375,8 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
             </div>
           ))}
           {isEditing && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 const newLines = [...(paymentData.customLines || []), { id: Date.now().toString(), name: "", value: "" }];
                 setPaymentData({ ...paymentData, customLines: newLines });
@@ -378,6 +386,32 @@ export function ArtistPayment({ artist, eventId, onRefresh, onAutoOpen }: Artist
               <Plus className="h-4 w-4 mr-2" /> Add Payment Line / Question
             </Button>
           )}
+        </div>
+
+        {/* Totals Summary */}
+        <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 mt-4 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500 font-medium">Performance Fee</span>
+            <span className="text-slate-700 font-semibold">€{performanceFee.toLocaleString()}</span>
+          </div>
+          {customLinesTotal > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500 font-medium">Extra Payment Lines</span>
+              <span className="text-slate-700 font-semibold">+ €{customLinesTotal.toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200">
+            <span className="text-slate-600 font-bold">Total Cost</span>
+            <span className="text-slate-900 font-bold">€{totalCost.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500 font-medium">Paid (Downpayment + Amount Paid)</span>
+            <span className="text-slate-700 font-semibold">€{(downpayment + amountPaid).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200">
+            <span className="text-pink-600 font-bold">Remaining Balance</span>
+            <span className="text-pink-600 font-bold">€{Math.max(0, remainingBalance).toLocaleString()}</span>
+          </div>
         </div>
 
         {isEditing && (
