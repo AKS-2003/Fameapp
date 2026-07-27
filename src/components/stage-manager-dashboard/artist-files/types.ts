@@ -1,5 +1,7 @@
 export type SectionItemStatus = "required" | "not_required" | "not_applicable";
 
+export type WorkshopLevel = "beginner" | "intermediate" | "advanced" | "bootcamp" | "custom";
+
 export interface Artist {
   id: string;
   name: string;
@@ -210,6 +212,10 @@ export interface ScheduleItem {
   location: string;
   description?: string;
   status: string;
+  /** Workshop skill level — only applicable to items in Schedule.workshops */
+  level?: WorkshopLevel;
+  /** Free-text label used when level === "custom" */
+  customLevel?: string;
 }
 
 export interface ScheduleTask {

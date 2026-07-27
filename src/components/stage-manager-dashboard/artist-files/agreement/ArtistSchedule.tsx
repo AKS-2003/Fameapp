@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Artist, Schedule, ScheduleItem, ScheduleTask, SectionItemStatus } from "../types";
+import { Artist, Schedule, ScheduleItem, ScheduleTask, SectionItemStatus, WorkshopLevel } from "../types";
 import { StageDiscussion } from "../StageDiscussion";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { v4 as uuidv4 } from "uuid";
@@ -37,6 +37,14 @@ const sectionStatusColors: Record<SectionItemStatus, string> = {
   not_required:   "text-amber-600 bg-amber-50 border-amber-200",
   not_applicable: "text-slate-400 bg-slate-100 border-slate-200",
 };
+
+const workshopLevelOptions: { value: WorkshopLevel; label: string }[] = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+  { value: "bootcamp", label: "Bootcamp" },
+  { value: "custom", label: "Custom" },
+];
 
 export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: ArtistScheduleProps) {
   const { toast } = useToast();
@@ -336,11 +344,37 @@ export function ArtistSchedule({ artist, eventId, onRefresh, onAutoOpen }: Artis
                   />
                 </div>
               </div>
-              <input 
+              <div className="flex gap-3 flex-col md:flex-row">
+                <div className="w-full md:w-48">
+                  <select
+                    disabled={!isEditing}
+                    value={item.level || ""}
+                    onChange={(e) => updateItem('workshops', item.id, { level: (e.target.value || undefined) as WorkshopLevel | undefined })}
+                    className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100 cursor-pointer disabled:cursor-default"
+                  >
+                    <option value="">Select Level...</option>
+                    {workshopLevelOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {item.level === "custom" && (
+                  <div className="flex-1">
+                    <input
+                      disabled={!isEditing}
+                      value={item.customLevel || ""}
+                      onChange={(e) => updateItem('workshops', item.id, { customLevel: e.target.value })}
+                      placeholder="Custom level name"
+                      className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
+                    />
+                  </div>
+                )}
+              </div>
+              <input
                 disabled={!isEditing}
                 value={item.description || ""}
                 onChange={(e) => updateItem('workshops', item.id, { description: e.target.value })}
-                placeholder="Level / Description"
+                placeholder="Description"
                 className="w-full h-10 rounded-lg bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-pink-500/10 outline-none disabled:bg-slate-50/50 disabled:border-slate-100"
               />
             </div>
