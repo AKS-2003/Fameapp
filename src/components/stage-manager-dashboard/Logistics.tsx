@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
 	Loader2,
 	Search,
@@ -35,7 +35,7 @@ interface LogisticsArtist {
 	realName?: string;
 	email?: string;
 	performanceType?: string;
-	members?: Array<{ name: string }>;
+	members?: Array<{ name?: string; fullName?: string }>;
 	tshirtSizes?: Array<{ name: string; size: string; fit?: string }>;
 	logistics?: {
 		crewSize?: string;
@@ -44,11 +44,18 @@ interface LogisticsArtist {
 		status?: string;
 		contractStatus?: string;
 	};
+	travelLogistics?: {
+		pickupInfo?: string;
+		dropoffInfo?: string;
+		workshopSchedule?: string;
+		additionalNotes?: string;
+	};
 	status?: string;
 	updatedAt?: string;
 	createdAt?: string;
 	eventId?: string;
 	eventName?: string;
+	workflowLogistics?: "Required" | "Not Required" | "Not Ready Yet" | "Completed Outside System";
 }
 
 interface LogisticsProps {
@@ -80,15 +87,15 @@ const CONTRACT_STATUS_COLORS: Record<string, string> = {
 function deriveLogisticsStatus(artist: LogisticsArtist): string {
 	if (artist.logistics?.status) return artist.logistics.status;
 	if (artist.status === "confirmed") return "Locked";
-	if (artist.status === "pending") return "Booking In Progress";
-	if (artist.status === "submitted") return "Submitted";
+	if (artist.status === "waiting_info") return "Booking In Progress";
+	if (artist.status === "invited") return "Waiting For Artist";
 	return "Booking In Progress";
 }
 
 function deriveContractStatus(artist: LogisticsArtist): string {
 	if (artist.logistics?.contractStatus) return artist.logistics.contractStatus;
 	if (artist.status === "confirmed") return "Artist Signed";
-	if (artist.status === "pending") return "Draft";
+	if (artist.status === "waiting_info") return "Under Review";
 	return "Draft";
 }
 
@@ -109,38 +116,47 @@ export default function Logistics({ providedEventId }: LogisticsProps) {
 			setLoading(true);
 			setError(null);
 
-			const [artistsRes, eventRes] = await Promise.all([
-				fetch(`/api/events/${providedEventId}/artists`),
+			const [contractsRes, eventRes] = await Promise.all([
+				fetch(`/api/contracts/${providedEventId}`),
 				fetch(`/api/events/${providedEventId}`),
 			]);
 
-			const artistsData = await artistsRes.json();
+			const contractsData = await contractsRes.json();
+
+			let logisticsEnabled = true;
 			if (eventRes.ok) {
 				const evtData = await eventRes.json();
-				setEventName(evtData.data?.name || evtData.name || "");
+				const event = evtData.data || evtData;
+				setEventName(event?.name || "");
+				logisticsEnabled = event?.logisticsEnabled !== false;
 			}
 
-			if (!artistsRes.ok || !artistsData.success) {
-				setError(artistsData.error?.message || "Failed to load artists");
+			if (!contractsRes.ok || !contractsData.success) {
+				setError(contractsData.error || "Failed to load artists");
 				setArtists([]);
 				return;
 			}
 
-			const list: LogisticsArtist[] = (artistsData.data?.artists || []).map(
-				(a: any) => ({
+			// Same per-artist gating as the Artist Files Logistics tab: an artist's
+			// explicit workflowLogistics override wins, otherwise fall back to the
+			// event's own logisticsEnabled toggle (see resolveArtistWorkflow in ArtistFiles.tsx).
+			const list: LogisticsArtist[] = (contractsData.artists || [])
+				.map((a: any) => ({
 					id: a.id,
-					artistName: a.artistName || a.name || "Unknown Artist",
-					realName: a.realName,
+					artistName: a.stageName || a.artistName || a.name || "Unknown Artist",
+					realName: a.legalName || a.realName,
 					email: a.email,
-					performanceType: a.performanceType || a.style,
-					members: a.members || [],
+					performanceType: a.role || a.performanceType || a.style,
+					members: a.groupMembers || a.members || [],
 					tshirtSizes: a.tshirtSizes || [],
 					logistics: a.logistics || {},
+					travelLogistics: a.travelLogistics || {},
 					status: a.status,
 					updatedAt: a.updatedAt || a.createdAt,
 					createdAt: a.createdAt,
-				}),
-			);
+					workflowLogistics: a.workflowLogistics || (logisticsEnabled ? "Required" : "Not Required"),
+				}))
+				.filter((a: LogisticsArtist) => a.workflowLogistics !== "Not Required");
 			setArtists(list);
 		} catch {
 			setError("Failed to load logistics data");
@@ -288,9 +304,8 @@ export default function Logistics({ providedEventId }: LogisticsProps) {
 										const contractStatus = deriveContractStatus(artist);
 
 										return (
-											<>
+											<React.Fragment key={artist.id}>
 												<tr
-													key={artist.id}
 													onClick={() => setExpandedId(isExpanded ? null : artist.id)}
 													className="cursor-pointer transition hover:bg-fuchsia-50/40"
 												>
@@ -330,8 +345,11 @@ export default function Logistics({ providedEventId }: LogisticsProps) {
 																<div>
 																	<p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Travel</p>
 																	<div className="space-y-1 text-sm text-slate-700">
-																		{artist.logistics?.travelRequirements ? (
-																			<p>{artist.logistics.travelRequirements}</p>
+																		{artist.travelLogistics?.pickupInfo || artist.travelLogistics?.dropoffInfo ? (
+																			<>
+																				{artist.travelLogistics?.pickupInfo && <p>Pickup: {artist.travelLogistics.pickupInfo}</p>}
+																				{artist.travelLogistics?.dropoffInfo && <p>Dropoff: {artist.travelLogistics.dropoffInfo}</p>}
+																			</>
 																		) : (
 																			<p className="italic text-slate-400">No travel info</p>
 																		)}
@@ -345,14 +363,17 @@ export default function Logistics({ providedEventId }: LogisticsProps) {
 																	</p>
 																	{artist.members && artist.members.length > 0 ? (
 																		<ul className="space-y-1 text-sm text-slate-700">
-																			{artist.members.map((m, i) => (
-																				<li key={i} className="flex items-center gap-1.5">
-																					<div className="h-5 w-5 rounded-full bg-violet-100 flex items-center justify-center text-[10px] font-bold text-violet-700">
-																						{m.name[0]?.toUpperCase()}
-																					</div>
-																					{m.name}
-																				</li>
-																			))}
+																			{artist.members.map((m, i) => {
+																				const memberName = m.fullName || m.name || "Unknown";
+																				return (
+																					<li key={i} className="flex items-center gap-1.5">
+																						<div className="h-5 w-5 rounded-full bg-violet-100 flex items-center justify-center text-[10px] font-bold text-violet-700">
+																							{memberName[0]?.toUpperCase()}
+																						</div>
+																						{memberName}
+																					</li>
+																				);
+																			})}
 																		</ul>
 																	) : (
 																		<p className="text-sm italic text-slate-400">Solo artist</p>
@@ -376,17 +397,17 @@ export default function Logistics({ providedEventId }: LogisticsProps) {
 																</div>
 
 																{/* Hospitality */}
-																{artist.logistics?.hospitalityNotes && (
+																{(artist.logistics?.hospitalityNotes || artist.travelLogistics?.additionalNotes) && (
 																	<div className="sm:col-span-3">
 																		<p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Hospitality</p>
-																		<p className="text-sm text-slate-700">{artist.logistics.hospitalityNotes}</p>
+																		<p className="text-sm text-slate-700">{artist.logistics?.hospitalityNotes || artist.travelLogistics?.additionalNotes}</p>
 																	</div>
 																)}
 															</div>
 														</td>
 													</tr>
 												)}
-											</>
+											</React.Fragment>
 										);
 									})}
 								</tbody>
