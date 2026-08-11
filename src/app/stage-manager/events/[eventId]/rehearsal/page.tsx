@@ -202,6 +202,7 @@ interface Artist {
 	available_order: number | null;
 	cue_notes?: string;
 	rehearsal_dept_notes?: any;
+	backstage_color?: string;
 }
 
 export default function RehearsalSchedule({
@@ -956,6 +957,7 @@ export default function RehearsalSchedule({
 							rehearsal_marked: artist.rehearsal_marked || false,
 							available_order: artist.available_order ?? null,
 							cue_notes: artist.cue_notes || "",
+							backstage_color: artist.backstage_color || "",
 						}));
 					setArtists(assignedArtists);
 
