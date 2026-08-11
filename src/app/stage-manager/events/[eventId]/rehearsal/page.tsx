@@ -107,6 +107,7 @@ import { CallArtistButton } from "@/components/CallArtistButton";
 import { CheckInScanDialog } from "@/components/CheckInScanDialog";
 import { useAllCheckIns } from "@/hooks/use-all-checkins";
 import { EventChecklistButton } from "@/components/EventChecklistButton";
+import { CueColorPicker } from "@/components/ui/cue-color-picker";
 
 // Helper: returns the correct public base URL to avoid localhost/0.0.0.0 issues
 const getBaseUrl = (): string => {
@@ -254,6 +255,7 @@ export default function RehearsalSchedule({
 	const [cueNotesFullArtist, setCueNotesFullArtist] = useState<any | null>(
 		null,
 	);
+	const [cueNotesColor, setCueNotesColor] = useState<string>("");
 	const [deptNotesValue, setDeptNotesValue] = useState<{
 		showcaller: string;
 		dj: string;
@@ -1903,7 +1905,8 @@ export default function RehearsalSchedule({
 	const openRehearsalNotes = async (artist: Artist) => {
 		setEditingCueNotesArtist(artist);
 		setCueNotesValue(artist.cue_notes || "");
-		
+		setCueNotesColor(artist.backstage_color || "");
+
 		const defaultDeptNotes = {
 			showcaller: "",
 			dj: "",
@@ -1937,6 +1940,9 @@ export default function RehearsalSchedule({
 							...data.data.artist.rehearsal_dept_notes,
 						});
 					}
+					if (data.data.artist.backstage_color) {
+						setCueNotesColor(data.data.artist.backstage_color);
+					}
 				}
 			}
 		} catch (err) {
@@ -1948,11 +1954,12 @@ export default function RehearsalSchedule({
 	const saveCueNotes = async () => {
 		if (!editingCueNotesArtist) return;
 
-		// Check if at least one text field is filled
+		// Check if at least one field is filled
 		const hasGeneralNotes = cueNotesValue && cueNotesValue.trim() !== "";
 		const hasDeptNotes = deptNotesValue && Object.values(deptNotesValue).some(val => val && val.trim() !== "");
-		
-		if (!hasGeneralNotes && !hasDeptNotes) {
+		const hasColor = cueNotesColor && cueNotesColor.trim() !== "";
+
+		if (!hasGeneralNotes && !hasDeptNotes && !hasColor) {
 			toast({
 				title: "⚠️ Validation Error",
 				description: "Please fill in at least one note field before saving.",
@@ -1966,9 +1973,10 @@ export default function RehearsalSchedule({
 				{
 					method: "PATCH",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ 
+					body: JSON.stringify({
 						cue_notes: cueNotesValue,
 						rehearsal_dept_notes: deptNotesValue,
+						backstage_color: cueNotesColor,
 						eventShowId: editingCueNotesArtist.eventShowId || undefined
 					}),
 				},
@@ -1978,7 +1986,7 @@ export default function RehearsalSchedule({
 				setArtists((prev) =>
 					prev.map((a) =>
 						a.uniqueId === editingCueNotesArtist.uniqueId
-							? { ...a, cue_notes: cueNotesValue, rehearsal_dept_notes: deptNotesValue }
+							? { ...a, cue_notes: cueNotesValue, rehearsal_dept_notes: deptNotesValue, backstage_color: cueNotesColor }
 							: a,
 					),
 				);
@@ -1991,6 +1999,7 @@ export default function RehearsalSchedule({
 						eventShowId: editingCueNotesArtist.eventShowId || undefined,
 						cue_notes: cueNotesValue,
 						rehearsal_dept_notes: deptNotesValue,
+						backstage_color: cueNotesColor,
 					});
 				}
 				setEditingCueNotesArtist(null);
@@ -4559,6 +4568,7 @@ export default function RehearsalSchedule({
 						onClick={() => {
 							setEditingCueNotesArtist(null);
 							setCueNotesFullArtist(null);
+							setCueNotesColor("");
 						}}
 					/>
 					
@@ -4632,13 +4642,31 @@ export default function RehearsalSchedule({
 											<span>{cueNotesFullArtist.equipment || cueNotesFullArtist.props_needed}</span>
 										</div>
 									)}
+									{cueNotesFullArtist.lightRequests && (
+										<div>
+											<span className="font-bold text-yellow-700">Special Lighting Requests: </span>
+											<span>{cueNotesFullArtist.lightRequests}</span>
+										</div>
+									)}
+									{(cueNotesFullArtist.musicTrack?.dj_notes || cueNotesFullArtist.dj_notes) && (
+										<div>
+											<span className="font-bold text-pink-700">DJ Notes: </span>
+											<span>{cueNotesFullArtist.musicTrack?.dj_notes || cueNotesFullArtist.dj_notes}</span>
+										</div>
+									)}
+									{cueNotesFullArtist.musicTrack?.tempo && (
+										<div>
+											<span className="font-bold text-indigo-700">Show Tempo: </span>
+											<span>{cueNotesFullArtist.musicTrack.tempo}</span>
+										</div>
+									)}
 								</div>
 							)}
 
 							{/* General Rehearsal Notes */}
 							<div className="space-y-2">
 								<Label htmlFor="general-rehearsal-notes" className="text-sm font-semibold text-gray-800">
-									General Rehearsal Notes
+									Artist Notes
 								</Label>
 								<Textarea
 									id="general-rehearsal-notes"
@@ -4647,6 +4675,15 @@ export default function RehearsalSchedule({
 									placeholder="Overall rehearsal observations..."
 									rows={3}
 									className="bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm rounded-xl focus:ring-purple-500 focus:border-purple-500"
+								/>
+							</div>
+
+							{/* Backstage Color Picker */}
+							<div className="border-t border-gray-100 pt-3">
+								<CueColorPicker
+									label="Backstage Color Picker"
+									value={cueNotesColor}
+									onChange={(color) => setCueNotesColor(color)}
 								/>
 							</div>
 

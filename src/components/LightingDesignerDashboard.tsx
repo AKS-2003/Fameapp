@@ -244,10 +244,17 @@ export default function LightingDesignerDashboard({
 				);
 
 			// Fetch show order with cues
-			const showOrderRes = await fetch(
-				`/api/events/${eventId}/show-order?performanceDate=${performanceDate}&t=${Date.now()}`,
-			);
+			const [showOrderRes, cuesRes] = await Promise.all([
+				fetch(
+					`/api/events/${eventId}/show-order?performanceDate=${performanceDate}&t=${Date.now()}`,
+				),
+				fetch(
+					`/api/events/${eventId}/cues?performanceDate=${performanceDate}&t=${Date.now()}`,
+				),
+			]);
 			const showOrderData = await showOrderRes.json();
+			const cuesData = await cuesRes.json();
+			const allCues: any[] = cuesData.success ? cuesData.data || [] : [];
 
 			let items: ShowOrderItem[] = [];
 
@@ -275,21 +282,24 @@ export default function LightingDesignerDashboard({
 							});
 						}
 					} else if (meta.type === "cue") {
-						items.push({
-							id: meta.id,
-							type: "cue",
-							cue: {
+						const cue = allCues.find((c) => c.id === meta.id);
+						if (cue) {
+							items.push({
 								id: meta.id,
-								type: meta.cue_type || meta.type,
-								title: meta.title || "Cue",
-								duration: meta.duration,
+								type: "cue",
+								cue: {
+									id: cue.id,
+									type: cue.type,
+									title: cue.title || "Cue",
+									duration: cue.duration,
+									performance_order: meta.performance_order,
+									notes: cue.notes,
+									color: cue.color,
+								},
 								performance_order: meta.performance_order,
-								notes: meta.notes,
-								color: meta.color,
-							},
-							performance_order: meta.performance_order,
-							status: meta.status,
-						});
+								status: meta.status,
+							});
+						}
 					}
 				}
 			}
