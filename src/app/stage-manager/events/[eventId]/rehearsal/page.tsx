@@ -107,7 +107,7 @@ import { CallArtistButton } from "@/components/CallArtistButton";
 import { CheckInScanDialog } from "@/components/CheckInScanDialog";
 import { useAllCheckIns } from "@/hooks/use-all-checkins";
 import { EventChecklistButton } from "@/components/EventChecklistButton";
-import { CueColorPicker } from "@/components/ui/cue-color-picker";
+import { CueColorPicker, isLightColor } from "@/components/ui/cue-color-picker";
 
 // Helper: returns the correct public base URL to avoid localhost/0.0.0.0 issues
 const getBaseUrl = (): string => {
@@ -2644,10 +2644,24 @@ export default function RehearsalSchedule({
 									) : (
 										<div className="space-y-3">
 											{scheduledArtists.map(
-												(artist, index) => (
+												(artist, index) => {
+													const hasCustomColor =
+														!!artist.backstage_color &&
+														!artist.rehearsal_marked;
+													const rowStyle = hasCustomColor
+														? {
+															backgroundColor: artist.backstage_color,
+															borderColor: artist.backstage_color,
+															color: isLightColor(artist.backstage_color!)
+																? "#000000"
+																: "#FFFFFF",
+														}
+														: undefined;
+													return (
 														<div
 															key={artist.uniqueId}
-															className={`flex items-center gap-3 p-3 border rounded-lg ${artist.rehearsal_marked ? "bg-green-50 border-green-200" : "bg-blue-50"}`}
+															className={`flex items-center gap-3 p-3 border rounded-lg ${hasCustomColor ? "" : artist.rehearsal_marked ? "bg-green-50 border-green-200" : "bg-blue-50"}`}
+															style={rowStyle}
 														>
 															<div className="flex items-center gap-2">
 																{/* Mark Checkbox (persisted, synced via WebSocket) */}
@@ -3063,8 +3077,9 @@ export default function RehearsalSchedule({
 																</div>
 															</div>
 														</div>
-													),
-												)}
+													);
+												},
+											)}
 										</div>
 									)}
 								</CardContent>
