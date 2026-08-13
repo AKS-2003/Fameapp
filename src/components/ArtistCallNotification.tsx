@@ -129,6 +129,16 @@ export function ArtistCallNotification({
 		};
 	}, [artistId, eventId]);
 
+	// Also stop the alarm if dismissed from elsewhere (e.g. the sticky call banner),
+	// so the two dismiss UIs can't fall out of sync and leave the alarm looping.
+	useEffect(() => {
+		const handleExternalDismiss = () => setCallData(null);
+		window.addEventListener("artist_call_dismiss", handleExternalDismiss);
+		return () => {
+			window.removeEventListener("artist_call_dismiss", handleExternalDismiss);
+		};
+	}, []);
+
 	// Try to play alarm audio — attempts multiple strategies
 	const tryPlayAlarm = useCallback(() => {
 		try {
