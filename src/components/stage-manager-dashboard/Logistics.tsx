@@ -20,6 +20,9 @@ import CurrenciesTab from "./CurrenciesTab";
 import CustomQuestionsTab from "./CustomQuestionsTab";
 import DeadlineRulesTab from "./DeadlineRulesTab";
 import NotesTab from "./NotesTab";
+import { mapContractArtistToArtist } from "./ArtistFiles";
+import { ArtistLogistics } from "./artist-files/ArtistLogistics";
+import type { Artist as FullArtist } from "./artist-files/types";
 
 
 
@@ -49,6 +52,13 @@ interface LogisticsArtist {
 		dropoffInfo?: string;
 		workshopSchedule?: string;
 		additionalNotes?: string;
+		arrivalDate?: string;
+		hotelName?: string;
+		hotelCheckIn?: string;
+		hotelCheckOut?: string;
+		flights?: Array<{ id: string; airline?: string; flightNumber?: string; from?: string; to?: string; departure?: string; arrival?: string }>;
+		hotels?: Array<{ id: string; name?: string; checkIn?: string; checkOut?: string }>;
+		transports?: Array<{ id: string; type?: string; vehicle?: string; pickupTime?: string; pickupLocation?: string; dropOffLocation?: string }>;
 	};
 	status?: string;
 	updatedAt?: string;
@@ -101,6 +111,9 @@ function deriveContractStatus(artist: LogisticsArtist): string {
 
 export default function Logistics({ providedEventId }: LogisticsProps) {
 	const [artists, setArtists] = useState<LogisticsArtist[]>([]);
+	// Raw contract artists, kept around so the expanded row can build the same
+	// full `Artist` shape ArtistFiles → Logistics uses (see mapContractArtistToArtist).
+	const [rawArtists, setRawArtists] = useState<Record<string, any>>({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
@@ -134,13 +147,19 @@ export default function Logistics({ providedEventId }: LogisticsProps) {
 			if (!contractsRes.ok || !contractsData.success) {
 				setError(contractsData.error || "Failed to load artists");
 				setArtists([]);
+				setRawArtists({});
 				return;
 			}
+
+			const rawList: any[] = contractsData.artists || [];
+			const rawById: Record<string, any> = {};
+			rawList.forEach((a) => { rawById[a.id] = a; });
+			setRawArtists(rawById);
 
 			// Same per-artist gating as the Artist Files Logistics tab: an artist's
 			// explicit workflowLogistics override wins, otherwise fall back to the
 			// event's own logisticsEnabled toggle (see resolveArtistWorkflow in ArtistFiles.tsx).
-			const list: LogisticsArtist[] = (contractsData.artists || [])
+			const list: LogisticsArtist[] = rawList
 				.map((a: any) => ({
 					id: a.id,
 					artistName: a.stageName || a.artistName || a.name || "Unknown Artist",
@@ -339,71 +358,25 @@ export default function Logistics({ providedEventId }: LogisticsProps) {
 												{/* Expanded row */}
 												{isExpanded && (
 													<tr key={`${artist.id}-expanded`}>
-														<td colSpan={8} className="bg-slate-50/70 px-16 py-4">
-															<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-																{/* Travel */}
-																<div>
-																	<p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Travel</p>
-																	<div className="space-y-1 text-sm text-slate-700">
-																		{artist.travelLogistics?.pickupInfo || artist.travelLogistics?.dropoffInfo ? (
-																			<>
-																				{artist.travelLogistics?.pickupInfo && <p>Pickup: {artist.travelLogistics.pickupInfo}</p>}
-																				{artist.travelLogistics?.dropoffInfo && <p>Dropoff: {artist.travelLogistics.dropoffInfo}</p>}
-																			</>
-																		) : (
-																			<p className="italic text-slate-400">No travel info</p>
-																		)}
-																	</div>
-																</div>
-
-																{/* Crew */}
-																<div>
-																	<p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-																		Crew ({artist.members?.length || 0})
-																	</p>
-																	{artist.members && artist.members.length > 0 ? (
-																		<ul className="space-y-1 text-sm text-slate-700">
-																			{artist.members.map((m, i) => {
-																				const memberName = m.fullName || m.name || "Unknown";
-																				return (
-																					<li key={i} className="flex items-center gap-1.5">
-																						<div className="h-5 w-5 rounded-full bg-violet-100 flex items-center justify-center text-[10px] font-bold text-violet-700">
-																							{memberName[0]?.toUpperCase()}
-																						</div>
-																						{memberName}
-																					</li>
-																				);
-																			})}
-																		</ul>
-																	) : (
-																		<p className="text-sm italic text-slate-400">Solo artist</p>
-																	)}
-																</div>
-
-																{/* T-shirts */}
-																<div>
-																	<p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">T-Shirts</p>
-																	{artist.tshirtSizes && artist.tshirtSizes.length > 0 ? (
-																		<div className="flex flex-wrap gap-1.5">
-																			{artist.tshirtSizes.map((t, i) => (
-																				<span key={i} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700">
-																					{t.name}: <strong>{t.size}</strong>{t.fit ? ` · ${t.fit}` : ""}
-																				</span>
-																			))}
+														<td colSpan={8} className="bg-slate-50/70 p-0">
+															{(() => {
+																const raw = rawArtists[artist.id];
+																if (!raw) {
+																	return (
+																		<div className="flex items-center justify-center py-12 text-sm text-slate-400">
+																			Loading logistics details...
 																		</div>
-																	) : (
-																		<p className="text-sm italic text-slate-400">Not specified</p>
-																	)}
-																</div>
-
-																{/* Hospitality */}
-																{(artist.logistics?.hospitalityNotes || artist.travelLogistics?.additionalNotes) && (
-																	<div className="sm:col-span-3">
-																		<p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Hospitality</p>
-																		<p className="text-sm text-slate-700">{artist.logistics?.hospitalityNotes || artist.travelLogistics?.additionalNotes}</p>
-																	</div>
-																)}
-															</div>
+																	);
+																}
+																const fullArtist = mapContractArtistToArtist(raw, providedEventId);
+																return (
+																	<ArtistLogistics
+																		artist={fullArtist}
+																		eventId={providedEventId}
+																		onRefresh={loadArtists}
+																	/>
+																);
+															})()}
 														</td>
 													</tr>
 												)}

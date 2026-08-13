@@ -20,7 +20,7 @@ interface ArtistFilesProps {
 }
 
 /** Map a ContractArtist (from /api/contracts/:eventId) to the Artist type used by sub-components */
-function mapContractArtistToArtist(a: any, eventId: string): Artist {
+export function mapContractArtistToArtist(a: any, eventId: string): Artist {
   const agr = a.agreement || {};
   return {
     id: a.id,
@@ -201,22 +201,24 @@ function mapContractArtistToArtist(a: any, eventId: string): Artist {
           visaDocument: m.visaDocument || "",
         })),
         flights: a.travelLogistics?.flights || [],
-        hotels: a.travelLogistics?.hotelName
-          ? [{
-              id: "hotel-1",
-              name: a.travelLogistics.hotelName,
-              roomType: questions.hotelRoomType || "Standard",
-              checkIn: a.travelLogistics.hotelCheckIn || "",
-              checkOut: a.travelLogistics.hotelCheckOut || "",
-              rooms: 1,
-              roomingList: "—",
-              breakfast: "—",
-              ref: "—",
-            }]
-          : [],
-        transports: [],
-        food: undefined,
-        notesData: [],
+        hotels: a.travelLogistics?.hotels && a.travelLogistics.hotels.length > 0
+          ? a.travelLogistics.hotels
+          : a.travelLogistics?.hotelName
+            ? [{
+                id: "hotel-1",
+                name: a.travelLogistics.hotelName,
+                roomType: questions.hotelRoomType || "Standard",
+                checkIn: a.travelLogistics.hotelCheckIn || "",
+                checkOut: a.travelLogistics.hotelCheckOut || "",
+                rooms: 1,
+                roomingList: "—",
+                breakfast: "—",
+                ref: "—",
+              }]
+            : [],
+        transports: a.travelLogistics?.transports || [],
+        food: a.travelLogistics?.food || undefined,
+        notesData: a.travelLogistics?.notesData || [],
       };
     })(),
     // Workflow status (per-artist, saved by stage manager).

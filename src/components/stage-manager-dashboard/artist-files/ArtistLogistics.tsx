@@ -72,6 +72,7 @@ export function ArtistLogistics({ artist, selectedShow, eventId, onRefresh, onUn
           "Hotel",
           "Transport",
           "Food",
+          "Notes",
           "Event Info"
         ].map(tab => (
           <button
@@ -217,15 +218,19 @@ export function ArtistLogistics({ artist, selectedShow, eventId, onRefresh, onUn
         )}
 
         {innerTab === "Hotel" && (
-          <LogisticsHotel artist={artist} />
+          <LogisticsHotel artist={artist} eventId={eventId} onRefresh={onRefresh} />
         )}
 
         {innerTab === "Transport" && (
-          <LogisticsTransport artist={artist} />
+          <LogisticsTransport artist={artist} eventId={eventId} onRefresh={onRefresh} />
         )}
 
         {innerTab === "Food" && (
-          <LogisticsFood artist={artist} />
+          <LogisticsFood artist={artist} eventId={eventId} onRefresh={onRefresh} />
+        )}
+
+        {innerTab === "Notes" && (
+          <LogisticsNotes artist={artist} eventId={eventId} onRefresh={onRefresh} />
         )}
 
         {innerTab === "Event Info" && (
