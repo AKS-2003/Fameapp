@@ -47,10 +47,7 @@ import {
 	ListTodo,
 	Search,
 	Check,
-	MessageSquare,
 	X,
-	Camera,
-	Send,
 	Sun,
 	Moon,
 } from "lucide-react";
@@ -257,120 +254,6 @@ export default function LivePerformanceBoard() {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [isLightMode, setIsLightMode] = useState(false);
 
-	// Organiser message popup state
-	const [activeOrganiserMessage, setActiveOrganiserMessage] = useState<any | null>(null);
-	const [showChatsOpen, setShowChatsOpen] = useState(false);
-	const [chatMessages, setChatMessages] = useState<any[]>([]);
-	const [newMessageText, setNewMessageText] = useState("");
-	const [sendingMessage, setSendingMessage] = useState(false);
-
-	const fetchChatMessages = async () => {
-		try {
-			const response = await fetch(`/api/events/${eventId}/organiser-chats?t=${Date.now()}`);
-			if (response.ok) {
-				const data = await response.json();
-				if (data.success && data.data) {
-					setChatMessages(data.data.chats || []);
-				}
-			}
-		} catch (error) {
-			console.error("Error fetching chats:", error);
-		}
-	};
-
-	const handleSendMessage = async () => {
-		if (!newMessageText.trim()) return;
-
-		setSendingMessage(true);
-		try {
-			const response = await fetch(`/api/events/${eventId}/organiser-chats`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					action: "send",
-					sender: "stage_manager",
-					recipient: "organiser",
-					text: newMessageText,
-				}),
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				if (data.success && data.data?.message) {
-					setChatMessages((prev) => [...prev, data.data.message]);
-					setNewMessageText("");
-				}
-			}
-		} catch (error) {
-			console.error("Error sending message:", error);
-		} finally {
-			setSendingMessage(false);
-		}
-	};
-
-	useEffect(() => {
-		if (showChatsOpen) {
-			fetchChatMessages();
-			const unreadMsgs = chatMessages.filter(
-				(m) => m.sender === "organiser" && m.recipient === "stage_manager" && m.status === "unread"
-			);
-			unreadMsgs.forEach(async (m) => {
-				try {
-					await fetch(`/api/events/${eventId}/organiser-chats`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ action: "read", messageId: m.id })
-					});
-				} catch (err) {
-					console.error("Error marking msg as read:", err);
-				}
-			});
-		}
-	}, [showChatsOpen]);
-
-	const handleConfirmReadOrganiserMessage = async (msgId: string) => {
-		try {
-			await fetch(`/api/events/${eventId}/organiser-chats`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					action: "read",
-					messageId: msgId,
-				}),
-			});
-		} catch (error) {
-			console.error("Error confirming read:", error);
-		} finally {
-			setActiveOrganiserMessage(null);
-		}
-	};
-
-	const checkUnreadOrganiserMessages = async () => {
-		try {
-			const response = await fetch(`/api/events/${eventId}/organiser-chats?t=${Date.now()}`);
-			if (response.ok) {
-				const data = await response.json();
-				if (data.success && data.data?.chats) {
-					// Since Live Board is used by Stage Manager/MC, we show unread messages for either role
-					const unread = data.data.chats
-						.filter((m: any) => m.sender === "organiser" && (m.recipient === "stage_manager" || m.recipient === "mc") && m.status === "unread")
-						.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-					if (unread.length > 0) {
-						setActiveOrganiserMessage(unread[0]);
-					} else {
-						setActiveOrganiserMessage(null);
-					}
-				}
-			}
-		} catch (error) {
-			console.error("Error checking unread organiser messages:", error);
-		}
-	};
-
 	// PDF Export Hook
 	const { generatePDF, isGenerating } = usePerformanceOrderPDF({
 		eventId,
@@ -451,8 +334,6 @@ export default function LivePerformanceBoard() {
 		if (eventId) {
 			fetchEventData();
 			fetchEventDates();
-			checkUnreadOrganiserMessages();
-			fetchChatMessages();
 		}
 
 		// Listen for WebSocket toast events
@@ -491,8 +372,6 @@ export default function LivePerformanceBoard() {
 			fetchEmergencyBroadcasts();
 			fetchShowDateInfo();
 			fetchEventTimings(selectedDate);
-			checkUnreadOrganiserMessages();
-			fetchChatMessages();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [selectedDate, refreshTrigger]);
@@ -593,14 +472,10 @@ export default function LivePerformanceBoard() {
 								if (data.isDraft !== undefined) setIsDraftShowOrder(data.isDraft);
 								if (data.isConfirmed !== undefined) setIsShowOrderConfirmed(data.isConfirmed);
 							}
-							if (evtName === "new_organiser_message") {
-								if (data.message?.recipient === "stage_manager" || data.message?.recipient === "mc") {
-									setActiveOrganiserMessage(data.message);
-								}
-								fetchChatMessages();
-							} else if (evtName === "organiser_message_read") {
-								fetchChatMessages();
-							} else {
+							if (
+								evtName !== "new_organiser_message" &&
+								evtName !== "organiser_message_read"
+							) {
 								triggerGlobalRefresh(data);
 							}
 						}
@@ -3018,15 +2893,6 @@ export default function LivePerformanceBoard() {
 							isDraftShowOrder={isDraftShowOrder}
 							isShowOrderConfirmed={isShowOrderConfirmed}
 							refreshTrigger={refreshTrigger}
-							activeOrganiserMessage={activeOrganiserMessage}
-							handleConfirmReadOrganiserMessage={handleConfirmReadOrganiserMessage}
-							showChatsOpen={showChatsOpen}
-							setShowChatsOpen={setShowChatsOpen}
-							chatMessages={chatMessages}
-							newMessageText={newMessageText}
-							setNewMessageText={setNewMessageText}
-							handleSendMessage={handleSendMessage}
-							sendingMessage={sendingMessage}
 							isLightMode={isLightMode}
 						/>
 					</TabsContent>
@@ -3990,15 +3856,6 @@ function LiveBoard3Component({
 	isDraftShowOrder,
 	isShowOrderConfirmed,
 	refreshTrigger,
-	activeOrganiserMessage,
-	handleConfirmReadOrganiserMessage,
-	showChatsOpen,
-	setShowChatsOpen,
-	chatMessages,
-	newMessageText,
-	setNewMessageText,
-	handleSendMessage,
-	sendingMessage,
 	isLightMode,
 }: {
 	eventId: string;
@@ -4008,15 +3865,6 @@ function LiveBoard3Component({
 	isDraftShowOrder: boolean;
 	isShowOrderConfirmed: boolean;
 	refreshTrigger: number;
-	activeOrganiserMessage: any;
-	handleConfirmReadOrganiserMessage: (msgId: string) => Promise<void>;
-	showChatsOpen: boolean;
-	setShowChatsOpen: (open: boolean) => void;
-	chatMessages: any[];
-	newMessageText: string;
-	setNewMessageText: (text: string) => void;
-	handleSendMessage: () => Promise<void>;
-	sendingMessage: boolean;
 	isLightMode: boolean;
 }) {
 	const [performanceItems, setPerformanceItems] = useState<PerformanceItem[]>([]);
@@ -4565,171 +4413,6 @@ function LiveBoard3Component({
 				</div>
 			</div>
 
-			{/* Organiser Message Modal Alert */}
-			{activeOrganiserMessage && (
-				<div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
-					<div className="w-full max-w-[420px] bg-white rounded-2xl p-6 shadow-2xl z-[1000] border border-gray-100 flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-200">
-						{/* Header */}
-						<div className="flex items-center justify-between shrink-0">
-							<div className="text-xs md:text-sm font-extrabold text-[#d946ef] tracking-wider flex items-center gap-1.5 uppercase">
-								<MessageSquare className="h-4 w-4" />
-								<span>Message From Organiser</span>
-							</div>
-							<span className={`text-xs font-bold ${isLightMode ? "text-gray-500" : "text-gray-400"}`}>
-								{new Date(activeOrganiserMessage.createdAt).toLocaleTimeString("en-US", {
-									hour: "2-digit",
-									minute: "2-digit",
-									hour12: true,
-								})}
-							</span>
-						</div>
-
-						{/* Body */}
-						<div className="py-2">
-							<p className="text-lg md:text-xl font-extrabold text-gray-900 leading-snug break-words text-left text-gray-900">
-								{activeOrganiserMessage.text}
-							</p>
-						</div>
-
-						{/* Footer Actions */}
-						<div className="flex items-center gap-3 pt-2">
-							<button
-								onClick={() => handleConfirmReadOrganiserMessage(activeOrganiserMessage.id)}
-								className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-sm flex-1 transition-all shadow-md active:scale-95"
-							>
-								<Check className="h-4 w-4" />
-								Confirm Read
-							</button>
-							<button
-								onClick={() => {
-									handleConfirmReadOrganiserMessage(activeOrganiserMessage.id);
-									setShowChatsOpen(true);
-								}}
-								className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold py-3 px-4 rounded-xl flex items-center justify-center text-sm flex-1 transition-all active:scale-95"
-							>
-								Respond
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-
-			{/* Floating Chat Action Button */}
-			{!showChatsOpen && (
-				<button
-					onClick={() => setShowChatsOpen(true)}
-					className="fixed bottom-6 right-6 z-[45] bg-[#d946ef] hover:bg-[#d946ef]/90 text-white p-4 rounded-full shadow-lg transition-transform duration-200 hover:scale-105 animate-bounce"
-				>
-					<MessageSquare className="h-6 w-6" />
-				</button>
-			)}
-
-			{/* Sliding Sidebar for Chat */}
-			<div
-				className={`fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white shadow-2xl z-50 border-l border-gray-150 flex flex-col transition-transform duration-300 ease-in-out ${
-					showChatsOpen ? "translate-x-0" : "translate-x-full"
-				}`}
-			>
-				{/* Header */}
-				<div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
-					<div className="flex flex-col text-left">
-						<span className="font-extrabold text-gray-900 text-lg">Organiser Chat</span>
-						<span className={`text-xs font-bold ${isLightMode ? "text-gray-500" : "text-gray-400"}`}>Stage ↔ Organiser</span>
-					</div>
-					<button
-						onClick={() => setShowChatsOpen(false)}
-						className="h-8 w-8 text-gray-400 hover:text-gray-650 rounded-full hover:bg-gray-100 flex items-center justify-center"
-					>
-						<X className="h-5 w-5" />
-					</button>
-				</div>
-
-				{/* Message List */}
-				<div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/30 flex flex-col">
-					{chatMessages.filter(
-						(m) =>
-							(m.sender === "organiser" && m.recipient === "stage_manager") ||
-							(m.sender === "stage_manager" && m.recipient === "organiser")
-					).length > 0 ? (
-						chatMessages
-							.filter(
-								(m) =>
-									(m.sender === "organiser" && m.recipient === "stage_manager") ||
-									(m.sender === "stage_manager" && m.recipient === "organiser")
-							)
-							.map((msg) => {
-								const isMe = msg.sender === "stage_manager";
-								return (
-									<div
-										key={msg.id}
-										className={`flex flex-col ${isMe ? "items-end text-right" : "items-start text-left"} max-w-[85%] ${
-											isMe ? "self-end" : "self-start"
-										}`}
-									>
-										<div
-											className={`px-4 py-2.5 rounded-2xl text-sm ${
-												isMe
-													? "bg-[#d946ef] text-white rounded-tr-none text-left"
-													: "bg-gray-100 text-gray-800 rounded-tl-none"
-											}`}
-										>
-											<p className="whitespace-pre-wrap">{msg.text}</p>
-										</div>
-										<div className="flex items-center gap-1 mt-1 px-1">
-											<span className="text-[9px] text-gray-400 font-medium">
-												{new Date(msg.createdAt).toLocaleTimeString("en-US", {
-													hour: "2-digit",
-													minute: "2-digit",
-													hour12: true,
-												})}
-											</span>
-											{isMe && (
-												<span className="font-bold">
-													{msg.status === "read" ? (
-														<span className="text-emerald-500 text-[11px] leading-none ml-1 font-bold" title="Read">✓✓</span>
-													) : (
-														<span className="text-gray-300 text-[11px] leading-none ml-1 font-bold" title="Sent">✓</span>
-													)}
-												</span>
-											)}
-										</div>
-									</div>
-								);
-							})
-					) : (
-						<div className="flex-1 flex items-center justify-center text-gray-400 text-sm font-medium py-16">
-							No messages yet.
-						</div>
-					)}
-				</div>
-
-				{/* Input Box */}
-				<div className="p-3 border-t border-gray-100 bg-white flex items-center gap-2 shrink-0">
-					<button className="p-2 text-gray-400 hover:text-gray-650 transition-colors">
-						<Camera className="h-5 w-5" />
-					</button>
-					<button className="p-2 text-gray-400 hover:text-gray-650 transition-colors">
-						<Mic className="h-5 w-5" />
-					</button>
-					<input
-						type="text"
-						value={newMessageText}
-						onChange={(e) => setNewMessageText(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") handleSendMessage();
-						}}
-						placeholder="Message organiser..."
-						className="flex-1 py-2 px-3 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-1 focus:ring-fuchsia-500 focus:bg-white transition-all text-gray-800"
-					/>
-					<button
-						onClick={handleSendMessage}
-						disabled={sendingMessage || !newMessageText.trim()}
-						className="p-2 bg-[#d946ef] hover:bg-[#d946ef]/90 text-white rounded-full transition-all disabled:opacity-50 flex items-center justify-center"
-					>
-						<Send className="h-4 w-4" />
-					</button>
-				</div>
-			</div>
 		</div>
 	);
 }
