@@ -31,6 +31,8 @@ interface CheckInScanDialogProps {
 	rehearsalCheckedIn?: boolean;
 	performanceCheckedIn?: boolean;
 	onCheckInComplete?: (type: "rehearsal" | "performance", checkedIn: boolean) => void;
+	/** Which check-in option to show. Defaults to both for backwards compatibility. */
+	mode?: "rehearsal" | "performance" | "both";
 }
 
 export function CheckInScanDialog({
@@ -42,7 +44,10 @@ export function CheckInScanDialog({
 	rehearsalCheckedIn = false,
 	performanceCheckedIn = false,
 	onCheckInComplete,
+	mode = "both",
 }: CheckInScanDialogProps) {
+	const showRehearsal = mode === "rehearsal" || mode === "both";
+	const showPerformance = mode === "performance" || mode === "both";
 	const { toast } = useToast();
 	const [confirmState, setConfirmState] = useState<{
 		type: "rehearsal" | "performance";
@@ -106,68 +111,72 @@ export function CheckInScanDialog({
 
 					<div className="space-y-3 py-2">
 						{/* Rehearsal Check-In */}
-						<Button
-							className="w-full justify-start gap-3 h-14"
-							variant={rehearsalCheckedIn ? "secondary" : "outline"}
-							disabled={loading}
-							onClick={() => setConfirmState({
-								type: "rehearsal", 
-								action: rehearsalCheckedIn ? "uncheck" : "checkin"
-							})}
-						>
-							{rehearsalCheckedIn ? (
-								<CheckCircle className="h-5 w-5 text-green-500" />
-							) : (
-								<Music className="h-5 w-5 text-blue-500" />
-							)}
-							<div className="text-left flex-1 border-r pr-2 border-border/50">
-								<div className="font-medium">Rehearsal</div>
-								<div className="text-xs text-muted-foreground">
-									{rehearsalCheckedIn
-										? "Already checked in ✓"
-										: "Check in for rehearsal"}
+						{showRehearsal && (
+							<Button
+								className="w-full justify-start gap-3 h-14"
+								variant={rehearsalCheckedIn ? "secondary" : "outline"}
+								disabled={loading}
+								onClick={() => setConfirmState({
+									type: "rehearsal",
+									action: rehearsalCheckedIn ? "uncheck" : "checkin"
+								})}
+							>
+								{rehearsalCheckedIn ? (
+									<CheckCircle className="h-5 w-5 text-green-500" />
+								) : (
+									<Music className="h-5 w-5 text-blue-500" />
+								)}
+								<div className="text-left flex-1 border-r pr-2 border-border/50">
+									<div className="font-medium">Rehearsal</div>
+									<div className="text-xs text-muted-foreground">
+										{rehearsalCheckedIn
+											? "Already checked in ✓"
+											: "Check in for rehearsal"}
+									</div>
 								</div>
-							</div>
-							{rehearsalCheckedIn && (
-								<div className="flex flex-col items-center justify-center pl-1 text-muted-foreground hover:text-destructive transition-colors">
-									<XCircle className="h-4 w-4" />
-									<span className="text-[10px] mt-0.5 opacity-80">Undo</span>
-								</div>
-							)}
-						</Button>
+								{rehearsalCheckedIn && (
+									<div className="flex flex-col items-center justify-center pl-1 text-muted-foreground hover:text-destructive transition-colors">
+										<XCircle className="h-4 w-4" />
+										<span className="text-[10px] mt-0.5 opacity-80">Undo</span>
+									</div>
+								)}
+							</Button>
+						)}
 
 						{/* Performance Check-In */}
-						<Button
-							className="w-full justify-start gap-3 h-14"
-							variant={performanceCheckedIn ? "secondary" : "outline"}
-							disabled={loading}
-							onClick={() => setConfirmState({
-								type: "performance",
-								action: performanceCheckedIn ? "uncheck" : "checkin"
-							})}
-						>
-							{performanceCheckedIn ? (
-								<CheckCircle className="h-5 w-5 text-green-500" />
-							) : (
-								<Theater className="h-5 w-5 text-purple-500" />
-							)}
-							<div className="text-left flex-1 border-r pr-2 border-border/50">
-								<div className="font-medium">
-									Performance Order
+						{showPerformance && (
+							<Button
+								className="w-full justify-start gap-3 h-14"
+								variant={performanceCheckedIn ? "secondary" : "outline"}
+								disabled={loading}
+								onClick={() => setConfirmState({
+									type: "performance",
+									action: performanceCheckedIn ? "uncheck" : "checkin"
+								})}
+							>
+								{performanceCheckedIn ? (
+									<CheckCircle className="h-5 w-5 text-green-500" />
+								) : (
+									<Theater className="h-5 w-5 text-purple-500" />
+								)}
+								<div className="text-left flex-1 border-r pr-2 border-border/50">
+									<div className="font-medium">
+										Performance
+									</div>
+									<div className="text-xs text-muted-foreground">
+										{performanceCheckedIn
+											? "Already checked in ✓"
+											: "Check in for performance"}
+									</div>
 								</div>
-								<div className="text-xs text-muted-foreground">
-									{performanceCheckedIn
-										? "Already checked in ✓"
-										: "Check in for performance"}
-								</div>
-							</div>
-							{performanceCheckedIn && (
-								<div className="flex flex-col items-center justify-center pl-1 text-muted-foreground hover:text-destructive transition-colors">
-									<XCircle className="h-4 w-4" />
-									<span className="text-[10px] mt-0.5 opacity-80">Undo</span>
-								</div>
-							)}
-						</Button>
+								{performanceCheckedIn && (
+									<div className="flex flex-col items-center justify-center pl-1 text-muted-foreground hover:text-destructive transition-colors">
+										<XCircle className="h-4 w-4" />
+										<span className="text-[10px] mt-0.5 opacity-80">Undo</span>
+									</div>
+								)}
+							</Button>
+						)}
 					</div>
 				</DialogContent>
 			</Dialog>
@@ -189,7 +198,7 @@ export function CheckInScanDialog({
 							<span className="font-semibold">
 								{confirmState?.type === "rehearsal"
 									? "Rehearsal"
-									: "Performance Order"}
+									: "Performance"}
 							</span>
 							?
 						</AlertDialogDescription>

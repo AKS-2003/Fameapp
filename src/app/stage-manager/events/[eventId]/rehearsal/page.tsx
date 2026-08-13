@@ -2980,16 +2980,6 @@ export default function RehearsalSchedule({
 																					R
 																				</Badge>
 																			)}
-																			{cs.performanceCheckedIn && (
-																				<Badge
-																					variant="outline"
-																					className="text-[10px] px-1 py-0 border-green-400 text-green-600 bg-green-50"
-																				>
-																					<CheckCircle className="h-2.5 w-2.5 mr-0.5" />
-
-																					P
-																				</Badge>
-																			)}
 																		</div>
 																	);
 																})()}
@@ -4780,6 +4770,7 @@ export default function RehearsalSchedule({
 						getCheckInStatus(checkInDialogArtist!.id)
 							.performanceCheckedIn
 					}
+					mode="rehearsal"
 					onCheckInComplete={(type, checkedIn) => {
 						markCheckInLocal(
 							checkInDialogArtist!.id,

@@ -81,7 +81,6 @@ import {
 	X,
 	Package,
 	QrCode,
-	FileText,
 	MessageSquare,
 	Camera,
 	Send,
@@ -5863,16 +5862,6 @@ export default function PerformanceOrder({
 																							);
 																						return (
 																							<span className="inline-flex items-center gap-1 ml-1">
-																								{cs.rehearsalCheckedIn && (
-																									<Badge
-																										variant="outline"
-																										className="text-[10px] px-1 py-0 border-green-400 text-green-600 bg-green-50"
-																									>
-																										<CheckCircle className="h-2.5 w-2.5 mr-0.5" />
-
-																										R
-																									</Badge>
-																								)}
 																								{cs.performanceCheckedIn && (
 																									<Badge
 																										variant="outline"
@@ -5880,7 +5869,7 @@ export default function PerformanceOrder({
 																									>
 																										<CheckCircle className="h-2.5 w-2.5 mr-0.5" />
 
-																										P
+																										Performance
 																									</Badge>
 																								)}
 																							</span>
@@ -6071,8 +6060,8 @@ export default function PerformanceOrder({
 																					onClick={() => setCheckInDialogArtist(item.artist!)}
 																					title={`Check in ${item.artist!.artist_name}`}
 																				>
-																					<FileText className="h-3.5 w-3.5" />
-																					<span className={`text-[9px] mt-0.5 font-medium ${isDarkBG ? "text-white" : "text-gray-500"}`}>File</span>
+																					<QrCode className="h-3.5 w-3.5" />
+																					<span className={`text-[9px] mt-0.5 font-medium ${isDarkBG ? "text-white" : "text-gray-500"}`}>Check-in</span>
 																				</Button>
 																			</>
 																		)}
@@ -8655,6 +8644,7 @@ export default function PerformanceOrder({
 							getCheckInStatus(checkInDialogArtist.id)
 								.performanceCheckedIn
 						}
+						mode="performance"
 						onCheckInComplete={(type, checkedIn) => {
 							markCheckInLocal(
 								checkInDialogArtist.id,
