@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { uploadToGCS } from "@/lib/upload-utils";
 import { FILE_LIMITS } from "@/lib/constants";
+import { QRCodeDialog } from "@/components/ui/qr-code-dialog";
 
 interface KnownForItem {
 	title: string;
@@ -236,11 +237,20 @@ export function MeProfileSection({ artistId }: { artistId: string }) {
 							{copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
 							Copy
 						</Button>
+						<QRCodeDialog
+							url={publicUrl}
+							title={profile.stageName || "My Profile"}
+							description="Scan this code to open your public profile."
+							triggerText="QR"
+							triggerVariant="outline"
+							triggerSize="sm"
+							triggerClassName="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl"
+						/>
 						<Button
 							onClick={() => window.open(publicUrl, "_blank")}
 							size="sm"
 							variant="outline"
-							className="border-white/10 hover:bg-white/5 text-white rounded-xl gap-1.5"
+							className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl gap-1.5"
 						>
 							<ExternalLink className="h-3.5 w-3.5" />
 							View
@@ -369,7 +379,7 @@ function BasicsTab({
 					variant="outline"
 					size="sm"
 					onClick={() => document.getElementById("me-banner-input")?.click()}
-					className="border-white/10 hover:bg-white/5 text-white rounded-lg gap-1.5"
+					className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-lg gap-1.5"
 				>
 					<Upload className="h-3.5 w-3.5" /> Upload banner
 				</Button>
@@ -577,7 +587,7 @@ function KnownForTab({
 						knownFor: [...p.knownFor, { title: "", description: "", thumbnail: "", video: "" }],
 					}))
 				}
-				className="w-full border-dashed border-purple-500/40 text-purple-300 hover:bg-purple-500/10 rounded-xl gap-2"
+				className="w-full bg-transparent border-dashed border-purple-500/40 text-purple-300 hover:bg-purple-500/10 rounded-xl gap-2"
 			>
 				<Plus className="h-4 w-4" /> Add another show
 			</Button>
@@ -652,7 +662,7 @@ function EventsTab({
 						events: [...p.events, { year: "", name: "", role: "", location: "" }],
 					}))
 				}
-				className="w-full border-dashed border-purple-500/40 text-purple-300 hover:bg-purple-500/10 rounded-xl gap-2"
+				className="w-full bg-transparent border-dashed border-purple-500/40 text-purple-300 hover:bg-purple-500/10 rounded-xl gap-2"
 			>
 				<Plus className="h-4 w-4" /> Add event
 			</Button>
