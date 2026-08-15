@@ -689,6 +689,10 @@ function FameLinkDashboardContent() {
 	const [onboardingOpen, setOnboardingOpen] = useState(false);
 	const [shareModalOpen, setShareModalOpen] = useState(false);
 	const [generateLinkModalOpen, setGenerateLinkModalOpen] = useState(false);
+	// Which show's "Share" button was clicked, so both the FameLink-invite flow
+	// and the "Create a private link" flow can pre-select the right show.
+	const [shareModalShowId, setShareModalShowId] = useState<string | undefined>(undefined);
+	const [generateLinkInitialShowId, setGenerateLinkInitialShowId] = useState<string | undefined>(undefined);
 	// Tracks whether we've already handled the ?justCreatedShow=true redirect this page load
 	const justCreatedShowRef = useRef(false);
 	// Track whether eventRequests/eventParticipations have finished their first fetch —
@@ -2374,7 +2378,13 @@ function FameLinkDashboardContent() {
 																<Link href={`/famelink/${artistId}/shows/${show.id}/edit`} className="flex items-center gap-1.5 text-[13px] font-semibold text-white hover:text-purple-300 transition-colors">
 																	<Edit className="h-4 w-4 text-[#a491b5]" /> Edit
 																</Link>
-																<button onClick={() => setShareModalOpen(true)} className="flex items-center gap-1.5 text-[13px] font-semibold text-[#f472b6] hover:text-[#fbcfe8] transition-colors">
+																<button
+																	onClick={() => {
+																		setShareModalShowId(show.id);
+																		setShareModalOpen(true);
+																	}}
+																	className="flex items-center gap-1.5 text-[13px] font-semibold text-[#f472b6] hover:text-[#fbcfe8] transition-colors"
+																>
 																	<Share2 className="h-4 w-4" /> Share
 																</button>
 																<button
@@ -4107,19 +4117,29 @@ function FameLinkDashboardContent() {
 							fetchEventRequests();
 							fetchEventParticipations();
 						}}
+						onCreatePrivateLink={(showId) => {
+							setOnboardingOpen(false);
+							setGenerateLinkInitialShowId(showId);
+							setGenerateLinkModalOpen(true);
+						}}
 					/>
 				)}
 
-				{/* ── Generate Private Link Modal (Send Show Info in Private Event Requests) ── */}
+				{/* ── Generate Private Link Modal (Send Show Info in Private Event Requests, or from the Share flow) ── */}
 				{generateLinkModalOpen && (
 					<GeneratePrivateLinkModal
 						artistId={artistId}
 						artistName={profile?.artistName || "Main Artist"}
 						shows={shows}
-						onDismiss={() => setGenerateLinkModalOpen(false)}
+						initialShowId={generateLinkInitialShowId}
+						onDismiss={() => {
+							setGenerateLinkModalOpen(false);
+							setGenerateLinkInitialShowId(undefined);
+						}}
 						onCreated={(link) => {
 							setShareLinks((prev) => [link, ...prev]);
 							setGenerateLinkModalOpen(false);
+							setGenerateLinkInitialShowId(undefined);
 						}}
 					/>
 				)}
@@ -4138,15 +4158,27 @@ function FameLinkDashboardContent() {
 								})}
 						hasLogistics={false}
 						initialStep="share_where"
-						onDismiss={() => setShareModalOpen(false)}
+						initialShowId={shareModalShowId}
+						onDismiss={() => {
+							setShareModalOpen(false);
+							setShareModalShowId(undefined);
+						}}
 						onShowCreated={() => {
 							setShareModalOpen(false);
+							setShareModalShowId(undefined);
 							router.push(`/famelink/${artistId}/shows/create`);
 						}}
 						onRequestResponded={() => {
 							setShareModalOpen(false);
+							setShareModalShowId(undefined);
 							fetchEventRequests();
 							fetchEventParticipations();
+						}}
+						onCreatePrivateLink={(showId) => {
+							setShareModalOpen(false);
+							setShareModalShowId(undefined);
+							setGenerateLinkInitialShowId(showId);
+							setGenerateLinkModalOpen(true);
 						}}
 					/>
 				)}

@@ -42,6 +42,8 @@ interface GeneratePrivateLinkModalProps {
 	artistId: string;
 	artistName?: string;
 	shows: BaseShow[];
+	/** Pre-select this show (e.g. when opened from a specific show's "Share" button) */
+	initialShowId?: string;
 	onDismiss: () => void;
 	onCreated: (link: any) => void;
 }
@@ -98,13 +100,16 @@ export function GeneratePrivateLinkModal({
 	artistId,
 	artistName,
 	shows,
+	initialShowId,
 	onDismiss,
 	onCreated,
 }: GeneratePrivateLinkModalProps) {
 	const { toast } = useToast();
 	const [label, setLabel] = useState("");
 	const [linkType, setLinkType] = useState<LinkType>("show_info");
-	const [selectedShowId, setSelectedShowId] = useState<string>(shows[0]?.id || "");
+	const [selectedShowId, setSelectedShowId] = useState<string>(
+		(initialShowId && shows.some((s) => s.id === initialShowId)) ? initialShowId : (shows[0]?.id || ""),
+	);
 	const [thumbnail, setThumbnail] = useState("");
 	const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
 	const [thumbnailProgress, setThumbnailProgress] = useState(0);

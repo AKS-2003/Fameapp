@@ -19,6 +19,7 @@ import {
 	Send,
 	Loader2,
 	ImageIcon,
+	Link2,
 } from "lucide-react";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,9 +84,13 @@ interface OnboardingFlowModalProps {
 	pendingParticipations?: EventParticipation[];
 	hasLogistics: boolean;
 	initialStep?: MainStep;
+	/** The show that triggered this modal (e.g. clicked "Share" on a specific show card) */
+	initialShowId?: string;
 	onDismiss: () => void;
 	onShowCreated: () => void;
 	onRequestResponded: () => void;
+	/** Opens the "Generate Private Link" flow, optionally pre-selecting a show */
+	onCreatePrivateLink?: (showId?: string) => void;
 }
 
 // ─── Step types ───────────────────────────────────────────────────────────────
@@ -133,9 +138,11 @@ export function OnboardingFlowModal({
 	pendingParticipations = [],
 	hasLogistics,
 	initialStep,
+	initialShowId,
 	onDismiss,
 	onShowCreated,
 	onRequestResponded,
+	onCreatePrivateLink,
 }: OnboardingFlowModalProps) {
 	const router = useRouter();
 	const [step, setStep] = useState<MainStep>(initialStep || "tasks");
@@ -556,13 +563,13 @@ export function OnboardingFlowModal({
 							</button>
 							<div>
 								<h2 className="text-base font-bold text-white">Where do you want to share?</h2>
-								<p className="text-xs text-purple-200/50 mt-0.5">Send your show info to a FameLink invite event.</p>
+								<p className="text-xs text-purple-200/50 mt-0.5">Send to a FameLink invite event, or create a private link.</p>
 							</div>
 						</div>
 
 						<div className="overflow-y-auto flex-1 px-4 pt-4 pb-5">
 							{allEventItems.length === 0 ? (
-								<div className="py-10 text-center text-sm text-purple-300/50">
+								<div className="py-6 text-center text-sm text-purple-300/50">
 									No pending events. You'll appear here once an organiser invites you.
 								</div>
 							) : (
@@ -640,6 +647,34 @@ export function OnboardingFlowModal({
 									</div>
 								</>
 							)}
+
+							{/* ── Or: generate a shareable private link ── */}
+							<div className="flex items-center gap-3 my-5">
+								<div className="flex-1 h-px bg-purple-500/15" />
+								<span className="text-[10px] font-bold text-purple-400/50 tracking-widest uppercase">Or</span>
+								<div className="flex-1 h-px bg-purple-500/15" />
+							</div>
+							<button
+								onClick={() => {
+									onDismiss();
+									onCreatePrivateLink?.(initialShowId);
+								}}
+								disabled={shows.length === 0}
+								className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-purple-500/15 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all text-left group disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:border-purple-500/15"
+							>
+								<div className="w-10 h-10 rounded-xl bg-pink-500/15 flex items-center justify-center shrink-0">
+									<Link2 className="h-5 w-5 text-pink-400" />
+								</div>
+								<div className="flex-1 min-w-0">
+									<p className="font-semibold text-white text-sm">Create a private link</p>
+									<p className="text-xs text-purple-200/50 mt-0.5">
+										{shows.length === 0
+											? "Create a show first to generate a link"
+											: "Generate a shareable link for anyone"}
+									</p>
+								</div>
+								<ChevronRight className="h-4 w-4 text-white/30 group-hover:text-white/60 shrink-0 transition-colors" />
+							</button>
 						</div>
 					</div>
 				)}
