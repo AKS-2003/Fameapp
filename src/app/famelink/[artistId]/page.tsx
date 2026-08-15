@@ -1515,14 +1515,6 @@ function FameLinkDashboardContent() {
 
 	const handleUpdateShareLink = async () => {
 		if (!editLinkData) return;
-		if (!editLinkData.organizerName.trim()) {
-			toast({
-				title: "Error",
-				description: "Organizer name is required",
-				variant: "destructive",
-			});
-			return;
-		}
 		if (!editLinkData.eventDate) {
 			toast({
 				title: "Error",
@@ -3512,7 +3504,7 @@ function FameLinkDashboardContent() {
 											<thead>
 												<tr className="border-b border-purple-500/20">
 													<th className="text-left py-3 px-5 text-xs font-medium text-purple-300/40 uppercase tracking-wider">
-														Organizer
+														Label
 													</th>
 													<th className="text-left py-3 px-5 text-xs font-medium text-purple-300/40 uppercase tracking-wider">
 														Show
@@ -3537,20 +3529,11 @@ function FameLinkDashboardContent() {
 															key={link.id}
 															className="border-b border-purple-500/20 hover:bg-white/2 transition-colors duration-150"
 														>
-															<td className="py-3.5 px-5">
-																<div className="text-white font-medium text-sm">
-																	{link.organizerName}
-																</div>
-																{link.organizerEmail && (
-																	<div className="text-purple-300/30 text-xs mt-0.5">
-																		{
-																			link.organizerEmail
-																		}
-																	</div>
-																)}
+															<td className="py-3.5 px-5 text-white text-sm">
+																{link.label || <span className="text-purple-300/30">—</span>}
 															</td>
 															<td className="py-3.5 px-5 text-purple-300/60 text-sm">
-																{link.showName}
+																{link.showName || <span className="text-purple-300/30">—</span>}
 															</td>
 															<td className="py-3.5 px-5 text-purple-200/50 text-sm">
 																{link.eventDate
@@ -3840,7 +3823,7 @@ function FameLinkDashboardContent() {
 								<div className="space-y-2">
 									<Label className="text-white font-medium text-sm">
 										Organizer name{" "}
-										<span className="text-pink-400">*</span>
+										<span className="text-purple-300/40">(optional)</span>
 									</Label>
 									<Input
 										value={editLinkData.organizerName}
@@ -3975,7 +3958,6 @@ function FameLinkDashboardContent() {
 										onClick={handleUpdateShareLink}
 										disabled={
 											editingSaving ||
-											!editLinkData.organizerName.trim() ||
 											!editLinkData.eventDate
 										}
 										className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl gap-2 shadow-lg shadow-purple-500/20 transition-all duration-300 disabled:opacity-40 disabled:shadow-none"
