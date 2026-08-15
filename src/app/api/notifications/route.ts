@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAnySession } from "@/lib/session";
+import { getArtistSession } from "@/lib/session";
 import {
 	getArtistNotifications,
 	updateArtistNotification,
@@ -8,7 +8,7 @@ import {
 // GET /api/notifications - Get notifications for current artist
 export async function GET(request: NextRequest) {
 	try {
-		const session = await getAnySession();
+		const session = await getArtistSession();
 		if (!session?.userId) {
 			return NextResponse.json(
 				{
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 // PUT /api/notifications - Mark notifications as read
 export async function PUT(request: NextRequest) {
 	try {
-		const session = await getAnySession();
+		const session = await getArtistSession();
 		if (!session?.userId) {
 			return NextResponse.json(
 				{
