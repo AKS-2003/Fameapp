@@ -1,3 +1,4 @@
+import { withArtistNotify } from "@/lib/notify-artist";
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistSession } from "@/lib/session";
 
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  *
  * Uses MongoDB exclusively (no GCS).
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+async function POST_handler(request: NextRequest, { params }: RouteParams) {
 	try {
 		const session = await getArtistSession();
 		if (!session?.userId) {
@@ -464,3 +465,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		);
 	}
 }
+
+const eventIdOf = async ({ params }: { params: any }) => ({
+	eventId: (await Promise.resolve(params)).eventId as string,
+});
+export const POST = withArtistNotify(POST_handler, eventIdOf);

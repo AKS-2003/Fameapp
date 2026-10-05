@@ -1262,6 +1262,14 @@ export default function ArtistDashboard() {
 					}
 				});
 
+				// Stage manager changed this artist's data (e.g. performances) -> refresh live
+				wsManager.on("artist_data_changed", (data: any) => {
+					if (!data.artistId || data.artistId === artistId) {
+						fetchArtistProfile(true);
+						setRefreshTrigger((prev) => prev + 1);
+					}
+				});
+
 				// Listen for artist info updates (force logout)
 				wsManager.on("artist_info_updated", (data: any) => {
 					console.log(
@@ -1444,6 +1452,7 @@ export default function ArtistDashboard() {
 				wsManager.off("new_personal_message");
 				wsManager.off("cue_updated");
 				wsManager.off("artist_info_updated");
+				wsManager.off("artist_data_changed");
 				wsManager.off("artist_color_updated");
 				wsManager.off("timing-settings-updated");
 				wsManager.off("rehearsal_updated");
@@ -1458,9 +1467,9 @@ export default function ArtistDashboard() {
 		};
 	}, [profile?.eventId, artistId, router]);
 
-	const fetchArtistProfile = async () => {
+	const fetchArtistProfile = async (silent = false) => {
 		try {
-			setLoading(true);
+			if (!silent) setLoading(true);
 			setError(null);
 
 			const response = await fetch(`/api/artists/${artistId}`);
@@ -1673,7 +1682,7 @@ export default function ArtistDashboard() {
 							<ArrowLeft className="h-4 w-4 mr-2" />
 							Back to Home
 						</Button>
-						<Button variant="outline" onClick={fetchArtistProfile}>
+						<Button variant="outline" onClick={() => fetchArtistProfile()}>
 							Try Again
 						</Button>
 					</div>

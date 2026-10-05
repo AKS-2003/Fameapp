@@ -1,3 +1,4 @@
+import { withArtistNotify } from "@/lib/notify-artist";
 import { NextRequest, NextResponse } from "next/server";
 import { ContractService } from "@/lib/contract-service";
 import { connectToDatabase } from "@/database/mongodb";
@@ -50,7 +51,7 @@ export async function GET(
 }
 
 // POST /api/contracts/[eventId] — Add a new artist
-export async function POST(
+async function POST_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string } }
 ) {
@@ -82,7 +83,7 @@ export async function POST(
 }
 
 // PUT /api/contracts/[eventId] — Update an artist
-export async function PUT(
+async function PUT_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string } }
 ) {
@@ -178,7 +179,7 @@ export async function PUT(
 }
 
 // DELETE /api/contracts/[eventId] — Delete an artist from this event
-export async function DELETE(
+async function DELETE_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string } }
 ) {
@@ -228,3 +229,10 @@ export async function DELETE(
 		);
 	}
 }
+
+const eventIdOf = async ({ params }: { params: any }) => ({
+	eventId: (await Promise.resolve(params)).eventId as string,
+});
+export const POST = withArtistNotify(POST_handler, eventIdOf);
+export const PUT = withArtistNotify(PUT_handler, eventIdOf);
+export const DELETE = withArtistNotify(DELETE_handler, eventIdOf);

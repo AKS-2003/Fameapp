@@ -13,6 +13,7 @@ import {
 } from "@/lib/data-access";
 import { connectToDatabase } from "@/database/mongodb";
 import { EventArtistModel } from "@/database/models/FameLinkModels";
+import { withArtistNotify } from "@/lib/notify-artist";
 import { ContractService } from "@/lib/contract-service";
 import { sendPerformanceDateAssignedEmail } from "@/lib/email-service";
 
@@ -194,7 +195,7 @@ export async function GET(
 	}
 }
 
-export async function PUT(
+async function PUT_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string; artistId: string } },
 ) {
@@ -343,7 +344,7 @@ export async function PUT(
 	}
 }
 
-export async function PATCH(
+async function PATCH_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string; artistId: string } },
 ) {
@@ -1201,7 +1202,7 @@ export async function PATCH(
 	}
 }
 
-export async function DELETE(
+async function DELETE_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string; artistId: string } },
 ) {
@@ -1307,3 +1308,10 @@ export async function DELETE(
 		);
 	}
 }
+
+type ArtistRouteCtx = { params: { eventId: string; artistId: string } };
+const artistIds = async ({ params }: ArtistRouteCtx) =>
+	Promise.resolve(params);
+export const PUT = withArtistNotify(PUT_handler, artistIds);
+export const PATCH = withArtistNotify(PATCH_handler, artistIds);
+export const DELETE = withArtistNotify(DELETE_handler, artistIds);

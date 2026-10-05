@@ -1034,6 +1034,22 @@ function FameLinkDashboardContent() {
 		}
 	}, [eventRequests, fetchPersonalMessagesForRequests]);
 
+	// ── Resync when the tab regains focus (socket push handles the rest) ──
+	useEffect(() => {
+		if (!artistId) return;
+		const refresh = () => {
+			if (document.visibilityState === "hidden") return;
+			fetchEventRequests();
+			fetchEventParticipations();
+		};
+		document.addEventListener("visibilitychange", refresh);
+		window.addEventListener("focus", refresh);
+		return () => {
+			document.removeEventListener("visibilitychange", refresh);
+			window.removeEventListener("focus", refresh);
+		};
+	}, [artistId, fetchEventRequests, fetchEventParticipations]);
+
 	// ── WebSocket for real-time notifications ───────────────────
 	useEffect(() => {
 		if (!artistId) return;
@@ -1062,6 +1078,10 @@ function FameLinkDashboardContent() {
 						role: "artist",
 						eventId: "",
 					});
+					// (Re)join event rooms and resync after any (re)connect
+					fetchEventRequests();
+					fetchEventParticipations();
+					(window as any).__fameLinkJoinRooms?.();
 				});
 				// Store socket reference for joining rooms later
 				(window as any).__fameLinkSocket = socket;
@@ -1073,6 +1093,12 @@ function FameLinkDashboardContent() {
 							description:
 								"You've received a new event invitation from a stage manager.",
 						});
+					}
+				});
+				socket.on("artist_data_changed", () => {
+					if (mounted) {
+						fetchEventRequests();
+						fetchEventParticipations();
 					}
 				});
 				socket.on("participation_status_changed", (data: any) => {
@@ -1131,18 +1157,22 @@ function FameLinkDashboardContent() {
 
 	// ── Join WebSocket event rooms when requests/participations load ──
 	useEffect(() => {
-		const socket = (window as any).__fameLinkSocket;
-		if (!socket || !socket.connected) return;
-		const eventIds = new Set<string>();
-		for (const req of eventRequests) {
-			if (req.eventId) eventIds.add(req.eventId);
-		}
-		for (const p of eventParticipations) {
-			if (p.eventId) eventIds.add(p.eventId);
-		}
-		for (const eid of eventIds) {
-			socket.emit("join_event_room", { eventId: eid });
-		}
+		const join = () => {
+			const socket = (window as any).__fameLinkSocket;
+			if (!socket || !socket.connected) return;
+			const eventIds = new Set<string>();
+			for (const req of eventRequests) {
+				if (req.eventId) eventIds.add(req.eventId);
+			}
+			for (const p of eventParticipations) {
+				if (p.eventId) eventIds.add(p.eventId);
+			}
+			for (const eid of eventIds) {
+				socket.emit("join_event_room", { eventId: eid });
+			}
+		};
+		(window as any).__fameLinkJoinRooms = join;
+		join();
 	}, [eventRequests, eventParticipations]);
 
 	// ── Action handlers (unchanged logic) ───────────────────────

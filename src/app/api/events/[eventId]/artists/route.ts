@@ -1,3 +1,4 @@
+import { withArtistNotify } from "@/lib/notify-artist";
 import { NextRequest, NextResponse } from "next/server";
 import { APIResponse } from "@/types";
 import { sendArtistVerificationEmail, sendArtistCredentialsEmail } from "@/lib/email-service";
@@ -360,7 +361,7 @@ export async function GET(
 	}
 }
 
-export async function POST(
+async function POST_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string } },
 ) {
@@ -569,3 +570,10 @@ export async function POST(
 		);
 	}
 }
+
+export const POST = withArtistNotify(
+	POST_handler,
+	async ({ params }: { params: { eventId: string } }) => ({
+		eventId: (await Promise.resolve(params)).eventId,
+	}),
+);

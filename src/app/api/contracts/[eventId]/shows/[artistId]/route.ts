@@ -1,3 +1,4 @@
+import { withArtistNotify } from "@/lib/notify-artist";
 import { NextRequest, NextResponse } from "next/server";
 import { 
   getEventShowsByArtistAndEventArray, 
@@ -116,7 +117,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
+async function PUT_handler(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string; artistId: string }> }
 ) {
@@ -194,3 +195,8 @@ export async function PUT(
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
+
+export const PUT = withArtistNotify(
+	PUT_handler,
+	async ({ params }: { params: any }) => Promise.resolve(params),
+);
