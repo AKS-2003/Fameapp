@@ -36,27 +36,62 @@ export function ArtistCommunication({ artist, eventId, selectedShow }: ArtistCom
   const [newMessage, setNewMessage] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const mapDiscussion = (list: any[]): Message[] =>
+    (list || []).map((msg: any) => {
+      let category: MessageCategory = "general";
+      if (msg.isContract) category = "contract";
+      else if (msg.isShowManagement) category = "show";
+      else if (msg.isLogistics) category = "logistics";
+
+      return {
+        id: msg.id || Math.random().toString(36).substring(7),
+        author: msg.sender || "Unknown",
+        role: msg.sender === "Organiser" || msg.sender === "Stage Manager" ? msg.sender : "Artist",
+        category,
+        date: msg.time || msg.timestamp || "",
+        text: msg.message || "",
+      };
+    });
+
+  // Seed from the loaded artist, then always re-read from the server so history survives
+  // tab switches/refreshes and picks up the artist's replies.
+  const loadMessages = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/contracts/${eventId}?t=${Date.now()}`, { cache: "no-store" });
+      const data = await res.json();
+      if (data.success) {
+        const found = (data.artists || []).find(
+          (a: any) => a.id === artist.id || (a.famelinkArtistId && a.famelinkArtistId === artist.id),
+        );
+        const list = found?.agreement?.stageDiscussion || found?.agreement?.discussion;
+        if (list) setMessages(mapDiscussion(list));
+      }
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, artist.id]);
 
   React.useEffect(() => {
-    if (artist.agreement?.stageDiscussion) {
-      const realMessages = artist.agreement.stageDiscussion.map((msg: any) => {
-        let category: MessageCategory = "general";
-        if (msg.isContract) category = "contract";
-        else if (msg.isShowManagement) category = "show";
-        else if (msg.isLogistics) category = "logistics";
+    if (artist.agreement?.stageDiscussion) setMessages(mapDiscussion(artist.agreement.stageDiscussion));
+    loadMessages();
+  }, [artist.agreement?.stageDiscussion, loadMessages]);
 
-        return {
-          id: msg.id || Math.random().toString(36).substring(7),
-          author: msg.sender || "Unknown",
-          role: msg.sender === "Organiser" || msg.sender === "Stage Manager" ? msg.sender : "Artist",
-          category,
-          date: msg.time || msg.timestamp || "",
-          text: msg.message || "",
-        };
-      });
-      setMessages(realMessages);
-    }
-  }, [artist.agreement?.stageDiscussion]);
+  // Live: reload when the artist (or anyone) posts in this event's discussion
+  React.useEffect(() => {
+    const ws = (window as any).performanceOrderWsManager || (window as any).artistsPageWsManager;
+    const handler = (data: any) => {
+      if (!data || data.eventId === eventId) loadMessages();
+    };
+    window.addEventListener("new_stage_discussion_message", handler as any);
+    ws?.socket?.on?.("new_stage_discussion_message", handler);
+    return () => {
+      window.removeEventListener("new_stage_discussion_message", handler as any);
+      ws?.socket?.off?.("new_stage_discussion_message", handler);
+    };
+  }, [eventId, loadMessages]);
 
   const filterTabs: FilterTab[] = ["All", "Contract", "Logistics", "Show"];
 
@@ -94,7 +129,11 @@ export function ArtistCommunication({ artist, eventId, selectedShow }: ArtistCom
         })
       });
 
-      if (response.ok) {
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setSendError(err.error || "Message could not be sent. Please try again.");
+      } else if (response.ok) {
+        setSendError(null);
         setMessages((prev) => [
           ...prev,
           {
@@ -107,9 +146,11 @@ export function ArtistCommunication({ artist, eventId, selectedShow }: ArtistCom
           },
         ]);
         setNewMessage("");
+        loadMessages();
       }
     } catch (err) {
       console.error("Failed to send message:", err);
+      setSendError("Network error – message not sent.");
     } finally {
       setSending(false);
     }
@@ -192,6 +233,7 @@ export function ArtistCommunication({ artist, eventId, selectedShow }: ArtistCom
 
         {/* Message input */}
         <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-3">
+          {sendError && <p role="alert" className="mb-2 text-xs text-red-600">{sendError}</p>}
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5">
             <input
               type="text"

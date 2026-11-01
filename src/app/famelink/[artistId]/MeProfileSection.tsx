@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { uploadToGCS, validateImageFile } from "@/lib/upload-utils";
 import { FILE_LIMITS } from "@/lib/constants";
+import { validateMeProfile } from "@/lib/form-validation";
 import { QRCodeDialog } from "@/components/ui/qr-code-dialog";
 
 interface KnownForItem {
@@ -139,6 +140,11 @@ export function MeProfileSection({ artistId }: { artistId: string }) {
 	}, [artistId]);
 
 	async function handleSave() {
+		const problems = validateMeProfile(profile);
+		if (problems.length > 0) {
+			toast({ title: "Please fix the following", description: problems.join(". "), variant: "destructive" });
+			return;
+		}
 		setSaving(true);
 		try {
 			const res = await fetch("/api/me-profile", {

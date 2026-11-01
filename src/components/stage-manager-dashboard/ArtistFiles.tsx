@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { PanelLeftOpen } from "lucide-react";
+import { io } from "socket.io-client";
 import { ArtistSidebar } from "./artist-files/ArtistSidebar";
 import { ArtistHeader } from "./artist-files/ArtistHeader";
 import { ArtistTabs } from "./artist-files/ArtistTabs";
@@ -392,6 +393,46 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
       .finally(() => setLoading(false));
   }, [providedEventId]);
 
+  // Live updates: when the artist signs, replies, submits logistics etc., reload the artist
+  // data in place (keeps the current selection and tab) instead of needing a page refresh.
+  const selectedArtistIdRef = React.useRef<string | null>(null);
+  selectedArtistIdRef.current = selectedArtist?.id ?? null;
+  const refreshRef = React.useRef<(id: string) => Promise<void>>(async () => {});
+  useEffect(() => {
+    if (!providedEventId) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const socket = io(undefined, { path: "/socket.io", transports: ["polling", "websocket"] });
+    socket.on("connect", () => {
+      socket.emit("authenticate", { userId: "stage-manager-artist-files", role: "stage_manager", eventId: providedEventId });
+      socket.emit("join_event_room", { eventId: providedEventId });
+    });
+    const onChange = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const id = selectedArtistIdRef.current;
+        if (id) refreshRef.current(id);
+      }, 600);
+    };
+    const events = [
+      "artist_data_changed",
+      "contract_artist_updated",
+      "contract_status_changed",
+      "contract_action",
+      "contract_message_new",
+      "contract_payment_updated",
+      "new_stage_discussion_message",
+      "logistics_updated",
+      "famelink_show_submitted",
+      "booking_stage_updated",
+      "booking_signature_submitted",
+    ];
+    events.forEach((e) => socket.on(e, onChange));
+    return () => {
+      if (timer) clearTimeout(timer);
+      socket.disconnect();
+    };
+  }, [providedEventId]);
+
   // Delete an artist from this event
   const handleDeleteArtist = async (artist: Artist) => {
     if (!providedEventId) return;
@@ -437,6 +478,7 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
       console.error("Error refreshing artist data:", err);
     }
   };
+  refreshRef.current = refreshArtistData;
 
   if (loading) {
     return (

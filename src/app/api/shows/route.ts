@@ -7,6 +7,7 @@
  * Requirements: 3.3, 3.5, 3.7, 3.8, 11.3
  */
 
+import { validateShowPayload } from "@/lib/form-validation";
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistSession } from "@/lib/session";
 
@@ -186,6 +187,14 @@ export async function POST(request: NextRequest) {
 						message: "Show name is required",
 					},
 				},
+				{ status: 400 },
+			);
+		}
+
+		const validationMessage = validateShowPayload(body);
+		if (validationMessage) {
+			return NextResponse.json(
+				{ success: false, error: { code: "SHOW_VALIDATION", message: validationMessage } },
 				{ status: 400 },
 			);
 		}

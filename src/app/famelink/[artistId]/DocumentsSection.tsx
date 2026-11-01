@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { checkTextFields } from "@/lib/form-validation";
 import {
 	Upload,
 	FileText,
@@ -14,7 +15,8 @@ import {
 	Save,
 	X,
 	Loader2,
-	Trash2
+	Trash2,
+	Eye
 } from "lucide-react";
 
 interface DocumentFile {
@@ -98,12 +100,31 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 	};
 
 	const saveContractDetails = async () => {
+		const c = contractDetails;
+		const detailErrors = [
+			...checkTextFields([
+				{ label: "Legal name", value: c.legalName },
+				{ label: "Company", value: c.company },
+				{ label: "Address", value: c.address },
+				{ label: "Bank", value: c.bank },
+			]),
+		];
+		if (c.taxId && !/^[A-Za-z0-9][A-Za-z0-9\-\/ ]{3,24}$/.test(c.taxId.trim())) {
+			detailErrors.push("Tax ID must be 4-25 characters (letters, digits, - or /)");
+		}
+		if (c.swift && !/^[A-Za-z]{6}[A-Za-z0-9]{2}([A-Za-z0-9]{3})?$/.test(c.swift.replace(/\s/g, ""))) {
+			detailErrors.push("SWIFT/BIC must be 8 or 11 characters, e.g. DEUTDEFF or DEUTDEFF500");
+		}
+		if (detailErrors.length > 0) {
+			toast({ title: "Please fix the following", description: detailErrors.join(". "), variant: "destructive" });
+			return;
+		}
 		setIsSavingContract(true);
 		try {
 			const res = await fetch(`/api/artists/${artistId}/documents`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ contractDetails })
+				body: JSON.stringify({ contractDetails: { ...contractDetails, swift: (contractDetails.swift || "").replace(/\s/g, "").toUpperCase() } })
 			});
 			if (!res.ok) throw new Error("Failed to save");
 			toast({ title: "Saved", description: "Contract details updated." });
@@ -290,6 +311,14 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 										</div>
 									</div>
 									<div className="flex items-center gap-2 shrink-0 ml-4">
+										<Button
+											variant="ghost"
+											onClick={() => window.open(file.url, "_blank", "noopener,noreferrer")}
+											className="h-8 text-sm text-purple-200 hover:text-white hover:bg-white/10 gap-1.5 px-3 rounded-lg"
+										>
+											<Eye className="h-4 w-4" />
+											<span className="hidden sm:inline">View</span>
+										</Button>
 										<Button
 											variant="ghost"
 											onClick={() => downloadFile(file)}

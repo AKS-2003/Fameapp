@@ -268,7 +268,8 @@ export class ContractService {
 	): Promise<boolean> {
 		await connectToDatabase();
 		const artists = await this.getArtists(eventId);
-		const index = artists.findIndex((a: any) => a.id === artistId);
+		// Match either the event-artist id or the FameLink account id
+		const index = artists.findIndex((a: any) => a.id === artistId || a.famelinkArtistId === artistId);
 		
 		if (index === -1) return false;
 		

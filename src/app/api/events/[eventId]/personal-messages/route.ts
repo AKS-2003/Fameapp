@@ -6,6 +6,27 @@ import { getEventData, saveEventData } from "@/lib/data-access";
 const STORAGE_KEY = "personal-messages";
 
 /**
+ * An artist can be referred to by two ids: the event-artist id (used by the stage manager UI)
+ * and the FameLink account id (used by the artist UI). Resolve every id for the same person so
+ * messages sent from either side are found by the other.
+ */
+async function getAliasIds(eventId: string, artistId: string): Promise<string[]> {
+	const ids = new Set<string>([artistId]);
+	try {
+		const artists = await EventDataService.getArtists(eventId);
+		for (const a of artists as any[]) {
+			if (a.id === artistId || a.famelinkArtistId === artistId) {
+				if (a.id) ids.add(a.id);
+				if (a.famelinkArtistId) ids.add(a.famelinkArtistId);
+			}
+		}
+	} catch {
+		/* fall back to the single id */
+	}
+	return Array.from(ids);
+}
+
+/**
  * GET /api/events/[eventId]/personal-messages
  * Get personal messages for a specific artist from MongoDB
  */
@@ -31,15 +52,16 @@ export async function GET(
 		}
 
 		if (countOnly && !artistId) {
-			const unreadCounts = (personalData.messages || []).reduce(
-				(acc: Record<string, number>, msg: PersonalMessage) => {
-					if (msg.senderRole === "artist" && !msg.readByStageManager) {
-						acc[msg.artistId] = (acc[msg.artistId] || 0) + 1;
+			const unreadCounts: Record<string, number> = {};
+			const aliasCache: Record<string, string[]> = {};
+			for (const msg of (personalData.messages || []) as PersonalMessage[]) {
+				if (msg.senderRole === "artist" && !msg.readByStageManager) {
+					aliasCache[msg.artistId] ||= await getAliasIds(eventId, msg.artistId);
+					for (const id of aliasCache[msg.artistId]) {
+						unreadCounts[id] = (unreadCounts[id] || 0) + 1;
 					}
-					return acc;
-				},
-				{},
-			);
+				}
+			}
 
 			return NextResponse.json({ success: true, data: { messages: [], unreadCounts } });
 		}
@@ -48,9 +70,10 @@ export async function GET(
 			return NextResponse.json({ success: false, error: "artistId is required" }, { status: 400 });
 		}
 
-		// Filter messages for this specific artist
+		// Filter messages for this specific artist (matching any of their ids)
+		const aliasIds = await getAliasIds(eventId, artistId);
 		const artistMessages = (personalData.messages || []).filter(
-			(msg: PersonalMessage) => msg.artistId === artistId,
+			(msg: PersonalMessage) => aliasIds.includes(msg.artistId),
 		);
 
 		// Mark messages as read based on viewer
@@ -132,10 +155,18 @@ export async function POST(
 
 		// Broadcast WebSocket event
 		if (global.io) {
-			global.io.to(`event_${eventId}`).emit("new_personal_message", {
-				eventId, artistId, artistName, senderRole: role, message: newMessage,
-				timestamp: new Date().toISOString(),
-			});
+			// Emit once per id the artist is known by, so every client that filters on its own id receives it
+			const aliasIds = await getAliasIds(eventId, artistId);
+			for (const id of aliasIds) {
+				global.io.to(`event_${eventId}`).emit("new_personal_message", {
+					eventId, artistId: id, artistName, senderRole: role, message: newMessage,
+					timestamp: new Date().toISOString(),
+				});
+				global.io.to(`user_${id}`).emit("new_personal_message", {
+					eventId, artistId: id, artistName, senderRole: role, message: newMessage,
+					timestamp: new Date().toISOString(),
+				});
+			}
 		}
 
 		// Send email notifications
@@ -155,7 +186,7 @@ export async function POST(
 			}
 		} else {
 			const artists = await EventDataService.getArtists(eventId);
-			const artist = artists.find((a: any) => a.id === artistId);
+			const artist = artists.find((a: any) => a.id === artistId || a.famelinkArtistId === artistId);
 
 			if (artist?.email) {
 				try {

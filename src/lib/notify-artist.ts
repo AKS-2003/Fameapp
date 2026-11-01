@@ -30,3 +30,27 @@ export function withArtistNotify<A extends any[]>(
 		return res;
 	};
 }
+
+/** Like withArtistNotify, but takes the ids from the JSON request body (read from a clone). */
+export function withBodyNotify(
+	handler: (req: NextRequest, ...args: any[]) => Promise<NextResponse | Response>,
+	pick: (body: any) => { eventId?: string; artistId?: string },
+) {
+	return async (req: NextRequest, ...args: any[]) => {
+		let ids: { eventId?: string; artistId?: string } = {};
+		try {
+			ids = pick(await req.clone().json());
+		} catch {
+			/* body not JSON, nothing to notify */
+		}
+		const res = await handler(req, ...args);
+		if (res.ok && (ids.eventId || ids.artistId)) {
+			try {
+				notifyArtistDataChanged(ids.eventId, ids.artistId);
+			} catch {
+				/* never break the request over a notification */
+			}
+		}
+		return res;
+	};
+}

@@ -45,6 +45,21 @@ const sectionStatusColors: Record<SectionItemStatus, string> = {
 export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allShows }: ArtistAgreementProps) {
   const [signatureName, setSignatureName] = useState("");
   const [signing, setSigning] = useState(false);
+  const [accountName, setAccountName] = useState("");
+  const [signError, setSignError] = useState<string | null>(null);
+
+  // The organiser's signature must match the logged-in stage manager's name
+  React.useEffect(() => {
+    fetch("/api/stage-manager/profile")
+      .then((r) => r.json())
+      .then((d) => {
+        const u = d?.data?.user;
+        if (d?.success && u) {
+          setAccountName(`${u.profile?.firstName || ""} ${u.profile?.lastName || ""}`.trim());
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [openItems, setOpenItems] = useState<string[]>([]);
   const [signaturesStatus, setSignaturesStatus] = useState<SectionItemStatus>(
     (artist.sectionStatuses?.["signatures"] as SectionItemStatus) ?? "required"
@@ -81,7 +96,17 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
   const signedCount = (isOrganiserSigned ? 1 : 0) + (isArtistSigned ? 1 : 0);
 
   const handleSignContract = async () => {
-    if (!signatureName.trim()) return;
+    const typed = signatureName.trim().replace(/\s+/g, " ");
+    if (!typed) return;
+    if (!/^[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.\- ]{2,}$/.test(typed) || !typed.includes(" ")) {
+      setSignError("Enter your full legal name (first and last name, letters only).");
+      return;
+    }
+    if (accountName && typed.toLowerCase() !== accountName.replace(/\s+/g, " ").toLowerCase()) {
+      setSignError(`The signature must match your account name: ${accountName}.`);
+      return;
+    }
+    setSignError(null);
     setSigning(true);
     try {
       // Only mark the contract as fully "confirmed" once the ARTIST has also signed.
@@ -282,10 +307,12 @@ export function ArtistAgreement({ artist, eventId, onRefresh, selectedShow, allS
                       <input 
                         type="text" 
                         value={signatureName}
-                        onChange={(e) => setSignatureName(e.target.value)}
-                        placeholder="e.g. Elena Rodriguez" 
-                        className="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm mb-4"
+                        onChange={(e) => { setSignatureName(e.target.value); setSignError(null); }}
+                        placeholder={accountName || "e.g. Elena Rodriguez"} 
+                        className="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm mb-2"
                       />
+                      {signError && <p role="alert" className="mb-3 text-xs text-red-600">{signError}</p>}
+                      <div className="mb-2" />
                       <Button 
                         onClick={handleSignContract}
                         disabled={signing || !signatureName.trim()}

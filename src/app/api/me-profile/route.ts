@@ -1,3 +1,4 @@
+import { validateMeProfile } from "@/lib/form-validation";
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistSession } from "@/lib/session";
 import {
@@ -56,6 +57,14 @@ export async function PUT(request: NextRequest) {
 			photos,
 			socialMedia,
 		} = body;
+
+		const problems = validateMeProfile(body);
+		if (problems.length > 0) {
+			return NextResponse.json(
+				{ success: false, error: { message: problems.join(". ") } },
+				{ status: 400 },
+			);
+		}
 
 		const existing = await getMeProfileByArtist(session.userId);
 

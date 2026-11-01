@@ -1,8 +1,9 @@
+import { withArtistNotify, withBodyNotify } from "@/lib/notify-artist";
 import { NextRequest, NextResponse } from "next/server";
 import { ContractService } from "@/lib/contract-service";
 
 // PUT /api/contracts/[eventId]/bookings/stages — Update a booking stage
-export async function PUT(
+async function PUT_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string } },
 ) {
@@ -65,7 +66,7 @@ export async function PUT(
 }
 
 // POST /api/contracts/[eventId]/bookings/stages — Add negotiation message or sign
-export async function POST(
+async function POST_handler(
 	request: NextRequest,
 	{ params }: { params: { eventId: string } },
 ) {
@@ -207,3 +208,7 @@ export async function POST(
 		);
 	}
 }
+
+const eventIdOf = async ({ params }: { params: any }) => ({ eventId: (await Promise.resolve(params)).eventId as string });
+export const PUT = withArtistNotify(PUT_handler, eventIdOf);
+export const POST = withArtistNotify(POST_handler, eventIdOf);

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { checkTextFields } from "@/lib/form-validation";
 import { isValidPhone, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import { IMAGE_MAX_BYTES } from "@/lib/upload-utils";
 import { Textarea } from "@/components/ui/textarea";
@@ -187,13 +188,11 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
 
-	/** Passport/visa copies: JPG, PNG, WebP or PDF, max 10MB. Returns an error message or null. */
+	/** Passport/visa copies must be PDF, max 10MB. Returns an error message or null. */
 	const validateDocumentFile = (file: File): string | null => {
 		const ext = file.name.split(".").pop()?.toLowerCase() || "";
-		const okTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-		const okExt = ["jpg", "jpeg", "png", "webp", "pdf"];
-		if (!okTypes.includes(file.type) || !okExt.includes(ext)) {
-			return "Unsupported file type. Please upload a JPG, PNG, WebP or PDF file.";
+		if (file.type !== "application/pdf" || ext !== "pdf") {
+			return "Only PDF files are accepted. Please upload your document as a PDF.";
 		}
 		if (file.size > IMAGE_MAX_BYTES) {
 			return `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 10 MB.`;
@@ -291,6 +290,28 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 	const saveTraveler = async () => {
 		if (!formData.fullPassportName.trim()) {
 			toast({ title: "Name required", description: "Please enter the full passport name.", variant: "destructive" });
+			return;
+		}
+		const travelerErrors = [
+			...checkTextFields([
+				{ label: "Full passport name", value: formData.fullPassportName },
+				{ label: "Nationality", value: formData.nationality },
+				{ label: "Departure city", value: formData.homeDepartureCity },
+				{ label: "Preferred airport", value: formData.preferredAirport },
+				{ label: "Emergency contact", value: formData.emergencyContact },
+			]),
+		];
+		if (formData.passportNumber && !/^[A-Za-z0-9]{5,15}$/.test(formData.passportNumber.trim())) {
+			travelerErrors.push("Passport number must be 5-15 letters/digits with no spaces or symbols");
+		}
+		const today = new Date().toISOString().slice(0, 10);
+		if (formData.dateOfBirth && formData.dateOfBirth > today) travelerErrors.push("Date of birth cannot be in the future");
+		if (formData.passportExpiry && formData.passportExpiry < today) travelerErrors.push("Passport expiry date cannot be in the past");
+		if (formData.dateOfBirth && formData.passportExpiry && formData.passportExpiry <= formData.dateOfBirth) {
+			travelerErrors.push("Passport expiry must be after the date of birth");
+		}
+		if (travelerErrors.length > 0) {
+			toast({ title: "Please fix the following", description: travelerErrors.join(". "), variant: "destructive" });
 			return;
 		}
 		let newTravelers;
@@ -739,7 +760,7 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 											type="file"
 											id="passportUpload"
 											className="hidden"
-											accept="image/*,.pdf"
+											accept="application/pdf,.pdf"
 											onChange={handleFileUpload}
 										/>
 										<label
@@ -751,7 +772,7 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 											) : (
 												<Upload className="h-4 w-4 text-purple-400" />
 											)}
-											Upload Passport Copy
+											Upload Passport Copy (PDF)
 										</label>
 										
 										{formData.passportCopyUrl && (
@@ -776,7 +797,7 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 											type="file"
 											id="visaUpload"
 											className="hidden"
-											accept="image/*,.pdf"
+											accept="application/pdf,.pdf"
 											onChange={handleVisaUpload}
 										/>
 										<label

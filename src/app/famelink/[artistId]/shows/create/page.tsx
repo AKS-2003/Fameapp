@@ -1,5 +1,7 @@
 "use client";
 
+import { checkTextFields, checkUrlFields } from "@/lib/form-validation";
+import { isValidEmail, isValidPhone } from "@/lib/phone-validation";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -350,10 +352,10 @@ export default function CreateShowPage() {
 				description: `Music uploaded. Duration: ${duration} seconds.`,
 				variant: "success",
 			});
-		} catch {
+		} catch (err) {
 			toast({
 				title: "Upload failed",
-				description: "Failed to upload music file",
+				description: err instanceof Error ? err.message : "Failed to upload music file",
 				variant: "destructive",
 			});
 		} finally {
@@ -428,10 +430,10 @@ export default function CreateShowPage() {
 				description: "Rehearsal video uploaded",
 				variant: "success",
 			});
-		} catch {
+		} catch (err) {
 			toast({
 				title: "Upload failed",
-				description: "Failed to upload video",
+				description: err instanceof Error ? err.message : "Failed to upload video",
 				variant: "destructive",
 			});
 		} finally {
@@ -487,6 +489,35 @@ export default function CreateShowPage() {
 			});
 			return;
 		}
+
+		// Format validation: text fields need letters, links must be real URLs, phone/email well-formed
+		const formatErrors = [
+			...checkTextFields([
+				{ label: "Artist/Stage Name", value: formData.name },
+				{ label: "Personal Name", value: formData.real_name },
+				{ label: "Performance Style", value: formData.style },
+				{ label: "Managed By", value: formData.managed_by },
+			]),
+			...checkUrlFields([
+				{ label: "Instagram", value: formData.instagram_link },
+				{ label: "Facebook", value: formData.facebook_link },
+				{ label: "TikTok", value: formData.tiktok_link },
+				{ label: "YouTube", value: formData.youtube_link },
+				{ label: "Website", value: formData.website_link },
+				{ label: "Show link", value: formData.show_link },
+			]),
+		];
+		if (formData.email.trim() && !isValidEmail(formData.email)) formatErrors.push("Email must be a valid email address");
+		if (formData.phone.trim() && !isValidPhone(formData.phone)) formatErrors.push("WhatsApp number must include the country code, e.g. +971501234567");
+		if (formatErrors.length > 0) {
+			toast({
+				title: "Please fix the following",
+				description: formatErrors.join(". "),
+				variant: "destructive",
+			});
+			return;
+		}
+
 
 		setSaving(true);
 		try {

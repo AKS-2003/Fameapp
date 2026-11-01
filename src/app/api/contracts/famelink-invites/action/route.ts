@@ -1,8 +1,9 @@
+import { withArtistNotify, withBodyNotify } from "@/lib/notify-artist";
 import { NextRequest, NextResponse } from "next/server";
 import { ContractService } from "@/lib/contract-service";
 
 // POST /api/contracts/famelink-invites/action — Artist actions on contract invites
-export async function POST(request: NextRequest) {
+async function POST_handler(request: NextRequest) {
 	try {
 		const body = await request.json();
 		const { eventId, artistContractId, action, data } = body;
@@ -318,3 +319,5 @@ export async function POST(request: NextRequest) {
 		);
 	}
 }
+
+export const POST = withBodyNotify(POST_handler, (b) => ({ eventId: b.eventId, artistId: b.artistContractId }));

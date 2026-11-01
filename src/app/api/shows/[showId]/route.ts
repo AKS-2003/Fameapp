@@ -8,6 +8,7 @@
  * Requirements: 3.3, 3.5, 3.6, 3.7, 3.8, 11.3
  */
 
+import { validateShowPayload } from "@/lib/form-validation";
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistSession } from "@/lib/session";
 
@@ -207,6 +208,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 		// Parse request body
 		const body: Record<string, any> = await request.json();
+
+		const validationMessage = validateShowPayload(body, false);
+		if (validationMessage) {
+			return NextResponse.json(
+				{ success: false, error: { code: "SHOW_VALIDATION", message: validationMessage } },
+				{ status: 400 },
+			);
+		}
 
 		// Validate fields if provided
 		const errors: string[] = [];

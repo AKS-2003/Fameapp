@@ -433,10 +433,10 @@ export default function EditEventCopyPage() {
 				description: "Music file uploaded",
 				variant: "success",
 			});
-		} catch {
+		} catch (err) {
 			toast({
 				title: "Upload failed",
-				description: "Failed to upload music file",
+				description: err instanceof Error ? err.message : "Failed to upload music file",
 				variant: "destructive",
 			});
 		} finally {
@@ -511,10 +511,10 @@ export default function EditEventCopyPage() {
 				description: "Rehearsal video uploaded",
 				variant: "success",
 			});
-		} catch {
+		} catch (err) {
 			toast({
 				title: "Upload failed",
-				description: "Failed to upload video",
+				description: err instanceof Error ? err.message : "Failed to upload video",
 				variant: "destructive",
 			});
 		} finally {
