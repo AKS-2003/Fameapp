@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEventData, saveEventData } from "@/lib/data-access";
+import { EventDataService } from "@/lib/storage-service";
 import {
 	generateDefaultChecklist,
 	type EventChecklist,
@@ -29,6 +30,15 @@ export async function GET(
 		let checklist = await getEventData(eventId, key);
 
 		if (!checklist) {
+			// An unknown event id must not look like a valid (default) checklist, otherwise a
+			// bulk import from a mistyped id silently replaces the real checklist.
+			const event = await EventDataService.getEvent(eventId);
+			if (!event) {
+				return NextResponse.json(
+					{ success: false, error: "Event not found" },
+					{ status: 404 }
+				);
+			}
 			// Return default empty structure but don't persist yet
 			checklist = generateDefaultChecklist(eventId);
 		}

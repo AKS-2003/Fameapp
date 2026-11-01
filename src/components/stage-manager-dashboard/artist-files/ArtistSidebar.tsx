@@ -57,10 +57,26 @@ export function ArtistSidebar({
     }
   };
 
-  const filteredArtists = artists.filter(a => 
-    a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.realName.toLowerCase().includes(searchQuery.toLowerCase())
+  const [statusFilter, setStatusFilter] = React.useState("all");
+  const [typeFilter, setTypeFilter] = React.useState("all");
+
+  const statusOptions = React.useMemo(
+    () => Array.from(new Set(artists.map((a) => a.status).filter(Boolean))).sort(),
+    [artists],
   );
+  const typeOptions = React.useMemo(
+    () => Array.from(new Set(artists.map((a) => a.type).filter(Boolean))).sort(),
+    [artists],
+  );
+
+  const filteredArtists = artists.filter((a) => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      (a.name || "").toLowerCase().includes(q) || (a.realName || "").toLowerCase().includes(q);
+    const matchesStatus = statusFilter === "all" || a.status === statusFilter;
+    const matchesType = typeFilter === "all" || a.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
 
   const getImageUrl = (src: string) => {
     if (!src) return "";
@@ -107,12 +123,33 @@ export function ArtistSidebar({
         </div>
 
         <div className="flex gap-2">
-          <div className="flex flex-1 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600">
-            All Status ({filteredArtists.length}) <ChevronDown className="h-3 w-3" />
-          </div>
-          <div className="flex flex-1 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600">
-            All Types <ChevronDown className="h-3 w-3" />
-          </div>
+          {/* Real selects (the previous version was static text, so nothing could be chosen) */}
+          <select
+            aria-label="Filter by status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-fuchsia-500/20"
+          >
+            <option value="all">All Status ({artists.length})</option>
+            {statusOptions.map((st) => (
+              <option key={st} value={st}>
+                {st} ({artists.filter((a) => a.status === st).length})
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by type"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-fuchsia-500/20"
+          >
+            <option value="all">All Types</option>
+            {typeOptions.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

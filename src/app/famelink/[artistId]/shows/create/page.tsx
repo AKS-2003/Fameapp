@@ -1820,7 +1820,7 @@ export default function CreateShowPage() {
 											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 												<div className="space-y-2">
 													<Label>
-														Starting Position
+														Starting Position <span className="text-red-500">*</span>
 													</Label>
 													<Select
 														value={
@@ -1872,7 +1872,7 @@ export default function CreateShowPage() {
 												</div>
 												<div className="space-y-2">
 													<Label>
-														Ending Position
+														Ending Position <span className="text-red-500">*</span>
 													</Label>
 													<Select
 														value={

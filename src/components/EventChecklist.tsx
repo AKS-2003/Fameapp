@@ -70,6 +70,7 @@ export default function EventChecklistComponent({
 	const [showImportDialog, setShowImportDialog] = useState(false);
 	const [importEventId, setImportEventId] = useState("");
 	const [importLoading, setImportLoading] = useState(false);
+	const [importError, setImportError] = useState<string | null>(null);
 
 	const fetchChecklist = useCallback(async () => {
 		try {
@@ -153,44 +154,64 @@ export default function EventChecklistComponent({
 	};
 
 	const importChecklist = async () => {
-		if (!importEventId.trim()) return;
+		const sourceId = importEventId.trim();
+		if (!sourceId) return;
+		if (sourceId === eventId) {
+			setImportError("Enter the ID of a different event to copy from.");
+			return;
+		}
 		setImportLoading(true);
+		setImportError(null);
 		try {
-			const response = await fetch(`/api/events/${importEventId}/checklist`);
-			if (response.ok) {
-				const data = await response.json();
-				if (data.success && data.data) {
-					const imported = data.data as ChecklistData;
-					const now = new Date().toISOString();
-					const newChecklist: ChecklistData = {
-						eventId,
-						items: imported.items.map((item: ChecklistItem) => ({
-							...item,
-							id: `chk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-							status: "pending" as ChecklistStatus,
-							updatedAt: now,
-						})),
-						createdAt: now,
-						updatedAt: now,
-						version: (checklist?.version || 0) + 1,
-					};
-					const putResponse = await fetch(`/api/events/${eventId}/checklist`, {
-						method: "PUT",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ ...newChecklist, action: "import" }),
-					});
-					if (putResponse.ok) {
-						const putData = await putResponse.json();
-						if (putData.success) setChecklist(putData.data);
-					}
-				}
+			// Validate first: nothing about the current checklist is touched until the source is known to be good.
+			const response = await fetch(`/api/events/${encodeURIComponent(sourceId)}/checklist`);
+			if (response.status === 404) {
+				setImportError("No event found with that ID. Your checklist was not changed.");
+				return;
 			}
-		} catch (error) {
-			console.error("Import failed:", error);
-		} finally {
-			setImportLoading(false);
+			if (!response.ok) {
+				setImportError("Could not load that event's checklist. Your checklist was not changed.");
+				return;
+			}
+			const data = await response.json();
+			const imported = data?.success ? (data.data as ChecklistData) : null;
+			if (!imported || !Array.isArray(imported.items) || imported.items.length === 0) {
+				setImportError("That event has no checklist items to import. Your checklist was not changed.");
+				return;
+			}
+
+			const now = new Date().toISOString();
+			const newChecklist: ChecklistData = {
+				eventId,
+				items: imported.items.map((item: ChecklistItem) => ({
+					...item,
+					id: `chk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+					status: "pending" as ChecklistStatus,
+					updatedAt: now,
+				})),
+				createdAt: now,
+				updatedAt: now,
+				version: (checklist?.version || 0) + 1,
+			};
+			const putResponse = await fetch(`/api/events/${eventId}/checklist`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ ...newChecklist, action: "import" }),
+			});
+			const putData = putResponse.ok ? await putResponse.json() : null;
+			if (!putData?.success) {
+				setImportError("Import failed. Your checklist was not changed.");
+				return;
+			}
+			setChecklist(putData.data);
+			// Success: close the dialog
 			setShowImportDialog(false);
 			setImportEventId("");
+		} catch (error) {
+			console.error("Import failed:", error);
+			setImportError("Import failed. Your checklist was not changed.");
+		} finally {
+			setImportLoading(false);
 		}
 	};
 
@@ -572,13 +593,16 @@ export default function EventChecklistComponent({
 							</p>
 							<input
 								value={importEventId}
-								onChange={(e) => setImportEventId(e.target.value)}
+								onChange={(e) => { setImportEventId(e.target.value); setImportError(null); }}
 								placeholder="Enter Event ID..."
-								className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-300 outline-none mb-4"
+								className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-300 outline-none mb-2"
 								autoFocus
 							/>
-							<div className="flex justify-end gap-2">
-								<button onClick={() => { setShowImportDialog(false); setImportEventId(""); }} className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+							{importError && (
+								<p role="alert" className="text-sm text-red-600 mb-3">{importError}</p>
+							)}
+							<div className="flex justify-end gap-2 mt-2">
+								<button onClick={() => { setShowImportDialog(false); setImportEventId(""); setImportError(null); }} className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
 									Cancel
 								</button>
 								<button

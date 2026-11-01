@@ -1116,8 +1116,42 @@ export default function ArtistEditPage() {
 		});
 	};
 
+	// Snapshot of the form as first loaded, used to detect "Save" with nothing changed
+	const initialSnapshotRef = useRef<string | null>(null);
+	const currentSnapshot = () =>
+		JSON.stringify({
+			artistData,
+			musicTracks,
+			galleryFiles,
+			rehearsalVideo,
+			profileImage,
+			members,
+			tshirtSizes,
+		});
+	useEffect(() => {
+		if (!loading && profile && initialSnapshotRef.current === null) {
+			initialSnapshotRef.current = currentSnapshot();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [loading, profile]);
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+
+		// Nothing was edited: don't send an update, just tell the user and go back.
+		if (
+			initialSnapshotRef.current !== null &&
+			initialSnapshotRef.current === currentSnapshot()
+		) {
+			toast({
+				title: "No changes to save",
+				description: "You haven't changed anything on this profile.",
+			});
+			if (isFromStageManager && stageManagerEventId) {
+				router.push(`/stage-manager/events/${stageManagerEventId}/artists`);
+			}
+			return;
+		}
 
 		// Validate phone number format (optional field, but must be valid when filled)
 		if (artistData.phone && artistData.phone.trim() && !isValidPhone(artistData.phone)) {
