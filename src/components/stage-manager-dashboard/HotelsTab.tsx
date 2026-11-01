@@ -1,4 +1,5 @@
 "use client";
+import { isValidPhone, isValidEmail, sanitizePhoneInput, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, Plus, Pencil, Trash2, MapPin, Phone, Mail, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,8 @@ export default function HotelsTab({ eventId }: { eventId: string }) {
 
 	const handleSave = async () => {
 		if (!form.name.trim()) { setError("Hotel name is required"); return; }
+		if (form.phone && !isValidPhone(form.phone)) { setError(`Phone: ${PHONE_ERROR_MESSAGE}`); return; }
+		if (form.email && !isValidEmail(form.email)) { setError("Enter a valid email address"); return; }
 		setSaving(true); setError(null);
 		try {
 			const url = editingId ? `/api/events/${eventId}/hotels/${editingId}` : `/api/events/${eventId}/hotels`;
@@ -90,7 +93,7 @@ export default function HotelsTab({ eventId }: { eventId: string }) {
 						</div>
 						<div>
 							<label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">PHONE</label>
-							<input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+31 ..." className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400" />
+							<input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: sanitizePhoneInput(e.target.value) }))} placeholder="+31 ..." className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400" />
 						</div>
 						<div>
 							<label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">EMAIL</label>

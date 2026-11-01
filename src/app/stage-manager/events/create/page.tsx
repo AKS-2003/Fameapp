@@ -134,7 +134,21 @@ export default function CreateEventPage() {
 		reader.readAsDataURL(file);
 	};
 
+	const [submitError, setSubmitError] = useState<string | null>(null);
+
+	// Called when zod validation fails: tell the user and jump to the first problem
+	const onInvalid = (formErrors: Record<string, any>) => {
+		const first = Object.keys(formErrors)[0];
+		setSubmitError("Please fill in all required fields (marked with *) and fix the highlighted errors.");
+		if (first) {
+			const el = document.getElementById(first);
+			el?.scrollIntoView({ behavior: "smooth", block: "center" });
+			(el as HTMLElement | null)?.focus?.();
+		}
+	};
+
 	const onSubmit = async (data: EventFormData) => {
+		setSubmitError(null);
 		try {
 			setLoading(true);
 
@@ -186,10 +200,14 @@ export default function CreateEventPage() {
 			} else {
 				const errorResult = await response.json();
 				console.error("Failed to create event:", errorResult.error);
-				alert("Failed to create event. Please try again.");
+				setSubmitError(
+					(typeof errorResult.error === "string" ? errorResult.error : errorResult.error?.message) ||
+						"Failed to create event. Please try again.",
+				);
 			}
 		} catch (error) {
 			console.error("Error creating event:", error);
+			setSubmitError(error instanceof Error ? error.message : "Something went wrong while creating the event.");
 		} finally {
 			setLoading(false);
 		}
@@ -267,7 +285,7 @@ export default function CreateEventPage() {
 						</CardHeader>
 						<CardContent>
 							<form
-								onSubmit={handleSubmit(onSubmit)}
+								onSubmit={handleSubmit(onSubmit, onInvalid)}
 								className="space-y-6"
 							>
 								{/* Event Logo */}
@@ -433,18 +451,13 @@ export default function CreateEventPage() {
 																| undefined,
 														) => {
 															if (date) {
-																setValue(
-																	"startDate",
-																	date,
-																);
+																setValue("startDate", date, { shouldValidate: true, shouldDirty: true });
 																setShowStartCalendar(
 																	false,
 																);
 															}
 														}}
-														disabled={(
-															date: Date,
-														) => date < new Date()}
+														disabled={(date: Date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
 														className="rounded-md border-0 p-2 sm:p-3 min-w-[280px]"
 													/>
 												</div>
@@ -509,10 +522,7 @@ export default function CreateEventPage() {
 																| undefined,
 														) => {
 															if (date) {
-																setValue(
-																	"endDate",
-																	date,
-																);
+																setValue("endDate", date, { shouldValidate: true, shouldDirty: true });
 																setShowEndCalendar(
 																	false,
 																);
@@ -687,6 +697,12 @@ export default function CreateEventPage() {
 										/>
 									</div>
 								</div>
+
+								{submitError && (
+									<p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+										{submitError}
+									</p>
+								)}
 
 								{/* Action Buttons */}
 								<div className="flex flex-col sm:flex-row gap-4 pt-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { PanelLeftOpen } from "lucide-react";
 import { ArtistSidebar } from "./artist-files/ArtistSidebar";
 import { ArtistHeader } from "./artist-files/ArtistHeader";
 import { ArtistTabs } from "./artist-files/ArtistTabs";
@@ -300,6 +301,21 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
 
   // Select an artist and resolve its workflow in the SAME update, so ArtistHeader
   // never mounts with a stale workflow value from the previously-selected artist.
+  // Sidebar open/closed (persisted). On small screens it overlays the content instead of squeezing it.
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    const saved = localStorage.getItem("artistFilesSidebarOpen");
+    if (saved !== null) setSidebarOpen(saved === "1");
+    else if (window.innerWidth < 768) setSidebarOpen(false);
+  }, []);
+  const toggleSidebar = (open: boolean) => {
+    setSidebarOpen(open);
+    try { localStorage.setItem("artistFilesSidebarOpen", open ? "1" : "0"); } catch {}
+  };
+  const closeSidebarOnMobile = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) setSidebarOpen(false);
+  };
+
   const selectArtist = (a: Artist | null) => {
     setSelectedArtist(a);
     setArtistWorkflow(resolveArtistWorkflow(a));
@@ -443,20 +459,42 @@ export default function ArtistFiles({ providedEventId, eventData, onBack, initia
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-slate-100">
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar — always visible */}
-        <ArtistSidebar
-          artists={artists}
-          selectedArtist={creating ? null : selectedArtist}
-          onSelect={(a) => { selectArtist(a); setCreating(false); }}
-          onBack={onBack}
-          onAdd={() => { setCreating(true); selectArtist(null); }}
-          onDelete={handleDeleteArtist}
-          eventId={providedEventId}
-        />
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Sidebar — collapsible; overlays the content on small screens */}
+        {sidebarOpen && (
+          <>
+            <div
+              className="absolute inset-0 z-20 bg-black/30 md:hidden"
+              onClick={() => toggleSidebar(false)}
+            />
+            <ArtistSidebar
+              className="absolute inset-y-0 left-0 z-30 w-[85vw] max-w-[320px] shadow-xl md:static md:z-auto md:w-[320px] md:max-w-none md:shadow-none"
+              onCollapse={() => toggleSidebar(false)}
+              artists={artists}
+              selectedArtist={creating ? null : selectedArtist}
+              onSelect={(a) => { selectArtist(a); setCreating(false); closeSidebarOnMobile(); }}
+              onBack={onBack}
+              onAdd={() => { setCreating(true); selectArtist(null); closeSidebarOnMobile(); }}
+              onDelete={handleDeleteArtist}
+              eventId={providedEventId}
+            />
+          </>
+        )}
 
         {/* Main Content Area */}
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {!sidebarOpen && (
+            <div className="flex shrink-0 items-center border-b border-slate-200 bg-white px-3 py-2">
+              <button
+                type="button"
+                onClick={() => toggleSidebar(true)}
+                aria-label="Show artist pipeline"
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                <PanelLeftOpen className="h-4 w-4" /> Artist Pipeline
+              </button>
+            </div>
+          )}
           {creating ? (
             <CreateArtistFile
               defaultEventId={providedEventId}

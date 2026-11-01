@@ -1,5 +1,6 @@
 "use client";
 
+import { isValidPhone, isValidEmail, sanitizePhoneInput, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Plus, Save, Loader2, Search, CheckCircle2, KeyRound, Copy, Check } from "lucide-react";
 
@@ -104,6 +105,14 @@ export function CreateArtistFile({ onBack, onCreated, defaultEventId }: CreateAr
     }
     if (!form.email.trim()) {
       setError("Email is required.");
+      return;
+    }
+    if (!isValidEmail(form.email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (form.phone && !isValidPhone(form.phone)) {
+      setError(PHONE_ERROR_MESSAGE);
       return;
     }
     if (!selectedEventId) {
@@ -376,7 +385,7 @@ export function CreateArtistFile({ onBack, onCreated, defaultEventId }: CreateAr
                   <input
                     type="tel"
                     value={form.phone}
-                    onChange={(e) => set("phone", e.target.value)}
+                    onChange={(e) => set("phone", sanitizePhoneInput(e.target.value))}
                     placeholder="+1 234 567 890"
                     className={inputCls}
                   />

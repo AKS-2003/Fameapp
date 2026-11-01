@@ -1,5 +1,6 @@
 "use client";
 
+import { isValidPhone, isValidEmail, sanitizePhoneInput, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -85,7 +86,30 @@ export default function LogisticsSettingsPage() {
 		contactEmail: "",
 		notes: "",
 	});
+	// Inline form validation (phone / email / required name)
+	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+	const PHONE_FIELDS = ["contactPhone", "phone"];
+	const validateForm = (values: Record<string, any>) => {
+		const errs: Record<string, string> = {};
+		if (!String(values.name || "").trim()) errs.name = "Name is required";
+		for (const key of PHONE_FIELDS) {
+			if (values[key] && !isValidPhone(String(values[key]))) errs[key] = PHONE_ERROR_MESSAGE;
+		}
+		if (values.contactEmail && !isValidEmail(String(values.contactEmail))) {
+			errs.contactEmail = "Enter a valid email address";
+		}
+		setFormErrors(errs);
+		return Object.keys(errs).length === 0;
+	};
+	const clearError = (f: string) =>
+		setFormErrors((prev) => {
+			if (!prev[f]) return prev;
+			const { [f]: _removed, ...rest } = prev;
+			return rest;
+		});
+
 	const addHotel = () => {
+		if (!validateForm(hotelForm)) return;
 		const h: RegisteredHotel = {
 			id: `hotel-${Date.now()}`,
 			name: hotelForm.name || "",
@@ -122,6 +146,7 @@ export default function LogisticsSettingsPage() {
 		costPerPerson: 0,
 	});
 	const addDriver = () => {
+		if (!validateForm(driverForm)) return;
 		const d: RegisteredDriver = {
 			id: `driver-${Date.now()}`,
 			name: driverForm.name || "",
@@ -158,6 +183,7 @@ export default function LogisticsSettingsPage() {
 		notes: "",
 	});
 	const addVenue = () => {
+		if (!validateForm(venueForm)) return;
 		const v: RegisteredVenue = {
 			id: `venue-${Date.now()}`,
 			name: venueForm.name || "",
@@ -353,14 +379,22 @@ export default function LogisticsSettingsPage() {
 									<input
 										value={(hotelForm as any)[f] || ""}
 										onChange={(e) =>
-											setHotelForm({
-												...hotelForm,
-												[f]: e.target.value,
-											})
+											{
+												clearError(f);
+												setHotelForm({
+													...hotelForm,
+													[f]: PHONE_FIELDS.includes(f)
+														? sanitizePhoneInput(e.target.value)
+														: e.target.value,
+												});
+											}
 										}
 										placeholder={p}
 										className={inputCls}
 									/>
+									{formErrors[f] && (
+										<p className="text-xs text-red-500 mt-1">{formErrors[f]}</p>
+									)}
 								</div>
 							))}
 						</div>
@@ -432,20 +466,26 @@ export default function LogisticsSettingsPage() {
 									<input
 										type={t}
 										value={(driverForm as any)[f] || ""}
-										onChange={(e) =>
+										onChange={(e) => {
+											clearError(f);
 											setDriverForm({
 												...driverForm,
 												[f]:
-													t === "number"
+													PHONE_FIELDS.includes(f)
+														? sanitizePhoneInput(e.target.value)
+														: t === "number"
 														? parseFloat(
 																e.target.value,
 															) || 0
 														: e.target.value,
 											})
-										}
+										}}
 										placeholder={p}
 										className={inputCls}
 									/>
+									{formErrors[f] && (
+										<p className="text-xs text-red-500 mt-1">{formErrors[f]}</p>
+									)}
 								</div>
 							))}
 						</div>
@@ -517,20 +557,26 @@ export default function LogisticsSettingsPage() {
 									<input
 										type={t}
 										value={(venueForm as any)[f] || ""}
-										onChange={(e) =>
+										onChange={(e) => {
+											clearError(f);
 											setVenueForm({
 												...venueForm,
 												[f]:
-													t === "number"
+													PHONE_FIELDS.includes(f)
+														? sanitizePhoneInput(e.target.value)
+														: t === "number"
 														? parseInt(
 																e.target.value,
 															) || 0
 														: e.target.value,
 											})
-										}
+										}}
 										placeholder={p}
 										className={inputCls}
 									/>
+									{formErrors[f] && (
+										<p className="text-xs text-red-500 mt-1">{formErrors[f]}</p>
+									)}
 								</div>
 							))}
 						</div>

@@ -31,6 +31,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FantasiaFooter } from "@/components/ui/fantasia-footer";
+import { isValidPhone, sanitizePhoneInput, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 
 export default function ProfilePage({
 	isDashboardTab = false,
@@ -39,6 +40,61 @@ export default function ProfilePage({
 } = {}) {
 	const [profileData, setProfileData] = useState<any>(null);
 	const [loading, setLoading] = useState(true);
+
+	// Edit profile state
+	const [isEditing, setIsEditing] = useState(false);
+	const [editForm, setEditForm] = useState({ firstName: "", lastName: "", phone: "" });
+	const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+	const [editSaving, setEditSaving] = useState(false);
+	const [editMessage, setEditMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+	const startEditing = () => {
+		setEditForm({
+			firstName: profileData?.firstName || "",
+			lastName: profileData?.lastName || "",
+			phone: profileData?.phone || "",
+		});
+		setEditErrors({});
+		setEditMessage(null);
+		setIsEditing(true);
+	};
+
+	const saveProfile = async () => {
+		const errs: Record<string, string> = {};
+		if (!editForm.firstName.trim()) errs.firstName = "First name is required";
+		if (!editForm.lastName.trim()) errs.lastName = "Last name is required";
+		if (editForm.phone && !isValidPhone(editForm.phone)) errs.phone = PHONE_ERROR_MESSAGE;
+		setEditErrors(errs);
+		if (Object.keys(errs).length > 0) return;
+
+		setEditSaving(true);
+		setEditMessage(null);
+		try {
+			const res = await fetch("/api/stage-manager/profile", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(editForm),
+			});
+			const result = await res.json();
+			if (result.success) {
+				setProfileData((prev: any) => ({
+					...prev,
+					firstName: result.data.firstName,
+					lastName: result.data.lastName,
+					phone: result.data.phone,
+					name: `${result.data.firstName} ${result.data.lastName}`.trim(),
+				}));
+				setIsEditing(false);
+				setEditMessage({ type: "success", text: "Profile updated successfully." });
+			} else {
+				setEditMessage({ type: "error", text: result.error?.message || "Failed to update profile" });
+			}
+		} catch {
+			setEditMessage({ type: "error", text: "Network error – please try again" });
+		} finally {
+			setEditSaving(false);
+		}
+	};
 
 	// Avatar state
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -445,35 +501,82 @@ export default function ProfilePage({
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4 bg-white">
-								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-									<div>
-										<Label
-											htmlFor="name"
-											className="text-purple-700 font-medium"
-										>
-											Full Name
-										</Label>
-										<Input
-											id="name"
-											value={profileData?.name || ""}
-											disabled
-											className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-800"
-										/>
+								{editMessage && (
+									<p className={`rounded-lg px-3 py-2 text-sm ${editMessage.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+										{editMessage.text}
+									</p>
+								)}
+								{isEditing ? (
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div>
+											<Label htmlFor="firstName" className="text-purple-700 font-medium">First Name *</Label>
+											<Input
+												id="firstName"
+												value={editForm.firstName}
+												onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+												className={editErrors.firstName ? "border-red-500" : "border-purple-200"}
+											/>
+											{editErrors.firstName && <p className="mt-1 text-xs text-red-600">{editErrors.firstName}</p>}
+										</div>
+										<div>
+											<Label htmlFor="lastName" className="text-purple-700 font-medium">Last Name *</Label>
+											<Input
+												id="lastName"
+												value={editForm.lastName}
+												onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+												className={editErrors.lastName ? "border-red-500" : "border-purple-200"}
+											/>
+											{editErrors.lastName && <p className="mt-1 text-xs text-red-600">{editErrors.lastName}</p>}
+										</div>
+										<div>
+											<Label htmlFor="phone" className="text-purple-700 font-medium">Phone Number</Label>
+											<Input
+												id="phone"
+												type="tel"
+												inputMode="tel"
+												placeholder="+971501234567"
+												value={editForm.phone}
+												onChange={(e) => setEditForm({ ...editForm, phone: sanitizePhoneInput(e.target.value) })}
+												className={editErrors.phone ? "border-red-500" : "border-purple-200"}
+											/>
+											{editErrors.phone && <p className="mt-1 text-xs text-red-600">{editErrors.phone}</p>}
+										</div>
+										<div>
+											<Label htmlFor="email" className="text-purple-700 font-medium">Email Address</Label>
+											<Input id="email" value={profileData?.email || ""} disabled className="bg-purple-50 border-purple-200 text-purple-800" />
+										</div>
 									</div>
-									<div>
-										<Label
-											htmlFor="email"
-											className="text-purple-700 font-medium"
-										>
-											Email Address
-										</Label>
-										<Input
-											id="email"
-											value={profileData?.email || ""}
-											disabled
-											className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-800"
-										/>
+								) : (
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div>
+											<Label htmlFor="name" className="text-purple-700 font-medium">Full Name</Label>
+											<Input id="name" value={profileData?.name || ""} disabled className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-800" />
+										</div>
+										<div>
+											<Label htmlFor="phone-view" className="text-purple-700 font-medium">Phone Number</Label>
+											<Input id="phone-view" value={profileData?.phone || "Not set"} disabled className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-800" />
+										</div>
+										<div>
+											<Label htmlFor="email" className="text-purple-700 font-medium">Email Address</Label>
+											<Input id="email" value={profileData?.email || ""} disabled className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200 text-purple-800" />
+										</div>
 									</div>
+								)}
+								<div className="flex gap-2 pt-1">
+									{isEditing ? (
+										<>
+											<Button onClick={saveProfile} disabled={editSaving} className="bg-purple-600 hover:bg-purple-700 text-white">
+												{editSaving ? "Saving..." : "Save Changes"}
+											</Button>
+											<Button variant="outline" onClick={() => { setIsEditing(false); setEditErrors({}); }} disabled={editSaving}>
+												Cancel
+											</Button>
+										</>
+									) : (
+										<Button variant="outline" onClick={startEditing} disabled={!profileData}>
+											Edit Profile
+										</Button>
+									)}
 								</div>
 							</CardContent>
 						</Card>

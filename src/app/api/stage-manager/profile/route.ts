@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/route-protection";
 import { getUserById } from "@/lib/data-access";
 import { APIResponse } from "@/types";
+import { connectToDatabase } from "@/database/mongodb";
+import UserModel from "@/database/models/User";
+import { isValidPhone, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 
 // Get stage manager profile using the data access layer
 export const GET = async (request: NextRequest) => {
@@ -141,6 +144,58 @@ const withAuthWrapper = async (request: NextRequest, session: any) => {
 					message: "An internal error occurred",
 				},
 			},
+			{ status: 500 }
+		);
+	}
+};
+
+// Update the logged-in stage manager's name and phone
+export const PATCH = async (request: NextRequest) => {
+	try {
+		const session = (await import("@/lib/session")).getSessionFromRequest(request);
+		if (!session) {
+			return NextResponse.json<APIResponse>(
+				{ success: false, error: { code: "UNAUTHORIZED", message: "No session found - please log in" } },
+				{ status: 401 }
+			);
+		}
+		if (session.role !== "stage_manager" && session.role !== "super_admin") {
+			return NextResponse.json<APIResponse>(
+				{ success: false, error: { code: "FORBIDDEN", message: "Access denied." } },
+				{ status: 403 }
+			);
+		}
+
+		const body = await request.json();
+		const firstName = String(body.firstName ?? "").trim();
+		const lastName = String(body.lastName ?? "").trim();
+		const phone = String(body.phone ?? "").trim();
+
+		const errors: Record<string, string> = {};
+		if (!firstName) errors.firstName = "First name is required";
+		if (!lastName) errors.lastName = "Last name is required";
+		if (phone && !isValidPhone(phone)) errors.phone = PHONE_ERROR_MESSAGE;
+		if (Object.keys(errors).length > 0) {
+			return NextResponse.json<APIResponse>(
+				{ success: false, error: { code: "VALIDATION_ERROR", message: Object.values(errors)[0], details: errors } as any },
+				{ status: 400 }
+			);
+		}
+
+		await connectToDatabase();
+		await UserModel.findOneAndUpdate(
+			{ id: session.userId },
+			{ $set: { "profile.firstName": firstName, "profile.lastName": lastName, "profile.phone": phone } }
+		);
+
+		return NextResponse.json<APIResponse>({
+			success: true,
+			data: { firstName, lastName, phone },
+		});
+	} catch (error) {
+		console.error("Update stage manager profile error:", error);
+		return NextResponse.json<APIResponse>(
+			{ success: false, error: { code: "INTERNAL_ERROR", message: "Failed to update profile" } },
 			{ status: 500 }
 		);
 	}

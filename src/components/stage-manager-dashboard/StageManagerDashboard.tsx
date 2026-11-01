@@ -428,7 +428,7 @@ export function StageManagerDashboard({ initialEventId }: StageManagerDashboardP
 	return (
 		<NotificationProvider userRole="stage-manager">
 			<div className="fixed inset-0 overflow-hidden bg-[#f6f5fb] text-slate-950 flex">
-				<div className="flex h-screen min-w-0 flex-1 flex-col overflow-visible">
+				<div className="flex h-dvh min-w-0 flex-1 flex-col overflow-visible">
 					<StageManagerTopbar
 						search={search}
 						onSearchChange={setSearch}

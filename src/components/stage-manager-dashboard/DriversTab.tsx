@@ -1,4 +1,5 @@
 "use client";
+import { isValidPhone, isValidEmail, sanitizePhoneInput, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, Plus, Pencil, Trash2, Phone, Car, Users, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ interface Driver {
 	capacity?: number; costPerTrip?: number; costPerPerson?: number; notes?: string;
 }
 const EMPTY = { name: "", phone: "", whatsapp: "", vehicle: "", capacity: "", costPerTrip: "", costPerPerson: "", notes: "" };
+
+const PHONE_FIELDS = ["phone", "whatsapp"];
 
 export default function DriversTab({ eventId }: { eventId: string }) {
 	const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -48,6 +51,9 @@ export default function DriversTab({ eventId }: { eventId: string }) {
 
 	const handleSave = async () => {
 		if (!form.name.trim()) { setError("Driver name is required"); return; }
+		if (form.phone && !isValidPhone(form.phone)) { setError(`Phone: ${PHONE_ERROR_MESSAGE}`); return; }
+		if ((form as any).whatsapp && !isValidPhone((form as any).whatsapp)) { setError(`WhatsApp: ${PHONE_ERROR_MESSAGE}`); return; }
+		if ((form as any).email && !isValidEmail((form as any).email)) { setError("Enter a valid email address"); return; }
 		setSaving(true); setError(null);
 		try {
 			const url = editingId ? `/api/events/${eventId}/drivers/${editingId}` : `/api/events/${eventId}/drivers`;
@@ -69,13 +75,13 @@ export default function DriversTab({ eventId }: { eventId: string }) {
 		load();
 	};
 
-	const Input = ({ label, field, placeholder, type = "text" }: { label: string; field: string; placeholder?: string; type?: string }) => (
+	const renderInput = ({ label, field, placeholder, type = "text" }: { label: string; field: string; placeholder?: string; type?: string }) => (
 		<div>
 			<label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</label>
 			<input
 				type={type}
 				value={(form as any)[field]}
-				onChange={e => f(field, e.target.value)}
+				onChange={e => f(field, PHONE_FIELDS.includes(field) ? sanitizePhoneInput(e.target.value) : e.target.value)}
 				placeholder={placeholder}
 				className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 focus:bg-white"
 			/>
@@ -96,13 +102,13 @@ export default function DriversTab({ eventId }: { eventId: string }) {
 				<div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 					{error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 					<div className="grid grid-cols-2 gap-4">
-						<Input label="NAME *"         field="name"          placeholder="Driver name" />
-						<Input label="PHONE"          field="phone"         placeholder="+31 ..." />
-						<Input label="WHATSAPP"       field="whatsapp"      placeholder="+31 ..." />
-						<Input label="VEHICLE"        field="vehicle"       placeholder="Make, model, color" />
-						<Input label="CAPACITY"       field="capacity"      placeholder="4" type="number" />
-						<Input label="COST PER TRIP"  field="costPerTrip"   placeholder="€120" type="number" />
-						<Input label="COST PER PERSON" field="costPerPerson" placeholder="€15" type="number" />
+						{renderInput({ label: "NAME *", field: "name", placeholder: "Driver name" })}
+						{renderInput({ label: "PHONE", field: "phone", placeholder: "+31 ..." })}
+						{renderInput({ label: "WHATSAPP", field: "whatsapp", placeholder: "+31 ..." })}
+						{renderInput({ label: "VEHICLE", field: "vehicle", placeholder: "Make, model, color" })}
+						{renderInput({ label: "CAPACITY", field: "capacity", placeholder: "4", type: "number" })}
+						{renderInput({ label: "COST PER TRIP", field: "costPerTrip", placeholder: "€120", type: "number" })}
+						{renderInput({ label: "COST PER PERSON", field: "costPerPerson", placeholder: "€15", type: "number" })}
 						<div />
 						<div className="col-span-2">
 							<label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">NOTES</label>

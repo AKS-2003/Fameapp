@@ -386,6 +386,10 @@ export default function SuperAdminPage() {
 			alert("Please fill in all fields");
 			return;
 		}
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUsername.trim())) {
+			alert("Please enter a valid email address");
+			return;
+		}
 
 		await handleUserAction(
 			"changeCredentials",

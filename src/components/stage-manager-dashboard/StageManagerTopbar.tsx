@@ -304,7 +304,7 @@ export function StageManagerTopbar({
 
 			{/* ── Row 2: Nav tabs ── */}
 			{onSelectTab && (
-				<div className="flex items-center gap-1 px-4 md:px-6 overflow-x-visible">
+				<div className="flex flex-wrap items-center gap-x-1 px-4 md:px-6 overflow-x-visible">
 					{NAV_TABS.map(({ label, icon: Icon, subItems }) => {
 						const isActive = activeTab === label ||
 							subItems.some((s) => s.label === activeTab);

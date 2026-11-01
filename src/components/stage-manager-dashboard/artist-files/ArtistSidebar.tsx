@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Plus, ChevronDown, Trash2, Clock, Bell } from "lucide-react";
+import { Search, Plus, ChevronDown, Trash2, Clock, Bell, PanelLeftClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,8 @@ interface ArtistSidebarProps {
   onAdd: () => void;
   onDelete?: (artist: Artist) => void;
   eventId: string;
+  className?: string;
+  onCollapse?: () => void;
 }
 
 
@@ -38,6 +40,8 @@ export function ArtistSidebar({
   onAdd,
   onDelete,
   eventId,
+  className,
+  onCollapse,
 }: ArtistSidebarProps) {
 
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -67,11 +71,22 @@ export function ArtistSidebar({
   };
 
   return (
-    <div className="flex w-[320px] shrink-0 flex-col border-r border-slate-100 bg-slate-50/50">
+    <div className={cn("flex w-full shrink-0 flex-col border-r border-slate-100 bg-slate-50/95 md:w-[320px] md:bg-slate-50/50", className)}>
       <div className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Artist Pipeline</h2>
           <div className="flex items-center gap-2">
+            {onCollapse && (
+              <button
+                type="button"
+                onClick={onCollapse}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            )}
             <span className="text-xs text-slate-400">Bulk</span>
             <Button size="sm" className="h-8 rounded-xl bg-fuchsia-600 px-3 hover:bg-fuchsia-700" onClick={onAdd}>
               <Plus className="mr-1 h-4 w-4" /> Add

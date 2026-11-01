@@ -1,4 +1,5 @@
 "use client";
+import { isValidPhone, isValidEmail, sanitizePhoneInput, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, Plus, Pencil, Trash2, MapPin, Phone, Mail, Users, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ interface Venue {
 	phone?: string; email?: string; capacity?: number; mapsLink?: string; notes?: string;
 }
 const EMPTY = { name: "", address: "", phone: "", email: "", capacity: "", mapsLink: "", notes: "" };
+
+const PHONE_FIELDS = ["phone", "whatsapp"];
 
 export default function VenuesTab({ eventId }: { eventId: string }) {
 	const [venues, setVenues] = useState<Venue[]>([]);
@@ -45,6 +48,9 @@ export default function VenuesTab({ eventId }: { eventId: string }) {
 
 	const handleSave = async () => {
 		if (!form.name.trim()) { setError("Venue name is required"); return; }
+		if (form.phone && !isValidPhone(form.phone)) { setError(`Phone: ${PHONE_ERROR_MESSAGE}`); return; }
+		if ((form as any).whatsapp && !isValidPhone((form as any).whatsapp)) { setError(`WhatsApp: ${PHONE_ERROR_MESSAGE}`); return; }
+		if ((form as any).email && !isValidEmail((form as any).email)) { setError("Enter a valid email address"); return; }
 		setSaving(true); setError(null);
 		try {
 			const url = editingId ? `/api/events/${eventId}/venues/${editingId}` : `/api/events/${eventId}/venues`;
@@ -66,13 +72,13 @@ export default function VenuesTab({ eventId }: { eventId: string }) {
 		load();
 	};
 
-	const Input = ({ label, field, placeholder, type = "text" }: { label: string; field: string; placeholder?: string; type?: string }) => (
+	const renderInput = ({ label, field, placeholder, type = "text" }: { label: string; field: string; placeholder?: string; type?: string }) => (
 		<div>
 			<label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</label>
 			<input
 				type={type}
 				value={(form as any)[field]}
-				onChange={e => f(field, e.target.value)}
+				onChange={e => f(field, PHONE_FIELDS.includes(field) ? sanitizePhoneInput(e.target.value) : e.target.value)}
 				placeholder={placeholder}
 				className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 focus:bg-white"
 			/>
@@ -93,12 +99,12 @@ export default function VenuesTab({ eventId }: { eventId: string }) {
 				<div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 					{error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 					<div className="grid grid-cols-2 gap-4">
-						<Input label="NAME *"         field="name"          placeholder="Venue name" />
-						<Input label="ADDRESS"        field="address"       placeholder="Full address" />
-						<Input label="PHONE"          field="phone"         placeholder="+31 ..." />
-						<Input label="EMAIL"          field="email"         placeholder="events@..." />
-						<Input label="CAPACITY"       field="capacity"      placeholder="1500" type="number" />
-						<Input label="GOOGLE MAPS LINK" field="mapsLink"    placeholder="https://maps.google.com/..." />
+						{renderInput({ label: "NAME *", field: "name", placeholder: "Venue name" })}
+						{renderInput({ label: "ADDRESS", field: "address", placeholder: "Full address" })}
+						{renderInput({ label: "PHONE", field: "phone", placeholder: "+31 ..." })}
+						{renderInput({ label: "EMAIL", field: "email", placeholder: "events@..." })}
+						{renderInput({ label: "CAPACITY", field: "capacity", placeholder: "1500", type: "number" })}
+						{renderInput({ label: "GOOGLE MAPS LINK", field: "mapsLink", placeholder: "https://maps.google.com/..." })}
 						<div className="col-span-2">
 							<label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">NOTES</label>
 							<textarea
