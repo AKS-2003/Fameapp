@@ -500,7 +500,7 @@ export default function SuperAdminPage() {
 	// ── Auth guard rendering ────────────────────────────────────────────────
 	if (!authChecked) {
 		return (
-			<div className="min-h-screen bg-gradient-to-br from-purple-900 to-pink-900 text-white flex items-center justify-center">
+			<div className="min-h-screen bg-gradient-to-br from-[#0a0618] via-[#120a2a] to-[#1a0b2e] text-white flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-400 mx-auto mb-4"></div>
 					<p className="text-gray-300">Verifying access...</p>
@@ -513,9 +513,9 @@ export default function SuperAdminPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-br from-purple-900 to-pink-900 text-white flex items-center justify-center">
+			<div className="min-h-screen bg-gradient-to-br from-[#0a0618] via-[#120a2a] to-[#1a0b2e] text-white flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500/20 mx-auto mb-4"></div>
 					<p>Loading Super Admin Dashboard...</p>
 				</div>
 			</div>
@@ -523,9 +523,9 @@ export default function SuperAdminPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-purple-900 to-pink-900 text-white">
+		<div className="min-h-screen bg-gradient-to-br from-[#0a0618] via-[#120a2a] to-[#1a0b2e] text-white">
 			{/* Header */}
-			<header className="bg-purple-800/50 border-b border-purple-600">
+			<header className="bg-white/5 border-b border-purple-500/20">
 				<div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 sm:py-0 sm:h-16 gap-3 sm:gap-0">
 						<div className="flex items-center">
@@ -626,7 +626,7 @@ export default function SuperAdminPage() {
 
 				{/* Statistics Cards */}
 				<div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
-					<Card className="bg-purple-800/50 border-purple-600">
+					<Card className="bg-white/5 border-purple-500/20">
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center">
 								<Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400" />
@@ -641,7 +641,7 @@ export default function SuperAdminPage() {
 							</div>
 						</CardContent>
 					</Card>
-					<Card className="bg-purple-800/50 border-purple-600">
+					<Card className="bg-white/5 border-purple-500/20">
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center">
 								<Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400" />
@@ -656,7 +656,7 @@ export default function SuperAdminPage() {
 							</div>
 						</CardContent>
 					</Card>
-					<Card className="bg-purple-800/50 border-purple-600">
+					<Card className="bg-white/5 border-purple-500/20">
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center">
 								<Music className="h-6 w-6 sm:h-8 sm:w-8 text-pink-400" />
@@ -671,7 +671,7 @@ export default function SuperAdminPage() {
 							</div>
 						</CardContent>
 					</Card>
-					<Card className="bg-purple-800/50 border-purple-600">
+					<Card className="bg-white/5 border-purple-500/20">
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center">
 								<Crown className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400" />
@@ -690,7 +690,7 @@ export default function SuperAdminPage() {
 
 				{/* Main Content Tabs */}
 				<Tabs defaultValue="pending" className="w-full">
-					<TabsList className="grid w-full grid-cols-1 sm:grid-cols-4 bg-purple-800/50 border-purple-600 gap-1">
+					<TabsList className="grid w-full h-auto grid-cols-2 sm:grid-cols-4 bg-white/5 border border-purple-500/20 gap-1">
 						<TabsTrigger
 							value="pending"
 							className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm"
@@ -740,7 +740,7 @@ export default function SuperAdminPage() {
 					</TabsList>
 
 					<TabsContent value="pending" className="space-y-6">
-						<Card className="bg-purple-800/50 border-purple-600">
+						<Card className="bg-white/5 border-purple-500/20">
 							<CardHeader>
 								<CardTitle className="text-white">
 									Pending Stage Manager Registrations
@@ -775,7 +775,7 @@ export default function SuperAdminPage() {
 										</p>
 									</div>
 								) : (
-									<Table>
+									<Table className="min-w-[760px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
 										<TableHeader>
 											<TableRow className="border-gray-800">
 												<TableHead className="text-gray-300">
@@ -916,7 +916,7 @@ export default function SuperAdminPage() {
 					</TabsContent>
 
 					<TabsContent value="stage-managers" className="space-y-6">
-						<Card className="bg-purple-800/50 border-purple-600">
+						<Card className="bg-white/5 border-purple-500/20">
 							<CardHeader>
 								<CardTitle className="text-white">
 									All Stage Managers
@@ -927,7 +927,7 @@ export default function SuperAdminPage() {
 							</CardHeader>
 							<CardContent>
 								<div className="overflow-x-auto">
-									<Table>
+									<Table className="min-w-[760px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
 										<TableHeader>
 											<TableRow className="border-gray-800">
 												<TableHead className="text-gray-300">
@@ -1158,7 +1158,7 @@ export default function SuperAdminPage() {
 					</TabsContent>
 
 					<TabsContent value="artists" className="space-y-6">
-						<Card className="bg-purple-800/50 border-purple-600">
+						<Card className="bg-white/5 border-purple-500/20">
 							<CardHeader>
 								<CardTitle className="text-white flex items-center gap-2">
 									<Music className="h-5 w-5" />
@@ -1172,7 +1172,7 @@ export default function SuperAdminPage() {
 							<CardContent>
 								{loadingArtists ? (
 									<div className="text-center py-8 text-gray-400">
-										<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+										<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500/20 mx-auto mb-4"></div>
 										<p>Loading artists...</p>
 									</div>
 								) : !artists.length ? (
@@ -1194,8 +1194,8 @@ export default function SuperAdminPage() {
 												: ""
 										}`}
 									>
-										<Table>
-											<TableHeader className="sticky top-0 bg-purple-800/90 z-10">
+										<Table className="min-w-[760px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
+											<TableHeader className="sticky top-0 bg-[#1c122f] z-10">
 												<TableRow className="border-gray-700">
 													<TableHead className="text-gray-300">
 														Profile
@@ -1296,11 +1296,11 @@ export default function SuperAdminPage() {
 														</TableCell>
 														<TableCell className="text-gray-300">
 															<div className="flex flex-col gap-1">
-																<span className={artist.eventName === "Not assigned" ? "text-gray-500 italic" : "font-medium text-white"}>
+																<span className={artist.eventName === "Not assigned" ? "text-gray-400 italic" : "font-medium text-white"}>
 																	{artist.eventName}
 																</span>
 																{artist.eventVenue && (
-																	<span className="text-xs text-gray-500 flex items-center gap-1">
+																	<span className="text-xs text-gray-400 flex items-center gap-1">
 																		<MapPin className="h-3 w-3" />
 																		{artist.eventVenue}
 																	</span>
@@ -1314,7 +1314,7 @@ export default function SuperAdminPage() {
 																	{formatDateSimple(artist.performanceDate)}
 																</div>
 															) : (
-																<span className="text-gray-600 italic">Not assigned</span>
+																<span className="text-gray-400 italic">Not assigned</span>
 															)}
 														</TableCell>
 														<TableCell>
@@ -1386,7 +1386,7 @@ export default function SuperAdminPage() {
 					</TabsContent>
 
 					<TabsContent value="subscriptions" className="space-y-6">
-						<Card className="bg-purple-800/50 border-purple-600">
+						<Card className="bg-white/5 border-purple-500/20">
 							<CardHeader>
 								<CardTitle className="text-white flex items-center gap-2">
 									<Crown className="h-5 w-5 text-amber-400" />
@@ -1424,11 +1424,11 @@ export default function SuperAdminPage() {
 													{proManagers.length})
 												</h3>
 												{proManagers.length === 0 ? (
-													<p className="text-gray-500 text-sm py-4 text-center">
+													<p className="text-gray-400 text-sm py-4 text-center">
 														No pro subscribers yet
 													</p>
 												) : (
-													<Table>
+													<Table className="min-w-[760px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
 														<TableHeader>
 															<TableRow className="border-gray-700">
 																<TableHead className="text-gray-300">
@@ -1518,11 +1518,11 @@ export default function SuperAdminPage() {
 													{freeManagers.length})
 												</h3>
 												{freeManagers.length === 0 ? (
-													<p className="text-gray-500 text-sm py-4 text-center">
+													<p className="text-gray-400 text-sm py-4 text-center">
 														No free users
 													</p>
 												) : (
-													<Table>
+													<Table className="min-w-[760px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
 														<TableHeader>
 															<TableRow className="border-gray-700">
 																<TableHead className="text-gray-300">
@@ -1636,7 +1636,7 @@ export default function SuperAdminPage() {
 								value={artistNewPassword}
 								onChange={(e) => setArtistNewPassword(e.target.value)}
 								placeholder="Enter new password (min. 6 chars)"
-								className="bg-gray-900 border-orange-600/40 text-white placeholder:text-gray-500 focus:border-orange-500"
+								className="bg-gray-900 border-orange-600/40 text-white placeholder:text-gray-400 focus:border-orange-500"
 								onKeyDown={(e) => e.key === "Enter" && handleChangeArtistPassword()}
 							/>
 						</div>
@@ -1679,7 +1679,7 @@ export default function SuperAdminPage() {
 				<DialogContent className="bg-white dark:bg-gray-900 border-border">
 					<DialogHeader>
 						<DialogTitle>Change User Credentials</DialogTitle>
-						<DialogDescription className="text-gray-600 dark:text-gray-400">
+						<DialogDescription className="text-gray-400 dark:text-gray-400">
 							Update the username and password for{" "}
 							{changePasswordDialog.user?.profile.firstName}{" "}
 							{changePasswordDialog.user?.profile.lastName}
