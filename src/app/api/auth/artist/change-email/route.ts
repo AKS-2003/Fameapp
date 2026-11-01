@@ -75,11 +75,12 @@ export async function POST(request: NextRequest) {
 				{
 					success: false,
 					error: {
-						code: "AUTH_003",
+						code: "INVALID_PASSWORD",
 						message: "Password is incorrect",
 					},
 				},
-				{ status: 401 },
+				// 400 (not 401): the session is valid, only the supplied password is wrong
+				{ status: 400 },
 			);
 		}
 

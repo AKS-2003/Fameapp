@@ -301,6 +301,9 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 				{ label: "Emergency contact", value: formData.emergencyContact },
 			]),
 		];
+		// Passport details are mandatory for every traveler
+		if (!formData.passportNumber.trim()) travelerErrors.push("Passport number is required");
+		if (!formData.passportExpiry) travelerErrors.push("Passport expiry date is required");
 		if (formData.passportNumber && !/^[A-Za-z0-9]{5,15}$/.test(formData.passportNumber.trim())) {
 			travelerErrors.push("Passport number must be 5-15 letters/digits with no spaces or symbols");
 		}
@@ -659,12 +662,14 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 							<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
 								<FormField
 									label="Passport Number"
+									required
 									value={formData.passportNumber}
 									onChange={(v) => updateField("passportNumber", v.toUpperCase())}
 									placeholder="e.g. AAB123456"
 								/>
 								<FormField
 									label="Passport Expiry"
+									required
 									value={formData.passportExpiry}
 									onChange={(v) => updateField("passportExpiry", v)}
 									type="date"

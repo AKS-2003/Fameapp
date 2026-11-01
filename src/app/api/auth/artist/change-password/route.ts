@@ -73,11 +73,13 @@ export async function POST(request: NextRequest) {
 				{
 					success: false,
 					error: {
-						code: "AUTH_003",
+						code: "INVALID_CURRENT_PASSWORD",
 						message: "Current password is incorrect",
 					},
 				},
-				{ status: 401 },
+				// 400, not 401: the session is valid, only the supplied password is wrong.
+				// A 401 made clients think the session had expired and log the user out.
+				{ status: 400 },
 			);
 		}
 
