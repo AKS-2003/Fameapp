@@ -384,6 +384,12 @@ export function AccountSection({ artistId, profile, onUpdateProfile, onLogout }:
 								)}
 							</button>
 						</div>
+						<a
+							href="/famelink-forgot-password"
+							className="inline-block text-xs text-purple-300 hover:text-white underline underline-offset-2"
+						>
+							Forgot your current password?
+						</a>
 					</div>
 
 					<div className="space-y-2">

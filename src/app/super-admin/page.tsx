@@ -1679,7 +1679,7 @@ export default function SuperAdminPage() {
 				<DialogContent className="bg-white dark:bg-gray-900 border-border">
 					<DialogHeader>
 						<DialogTitle>Change User Credentials</DialogTitle>
-						<DialogDescription className="text-gray-400">
+						<DialogDescription className="text-gray-600 dark:text-gray-400">
 							Update the username and password for{" "}
 							{changePasswordDialog.user?.profile.firstName}{" "}
 							{changePasswordDialog.user?.profile.lastName}
@@ -1689,7 +1689,7 @@ export default function SuperAdminPage() {
 						<div>
 							<Label
 								htmlFor="newUsername"
-								className="text-gray-300"
+								className="text-gray-700 dark:text-gray-300"
 							>
 								New Username (Email)
 							</Label>
@@ -1699,13 +1699,13 @@ export default function SuperAdminPage() {
 								value={newUsername}
 								onChange={(e) => setNewUsername(e.target.value)}
 								placeholder="Enter new email"
-								className="bg-purple-800 border-purple-600 text-white"
+								className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400"
 							/>
 						</div>
 						<div>
 							<Label
 								htmlFor="newPassword"
-								className="text-gray-300"
+								className="text-gray-700 dark:text-gray-300"
 							>
 								New Password
 							</Label>
@@ -1715,7 +1715,7 @@ export default function SuperAdminPage() {
 								value={newPassword}
 								onChange={(e) => setNewPassword(e.target.value)}
 								placeholder="Enter new password"
-								className="bg-purple-800 border-purple-600 text-white"
+								className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400"
 							/>
 						</div>
 					</div>
@@ -1728,7 +1728,7 @@ export default function SuperAdminPage() {
 									user: null,
 								})
 							}
-							className="border-gray-600 text-gray-300 hover:bg-gray-800"
+							className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
 						>
 							Cancel
 						</Button>

@@ -25,6 +25,7 @@ import {
 	Truck,
 	Globe,
 	Eye,
+	AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -503,41 +504,41 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 									</div>
 
 					{/* Status badges */}
-					<div className="flex flex-wrap gap-2">
+					<div className="flex flex-wrap items-center gap-2">
 						{/* Passport image — green "on file" if uploaded, yellow warning if not */}
 						{t.passportCopyUrl ? (
 							<Badge
-								className="text-[10px] rounded-full px-2.5 py-0.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 cursor-pointer hover:bg-emerald-500/25 transition-colors"
+								className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] leading-4 rounded-full px-2.5 py-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 cursor-pointer hover:bg-emerald-500/25 transition-colors"
 								onClick={() => window.open(t.passportCopyUrl, "_blank")}
 							>
-								<Check className="h-2.5 w-2.5 mr-1" />Passport on file
+								<Check className="h-2.5 w-2.5 shrink-0" />Passport on file
 							</Badge>
 						) : (
-							<Badge className="text-[10px] rounded-full px-2.5 py-0.5 bg-yellow-500/15 text-yellow-300 border border-yellow-500/25">
-								Passport image missing
+							<Badge className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] leading-4 rounded-full px-2.5 py-1 bg-yellow-500/15 text-yellow-300 border border-yellow-500/25">
+								<AlertCircle className="h-2.5 w-2.5 shrink-0" />Passport image missing
 							</Badge>
 						)}
-						<Badge className="text-[10px] rounded-full px-2.5 py-0.5 bg-slate-500/20 text-purple-200/60 border border-purple-500/15">
+						<Badge className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] leading-4 rounded-full px-2.5 py-1 bg-slate-500/20 text-purple-200/60 border border-purple-500/15">
 							<UtensilsCrossed className="h-2.5 w-2.5 mr-1" />
 							{t.dietaryRequirements || "No restrictions"}
 						</Badge>
 						{t.visaCopyUrl ? (
 							<Badge
-								className="text-[10px] rounded-full px-2.5 py-0.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 cursor-pointer hover:bg-emerald-500/25 transition-colors"
+								className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] leading-4 rounded-full px-2.5 py-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 cursor-pointer hover:bg-emerald-500/25 transition-colors"
 								onClick={() => window.open(t.visaCopyUrl, "_blank")}
 							>
-								<Check className="h-2.5 w-2.5 mr-1" />Visa on file
+								<Check className="h-2.5 w-2.5 shrink-0" />Visa on file
 							</Badge>
 						) : (
 							t.visaNotes && (
-								<Badge className="text-[10px] rounded-full px-2.5 py-0.5 bg-yellow-500/15 text-yellow-300 border border-yellow-500/25">
-									Visa image missing
+								<Badge className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] leading-4 rounded-full px-2.5 py-1 bg-yellow-500/15 text-yellow-300 border border-yellow-500/25">
+									<AlertCircle className="h-2.5 w-2.5 shrink-0" />Visa image missing
 								</Badge>
 							)
 						)}
 						{t.passportCopyUrl && t.passportNumber && (!t.visaNotes || t.visaCopyUrl) && (
-							<Badge className="text-[10px] rounded-full px-2.5 py-0.5 bg-teal-500/15 text-teal-300 border border-teal-500/25">
-								<Check className="h-2.5 w-2.5 mr-1" />Ready to travel
+							<Badge className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] leading-4 rounded-full px-2.5 py-1 bg-teal-500/15 text-teal-300 border border-teal-500/25">
+								<Check className="h-2.5 w-2.5 shrink-0" />Ready to travel
 							</Badge>
 						)}
 					</div>

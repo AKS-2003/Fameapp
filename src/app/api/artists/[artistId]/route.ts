@@ -8,6 +8,8 @@ import {
 	deleteEventShow,
 } from "@/lib/data-access";
 import { connectToDatabase } from "@/database/mongodb";
+import { getAnySessionFromRequest } from "@/lib/session";
+import { isValidPhone, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import { EventArtistModel, ArtistLogisticsModel } from "@/database/models/FameLinkModels";
 
 /** Safely parse snapshotJson — may be stored as a JSON string or already an object */
@@ -196,7 +198,48 @@ export async function PATCH(
 ) {
 	try {
 		const { artistId } = await Promise.resolve(params);
+
+		// Authorization: only the artist themself, or an active stage manager / super admin.
+		const session = getAnySessionFromRequest(request);
+		if (!session) {
+			return NextResponse.json<APIResponse>(
+				{ success: false, error: { code: "UNAUTHORIZED", message: "Authentication required." } },
+				{ status: 401 },
+			);
+		}
+		const isStaff = session.role === "stage_manager" || session.role === "super_admin";
+		const isSelf = session.role === "artist" && session.userId === artistId;
+		const blockedStatus = ["suspended", "deactivated", "rejected", "pending"];
+		if (
+			(!isStaff && !isSelf) ||
+			(isStaff && session.status && blockedStatus.includes(String(session.status)))
+		) {
+			return NextResponse.json<APIResponse>(
+				{ success: false, error: { code: "FORBIDDEN", message: "Access denied." } },
+				{ status: 403 },
+			);
+		}
+
 		const updateData = await request.json();
+
+		// Credentials are never writable through this endpoint (dedicated, verified flows exist).
+		for (const key of [
+			"password",
+			"passwordHash",
+			"newPassword",
+			"verificationToken",
+			"verificationTokenExpiry",
+			"role",
+		]) {
+			delete updateData[key];
+		}
+
+		if (typeof updateData.phone === "string" && updateData.phone.trim() && !isValidPhone(updateData.phone)) {
+			return NextResponse.json<APIResponse>(
+				{ success: false, error: { code: "VALIDATION_ERROR", message: PHONE_ERROR_MESSAGE } },
+				{ status: 400 },
+			);
+		}
 
 		await connectToDatabase();
 

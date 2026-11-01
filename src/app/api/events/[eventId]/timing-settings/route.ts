@@ -85,6 +85,20 @@ export async function PATCH(
 			time_overrides, rehearsal_time_overrides, updated_by, performanceDate,
 		} = body;
 
+		// Show start must not be earlier than backstage ready (HH:mm compares lexicographically)
+		if (
+			typeof backstage_ready_time === "string" &&
+			typeof show_start_time === "string" &&
+			backstage_ready_time &&
+			show_start_time &&
+			show_start_time < backstage_ready_time
+		) {
+			return NextResponse.json(
+				{ success: false, error: "Show start time cannot be earlier than the backstage ready time" },
+				{ status: 400 },
+			);
+		}
+
 		// Read existing data from MongoDB
 		let stored: any = await getEventData(eventId, STORAGE_KEY) || {};
 

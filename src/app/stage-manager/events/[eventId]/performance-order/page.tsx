@@ -1819,7 +1819,7 @@ export default function PerformanceOrder({
 					const rehearsalShows = filteredArtists.filter(
 						(a: Artist) => {
 							return (
-								a.performance_order === null &&
+								a.performance_order == null &&
 								(!a.performance_status ||
 									a.performance_status === "not_started")
 							);
@@ -1831,7 +1831,7 @@ export default function PerformanceOrder({
 					const assignedArtists = filteredArtists
 						.filter(
 							(a: Artist) =>
-								a.performance_order !== null ||
+								a.performance_order != null ||
 								(a.performance_status &&
 									a.performance_status !== "not_started" &&
 									a.rehearsal_completed),
@@ -1850,7 +1850,7 @@ export default function PerformanceOrder({
 									...filteredArtists
 										.filter(
 											(a: Artist) =>
-												a.performance_order !== null,
+												a.performance_order != null,
 										)
 										.map(
 											(a: Artist) =>
@@ -5421,8 +5421,9 @@ export default function PerformanceOrder({
 															}}
 														>
 															{/* Dynamic Cue Badge for all cards */}
+															<div className="absolute -top-3 left-3 z-10 flex items-center gap-1.5 whitespace-nowrap">
 															<span
-																className={`absolute -top-2 -left-2 text-[10px] font-bold px-2 py-0.5 rounded-full border z-10 shadow-sm ${
+																className={`text-[10px] leading-none font-bold px-2 py-1 rounded-full border shadow-sm ${
 																	isDarkBG 
 																		? "bg-white text-black border-gray-300"
 																		: "bg-primary text-primary-foreground border-primary"
@@ -5434,9 +5435,9 @@ export default function PerformanceOrder({
 															{/* If it's an artist, show the SHOW index badge next to it */}
 															{item.type === "artist" && (
 																<span
-																	className={`absolute -top-2 left-14 text-[8px] font-bold px-1.5 py-0.5 rounded-full border z-10 ${
+																	className={`text-[9px] leading-none font-bold px-2 py-1 rounded-full border ${
 																		isDarkBG
-																			? "bg-white/20 text-white border-white/30"
+																			? "bg-gray-800 text-white border-white/40"
 																			: "bg-green-100 text-green-800 border-green-200"
 																	}`}
 																	title={`Show ${showOrderItems.filter((i, idx) => idx < index && i.type === "artist").length + 1}`}
@@ -5444,6 +5445,7 @@ export default function PerformanceOrder({
 																	{`SHOW ${showOrderItems.filter((i, idx) => idx < index && i.type === "artist").length + 1}`}
 																</span>
 															)}
+														</div>
 															<div className="flex items-center justify-between">
 																<div className="flex items-center gap-2">
 																	{/* Reduced gap for better mobile layout */}
@@ -6843,7 +6845,17 @@ export default function PerformanceOrder({
 											show_start_time: e.target.value,
 										})
 									}
+									min={editForm.backstage_ready_time || undefined}
 								/>
+								{editForm.backstage_ready_time &&
+									editForm.show_start_time &&
+									editForm.show_start_time <
+										editForm.backstage_ready_time && (
+										<p className="text-xs text-red-500">
+											Show start time cannot be earlier
+											than the backstage ready time.
+										</p>
+									)}
 							</div>
 						</div>
 						<div className="flex gap-2 pt-4">
@@ -6857,6 +6869,12 @@ export default function PerformanceOrder({
 									})
 								}
 								className="flex-1"
+								disabled={
+									!!editForm.backstage_ready_time &&
+									!!editForm.show_start_time &&
+									editForm.show_start_time <
+										editForm.backstage_ready_time
+								}
 							>
 								Save Timing Settings
 							</Button>

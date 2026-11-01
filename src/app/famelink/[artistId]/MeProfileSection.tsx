@@ -358,31 +358,29 @@ function BasicsTab({
 
 			<div className="space-y-2">
 				<Label className="text-white">Profile Banner</Label>
-				<div
+				<label
+					htmlFor="me-banner-input"
 					className="relative h-28 rounded-xl border border-dashed border-white/15 bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center cursor-pointer overflow-hidden"
-					onClick={() => document.getElementById("me-banner-input")?.click()}
 				>
 					{profile.bannerImage ? (
 						<img src={getMediaUrl(profile.bannerImage)} alt="Banner" className="w-full h-full object-cover" />
 					) : (
 						<span className="text-sm text-white/70 font-medium">No banner yet — falls back to your photo</span>
 					)}
-				</div>
+				</label>
 				<input
 					type="file"
 					id="me-banner-input"
 					accept="image/*"
-					className="hidden"
+					className="sr-only"
 					onChange={(e) => onUpload(e, (fileName) => setProfile((p) => ({ ...p, bannerImage: fileName })))}
 				/>
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={() => document.getElementById("me-banner-input")?.click()}
-					className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-lg gap-1.5"
+				<label
+					htmlFor="me-banner-input"
+					className="inline-flex items-center gap-1.5 h-9 px-3 cursor-pointer rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-colors"
 				>
 					<Upload className="h-3.5 w-3.5" /> Upload banner
-				</Button>
+				</label>
 			</div>
 
 			<div className="space-y-2">

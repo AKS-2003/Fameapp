@@ -63,6 +63,7 @@ import {
 import { AudioPlayer } from "@/components/ui/audio-player";
 import { VideoPlayer, ImageViewer } from "@/components/ui/video-player";
 import { WhatsAppInput } from "@/components/ui/whatsapp-input";
+import { isValidPhone, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
 import {
 	ColorPickerCompact,
 	ColorPickerFull,
@@ -1117,6 +1118,16 @@ export default function ArtistEditPage() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+
+		// Validate phone number format (optional field, but must be valid when filled)
+		if (artistData.phone && artistData.phone.trim() && !isValidPhone(artistData.phone)) {
+			toast({
+				title: "Invalid phone number",
+				description: PHONE_ERROR_MESSAGE,
+				variant: "destructive",
+			});
+			return;
+		}
 
 		// Check if email has changed
 		const emailChanged = originalEmail !== artistData.email;

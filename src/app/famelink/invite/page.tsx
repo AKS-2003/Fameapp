@@ -81,7 +81,9 @@ function MagicLinkInviteContent() {
           const artistCheckRes = await fetch(`/api/artists/${artistId}`);
           const artistCheckJson = await artistCheckRes.json();
           const inviteEmail = artistCheckJson.data?.email?.toLowerCase().trim();
-          if (!inviteEmail || inviteEmail !== loggedInEmail) {
+          // Only block when the invited email is known and differs; an unresolved
+          // record or one without an email can't prove a mismatch.
+          if (inviteEmail && inviteEmail !== loggedInEmail) {
             setNotForMe(true);
             setActionLoading(null);
             return;
@@ -147,7 +149,7 @@ function MagicLinkInviteContent() {
                 const ac = await fetch(`/api/artists/${artistId}`);
                 const aj = await ac.json();
                 const inviteEmail = aj.data?.email?.toLowerCase().trim();
-                inviteIsForMe = Boolean(inviteEmail && inviteEmail === loggedInEmail);
+                inviteIsForMe = !inviteEmail || inviteEmail === loggedInEmail;
               } catch {}
             }
 
