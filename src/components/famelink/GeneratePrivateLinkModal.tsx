@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { uploadToGCS } from "@/lib/upload-utils";
+import { uploadToGCS, validateImageFile } from "@/lib/upload-utils";
 import { FILE_LIMITS } from "@/lib/constants";
 import {
 	Link2,
@@ -138,10 +138,10 @@ export function GeneratePrivateLinkModal({
 	async function handleThumbnailUpload(e: React.ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
 		if (!file) return;
-		if (!file.type.startsWith("image/") || file.size > FILE_LIMITS.MAX_IMAGE_SIZE) {
+		if (validateImageFile(file)) {
 			toast({
 				title: "Invalid file",
-				description: "Please upload an image under 100MB",
+				description: validateImageFile(file) || "Please upload a JPG, PNG or WebP image under 10MB",
 				variant: "destructive",
 			});
 			return;

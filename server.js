@@ -121,6 +121,26 @@ function handleGCSUpload(req, res) {
 					return;
 				}
 
+				// Server-side image guard (clients validate too, this stops direct API use)
+				if (fileInfo.mimeType && fileInfo.mimeType.startsWith("image/")) {
+					const allowedImages = ["image/jpeg", "image/png", "image/webp"];
+					const removeTemp = () => {
+						try { fs.unlinkSync(path.join(UPLOADS_ROOT, "temp", `temp_${fileInfo.timestamp}_${fileInfo.sanitizedFileName}`)); } catch {}
+					};
+					if (!allowedImages.includes(fileInfo.mimeType)) {
+						removeTemp();
+						res.writeHead(415, corsHeaders);
+						res.end(JSON.stringify({ error: "Unsupported image type. Use JPG, PNG or WebP." }));
+						return;
+					}
+					if (fileInfo.size > 10 * 1024 * 1024) {
+						removeTemp();
+						res.writeHead(413, corsHeaders);
+						res.end(JSON.stringify({ error: "Image is too large. Maximum size is 10 MB." }));
+						return;
+					}
+				}
+
 				const eventId = fields.eventId || "";
 				const artistId = fields.artistId || "";
 				const fileType = fields.fileType || "";

@@ -37,7 +37,7 @@ export const PERFORMANCE_STATUS = {
 // File Upload Limits
 export const FILE_LIMITS = {
 	MAX_FILE_SIZE: 2 * 1024 * 1024 * 1024, // 2GB (for videos)
-	MAX_IMAGE_SIZE: 100 * 1024 * 1024, // 100MB
+	MAX_IMAGE_SIZE: 10 * 1024 * 1024, // 10MB
 	MAX_AUDIO_SIZE: 100 * 1024 * 1024, // 100MB
 	ALLOWED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp"],
 	ALLOWED_AUDIO_TYPES: ["audio/mpeg", "audio/wav", "audio/mp3"],

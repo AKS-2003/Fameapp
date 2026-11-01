@@ -20,7 +20,7 @@ import {
 	ExternalLink,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { uploadToGCS } from "@/lib/upload-utils";
+import { uploadToGCS, validateImageFile } from "@/lib/upload-utils";
 import { FILE_LIMITS } from "@/lib/constants";
 import { QRCodeDialog } from "@/components/ui/qr-code-dialog";
 
@@ -170,8 +170,8 @@ export function MeProfileSection({ artistId }: { artistId: string }) {
 	) {
 		const file = e.target.files?.[0];
 		if (!file) return;
-		if (!file.type.startsWith("image/") || file.size > FILE_LIMITS.MAX_IMAGE_SIZE) {
-			toast({ title: "Invalid file", description: "Please upload an image under 100MB", variant: "destructive" });
+		if (validateImageFile(file)) {
+			toast({ title: "Invalid file", description: validateImageFile(file) || "Please upload a JPG, PNG or WebP image under 10MB", variant: "destructive" });
 			return;
 		}
 		try {
@@ -684,8 +684,8 @@ function PhotosTab({
 	async function handleAddPhoto(e: React.ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
 		if (!file) return;
-		if (!file.type.startsWith("image/") || file.size > FILE_LIMITS.MAX_IMAGE_SIZE) {
-			toast({ title: "Invalid file", description: "Please upload an image under 100MB", variant: "destructive" });
+		if (validateImageFile(file)) {
+			toast({ title: "Invalid file", description: validateImageFile(file) || "Please upload a JPG, PNG or WebP image under 10MB", variant: "destructive" });
 			return;
 		}
 		try {

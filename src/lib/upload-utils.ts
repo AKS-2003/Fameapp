@@ -24,6 +24,26 @@ interface UploadResult {
 	success: boolean;
 }
 
+import { toast } from "@/hooks/use-toast";
+
+export const IMAGE_ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
+export const IMAGE_MAX_BYTES = 10 * 1024 * 1024; // 10MB
+const IMAGE_UPLOAD_KINDS = ["profile", "gallery", "photo", "knownfor", "thumbnail", "banner"];
+
+/** Returns an error message when the file is not an allowed image, else null. */
+export function validateImageFile(file: File): string | null {
+	const ext = file.name.split(".").pop()?.toLowerCase() || "";
+	const typeOk = IMAGE_ALLOWED_MIME.includes(file.type);
+	const extOk = ["jpg", "jpeg", "png", "webp"].includes(ext);
+	if (!typeOk || !extOk) {
+		return "Unsupported file type. Please upload a JPG, PNG or WebP image.";
+	}
+	if (file.size > IMAGE_MAX_BYTES) {
+		return `Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 10 MB.`;
+	}
+	return null;
+}
+
 // Max rehearsal video size: 800MB
 export const MAX_REHEARSAL_VIDEO_SIZE = 800 * 1024 * 1024;
 
@@ -34,6 +54,14 @@ export const MAX_REHEARSAL_VIDEO_SIZE = 800 * 1024 * 1024;
  * 500–800MB rehearsal videos on mobile and slow connections.
  */
 export async function uploadToGCS(params: UploadParams): Promise<UploadResult> {
+	// Central guard: any upload meant to be an image is validated before it is sent.
+	if (params.fileType && IMAGE_UPLOAD_KINDS.includes(params.fileType)) {
+		const imageError = validateImageFile(params.file);
+		if (imageError) {
+			toast({ title: "Invalid image", description: imageError, variant: "destructive" });
+			throw new Error(imageError);
+		}
+	}
 	const fileSizeMB = (params.file.size / 1024 / 1024).toFixed(1);
 	if (params.file.size > 15 * 1024 * 1024) {
 		console.log(`[Upload] Chunked upload starting: ${params.file.name} (${fileSizeMB} MB)`);

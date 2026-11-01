@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { isValidPhone, PHONE_ERROR_MESSAGE } from "@/lib/phone-validation";
+import { IMAGE_MAX_BYTES } from "@/lib/upload-utils";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	ChevronLeft,
@@ -159,7 +161,15 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 		}
 	};
 
-	const saveActInfo = async () => {
+	const saveActInfo = async (): Promise<boolean> => {
+		if (actInfo.leadContactPhone && !isValidPhone(actInfo.leadContactPhone)) {
+			toast({ title: "Invalid phone number", description: PHONE_ERROR_MESSAGE, variant: "destructive" });
+			return false;
+		}
+		if (actInfo.leadContactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(actInfo.leadContactEmail.trim())) {
+			toast({ title: "Invalid email", description: "Enter a valid email address.", variant: "destructive" });
+			return false;
+		}
 		setIsSavingAct(true);
 		const success = await saveLogisticsToDB(actInfo, travelers);
 		setIsSavingAct(false);
@@ -169,6 +179,7 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 		} else {
 			toast({ title: "Error", description: "Could not save act information", variant: "destructive" });
 		}
+		return success;
 	};
 
 	// ── Form helpers ────────────────────────────────────────────────
@@ -176,9 +187,29 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
 
+	/** Passport/visa copies: JPG, PNG, WebP or PDF, max 10MB. Returns an error message or null. */
+	const validateDocumentFile = (file: File): string | null => {
+		const ext = file.name.split(".").pop()?.toLowerCase() || "";
+		const okTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+		const okExt = ["jpg", "jpeg", "png", "webp", "pdf"];
+		if (!okTypes.includes(file.type) || !okExt.includes(ext)) {
+			return "Unsupported file type. Please upload a JPG, PNG, WebP or PDF file.";
+		}
+		if (file.size > IMAGE_MAX_BYTES) {
+			return `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 10 MB.`;
+		}
+		return null;
+	};
+
 	const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
+		const fileError = validateDocumentFile(file);
+		if (fileError) {
+			toast({ title: "Invalid file", description: fileError, variant: "destructive" });
+			e.target.value = "";
+			return;
+		}
 		
 		setIsUploadingPassport(true);
 		try {
@@ -208,6 +239,12 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 	const handleVisaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
+		const fileError = validateDocumentFile(file);
+		if (fileError) {
+			toast({ title: "Invalid file", description: fileError, variant: "destructive" });
+			e.target.value = "";
+			return;
+		}
 		
 		setIsUploadingVisa(true);
 		try {
@@ -386,16 +423,24 @@ export default function LogisticsSection({ artistId: propArtistId }: { artistId?
 								<FormField
 									label="Lead contact phone"
 									value={actInfo.leadContactPhone}
-									onChange={(v) => setActInfo((p) => ({ ...p, leadContactPhone: v }))}
-									placeholder="Phone"
+									onChange={(v) =>
+										setActInfo((p) => ({
+											...p,
+											// digits only, optional leading +, max 15 digits
+											leadContactPhone: (v.startsWith("+") ? "+" : "") + v.replace(/\D/g, "").slice(0, 15),
+										}))
+									}
+									placeholder="+971501234567"
+									type="tel"
+									inputMode="tel"
 								/>
 							</div>
 
 							<div className="flex items-center gap-3">
 								<Button
 									onClick={async () => {
-										await saveActInfo();
-										setEditingAct(false);
+										const saved = await saveActInfo();
+										if (saved) setEditingAct(false);
 									}}
 									disabled={isSavingAct}
 									className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 rounded-xl gap-2 shadow-lg shadow-green-500/20"
@@ -806,6 +851,7 @@ function FormField({
 	placeholder,
 	type = "text",
 	required,
+	inputMode,
 }: {
 	label: string;
 	value: string;
@@ -813,6 +859,7 @@ function FormField({
 	placeholder?: string;
 	type?: string;
 	required?: boolean;
+	inputMode?: "text" | "tel" | "email" | "numeric";
 }) {
 	return (
 		<div>
@@ -821,6 +868,7 @@ function FormField({
 			</Label>
 			<Input
 				type={type}
+				inputMode={inputMode}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				className="bg-white/5 border-purple-500/20 text-white placeholder:text-purple-300/30 rounded-xl h-11 focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:border-purple-500"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,10 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 
 	const [loading, setLoading] = useState(true);
 	const [files, setFiles] = useState<DocumentFile[]>([]);
+	const filesRef = useRef<DocumentFile[]>([]);
+	useEffect(() => {
+		filesRef.current = files;
+	}, [files]);
 	const [contractDetails, setContractDetails] = useState<ContractDetails>({
 		legalName: "",
 		company: "",
@@ -111,9 +115,46 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 		}
 	};
 
+	const ALLOWED_DOC_EXT = ["pdf", "doc", "docx", "xls", "xlsx", "txt", "jpg", "jpeg", "png", "webp"];
+	const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25MB
+
+	/** Fetch as a blob and save with the original name; fall back to opening in a new tab. */
+	const downloadFile = async (file: DocumentFile) => {
+		try {
+			const res = await fetch(file.url);
+			if (!res.ok) throw new Error(`Status ${res.status}`);
+			const blob = await res.blob();
+			const objectUrl = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = objectUrl;
+			a.download = file.name;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+		} catch {
+			const opened = window.open(file.url, "_blank");
+			if (!opened) {
+				toast({ title: "Could not open file", description: "The file could not be downloaded. Please try again.", variant: "destructive" });
+			}
+		}
+	};
+
 	const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
+
+		const ext = file.name.split(".").pop()?.toLowerCase() || "";
+		if (!ALLOWED_DOC_EXT.includes(ext)) {
+			toast({ title: "Unsupported file type", description: "Allowed: PDF, Word, Excel, TXT, JPG, PNG or WebP.", variant: "destructive" });
+			e.target.value = "";
+			return;
+		}
+		if (file.size > MAX_DOC_BYTES) {
+			toast({ title: "File too large", description: "Maximum document size is 25 MB.", variant: "destructive" });
+			e.target.value = "";
+			return;
+		}
 
 		setIsUploadingFile(true);
 		try {
@@ -126,8 +167,8 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 				body: fData
 			});
 			
-			const data = await res.json();
-			if (data.success) {
+			const data = await res.json().catch(() => ({}));
+			if (res.ok && data.success) {
 				// We determine category naively for now
 				let category = "Misc";
 				if (file.name.toLowerCase().includes("passport")) category = "ID";
@@ -143,7 +184,7 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 					updatedAt: new Date().toISOString()
 				};
 
-				const newFiles = [...files, newFile];
+				const newFiles = [...filesRef.current, newFile];
 				
 				const patchRes = await fetch(`/api/artists/${artistId}/documents`, {
 					method: "PATCH",
@@ -153,12 +194,13 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 
 				if (!patchRes.ok) throw new Error("Failed to save file to DB");
 				setFiles(newFiles);
+				filesRef.current = newFiles;
 				toast({ title: "Uploaded", description: "Document uploaded successfully." });
 			} else {
 				throw new Error(data.error || "Failed to upload");
 			}
 		} catch (error) {
-			toast({ title: "Upload Failed", description: "An error occurred during upload.", variant: "destructive" });
+			toast({ title: "Upload Failed", description: error instanceof Error ? error.message : "An error occurred during upload.", variant: "destructive" });
 		} finally {
 			setIsUploadingFile(false);
 			if (e.target) e.target.value = '';
@@ -208,6 +250,7 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 					<div className="shrink-0">
 						<input
 							type="file"
+							accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.webp"
 							id="docUpload"
 							className="hidden"
 							onChange={handleFileUpload}
@@ -249,7 +292,7 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 									<div className="flex items-center gap-2 shrink-0 ml-4">
 										<Button
 											variant="ghost"
-											onClick={() => window.open(file.url, '_blank')}
+											onClick={() => downloadFile(file)}
 											className="h-8 text-sm text-purple-200 hover:text-white hover:bg-white/10 gap-1.5 px-3 rounded-lg hidden sm:flex"
 										>
 											<Download className="h-4 w-4" />
@@ -257,7 +300,7 @@ export default function DocumentsSection({ artistId: propArtistId }: { artistId?
 										</Button>
 										<Button
 											variant="ghost"
-											onClick={() => window.open(file.url, '_blank')}
+											onClick={() => downloadFile(file)}
 											className="h-8 w-8 p-0 text-purple-200 hover:text-white hover:bg-white/10 rounded-lg sm:hidden"
 										>
 											<Download className="h-4 w-4" />

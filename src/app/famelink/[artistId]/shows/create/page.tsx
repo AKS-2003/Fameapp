@@ -25,7 +25,7 @@ import { StagePositionPreview } from "@/components/StagePositionPreview";
 import { AudioPlayer } from "@/components/ui/audio-player";
 import { VideoPlayer, ImageViewer } from "@/components/ui/video-player";
 import { validateMediaFile } from "@/lib/media-validation";
-import { uploadToGCS } from "@/lib/upload-utils";
+import { uploadToGCS, validateImageFile } from "@/lib/upload-utils";
 import { Progress } from "@/components/ui/progress";
 import { FILE_LIMITS } from "@/lib/constants";
 import { WhatsAppInput } from "@/components/ui/whatsapp-input";
@@ -240,10 +240,10 @@ export default function CreateShowPage() {
 	) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
-		if (!file.type.startsWith("image/") || file.size > FILE_LIMITS.MAX_IMAGE_SIZE) {
+		if (validateImageFile(file)) {
 			toast({
 				title: "Invalid file",
-				description: "Please upload an image under 100MB",
+				description: validateImageFile(file) || "Please upload a JPG, PNG or WebP image under 10MB",
 				variant: "destructive",
 			});
 			return;
@@ -778,8 +778,7 @@ export default function CreateShowPage() {
 																		: "Upload profile image"}
 																</p>
 																<p className="text-xs text-gray-500">
-																	PNG, JPG up
-																	to 100MB
+																	PNG, JPG, WebP up to 10MB
 																</p>
 															</div>
 														</div>

@@ -28,7 +28,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { uploadToGCS } from "@/lib/upload-utils";
+import { uploadToGCS, validateImageFile } from "@/lib/upload-utils";
 import { FILE_LIMITS } from "@/lib/constants";
 import { Progress } from "@/components/ui/progress";
 import { AudioPlayer } from "@/components/ui/audio-player";
@@ -549,9 +549,25 @@ function FameLinkDashboardContent() {
 		}
 	}, [searchParams]);
 
+	// Changing section adds a history entry so the browser back button steps through sections
+	const selectSection = useCallback((id: typeof activeSection) => {
+		setActiveSection(id);
+		try {
+			const url = new URL(window.location.href);
+			url.searchParams.set("tab", id);
+			window.history.pushState(null, "", url.toString());
+		} catch {
+			/* ignore */
+		}
+	}, []);
+
 	// Switch active section when a tab parameter is provided in the URL
 	useEffect(() => {
 		const tab = searchParams.get("tab");
+		if (!tab) {
+			setActiveSection("dashboard");
+			return;
+		}
 		if (
 			tab === "shows" ||
 			tab === "dashboard" ||
@@ -715,7 +731,7 @@ function FameLinkDashboardContent() {
 
 				if (!authData.success) {
 					console.log("[DASHBOARD] No active session found, redirecting to login");
-					router.push(`/famelink-auth?artistId=${artistId}`);
+					router.replace(`/famelink-auth?artistId=${artistId}`);
 					return;
 				}
 
@@ -729,14 +745,14 @@ function FameLinkDashboardContent() {
 
 				if (role !== "artist") {
 					console.log("[DASHBOARD] Non-artist session, redirecting to login");
-					router.push(`/famelink-auth?artistId=${artistId}`);
+					router.replace(`/famelink-auth?artistId=${artistId}`);
 					return;
 				}
 
 				// Verify that the logged-in user matches the requested dashboard
 				if (authData.data.userId !== artistId) {
 					console.warn("[DASHBOARD] Session mismatch, redirecting to correct dashboard");
-					router.push(`/famelink/${authData.data.userId}`);
+					router.replace(`/famelink/${authData.data.userId}`);
 					return;
 				}
 
@@ -919,24 +935,26 @@ function FameLinkDashboardContent() {
 	const fetchPersonalMessagesForRequests = useCallback(
 		async (requests: EventRequestWithEvent[]) => {
 			const counts: Record<string, number> = {};
-			for (const req of requests) {
-				if (!req.eventId) continue;
-				try {
-					const response = await fetch(
-						`/api/events/${req.eventId}/personal-messages?artistId=${artistId}&countOnly=true`,
-					);
-					const result = await response.json();
-					if (result.success && result.data?.messages) {
-						const unread = result.data.messages.filter(
-							(msg: any) =>
-								msg.senderRole !== "artist" && !msg.read,
-						).length;
-						counts[req.eventId] = unread;
-					}
-				} catch {
-					/* ignore */
-				}
-			}
+			await Promise.all(
+				requests
+					.filter((req) => req.eventId)
+					.map(async (req) => {
+						try {
+							const response = await fetch(
+								`/api/events/${req.eventId}/personal-messages?artistId=${artistId}&countOnly=true`,
+							);
+							const result = await response.json();
+							if (result.success && result.data?.messages) {
+								counts[req.eventId] = result.data.messages.filter(
+									(msg: any) =>
+										msg.senderRole !== "artist" && !msg.read,
+								).length;
+							}
+						} catch {
+							/* ignore */
+						}
+					}),
+			);
 			setUnreadMessageCounts(counts);
 		},
 		[artistId],
@@ -1021,24 +1039,31 @@ function FameLinkDashboardContent() {
 		}
 	}, [artistId, fetchEventRequests, fetchEventParticipations]);
 
+	// Only re-run when the set of events changes, not on every refetch of the same data
+	const requestEventKey = eventRequests.map((r) => r.eventId).join(",");
+	const eventRequestsRef = useRef(eventRequests);
+	eventRequestsRef.current = eventRequests;
 	useEffect(() => {
-		if (eventRequests.length > 0) {
-			fetchPersonalMessagesForRequests(eventRequests);
-		}
-		// Poll for new messages every 15 seconds as a fallback
-		if (eventRequests.length > 0) {
-			const pollInterval = setInterval(() => {
-				fetchPersonalMessagesForRequests(eventRequests);
-			}, 15000);
-			return () => clearInterval(pollInterval);
-		}
-	}, [eventRequests, fetchPersonalMessagesForRequests]);
+		if (!requestEventKey) return;
+		fetchPersonalMessagesForRequests(eventRequestsRef.current);
+		// Poll for new messages every 30 seconds as a fallback (socket pushes handle the rest)
+		const pollInterval = setInterval(() => {
+			if (document.visibilityState === "hidden") return;
+			fetchPersonalMessagesForRequests(eventRequestsRef.current);
+		}, 30000);
+		return () => clearInterval(pollInterval);
+	}, [requestEventKey, fetchPersonalMessagesForRequests]);
 
 	// ── Resync when the tab regains focus (socket push handles the rest) ──
 	useEffect(() => {
 		if (!artistId) return;
+		let lastRun = 0;
 		const refresh = () => {
 			if (document.visibilityState === "hidden") return;
+			// Throttle: focus + visibilitychange fire together, avoid duplicate fetch bursts
+			const now = Date.now();
+			if (now - lastRun < 5000) return;
+			lastRun = now;
 			fetchEventRequests();
 			fetchEventParticipations();
 		};
@@ -1633,20 +1658,14 @@ function FameLinkDashboardContent() {
 	) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
-		if (!file.type.startsWith("image/")) {
+		const imageError = validateImageFile(file);
+		if (imageError) {
 			toast({
-				title: "Invalid file",
-				description: "Please upload an image file",
+				title: "Invalid image",
+				description: imageError,
 				variant: "destructive",
 			});
-			return;
-		}
-		if (file.size > FILE_LIMITS.MAX_IMAGE_SIZE) {
-			toast({
-				title: "File too large",
-				description: "Image must be under 100MB",
-				variant: "destructive",
-			});
+			e.target.value = "";
 			return;
 		}
 		try {
@@ -1884,7 +1903,7 @@ function FameLinkDashboardContent() {
 	// ██  MAIN DASHBOARD RENDER  ██
 	// ══════════════════════════════════════════════════════════════
 	return (
-		<div className="h-screen bg-[#0a0618] text-white flex relative overflow-hidden">
+		<div className="h-dvh bg-[#0a0618] text-white flex relative overflow-hidden">
 			<AnimationStyles />
 
 			{/* Ambient background */}
@@ -1902,7 +1921,7 @@ function FameLinkDashboardContent() {
 			)}
 
 			{/* ── LEFT SIDEBAR ─────────────────────────────────────────── */}
-			<aside className={`w-52 flex-shrink-0 fixed md:sticky top-0 h-screen bg-[#07031a]/95 backdrop-blur-xl border-r border-purple-500/15 flex flex-col z-40 md:z-20 overflow-hidden transition-transform duration-300 md:translate-x-0 ${
+			<aside className={`w-52 flex-shrink-0 fixed md:sticky top-0 h-dvh bg-[#07031a]/95 backdrop-blur-xl border-r border-purple-500/15 flex flex-col z-40 md:z-20 overflow-hidden transition-transform duration-300 md:translate-x-0 ${
 				isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
 			}`}>
 				{/* Logo */}
@@ -1937,7 +1956,7 @@ function FameLinkDashboardContent() {
 						<button
 							key={item.id}
 							onClick={() => {
-								setActiveSection(item.id);
+								selectSection(item.id);
 								setIsMobileMenuOpen(false);
 							}}
 							className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left ${activeSection === item.id
@@ -1972,7 +1991,7 @@ function FameLinkDashboardContent() {
 			</aside>
 
 			{/* ── MAIN CONTENT AREA ────────────────────────────────────── */}
-			<div className="flex-1 min-w-0 flex flex-col relative z-10 h-screen overflow-y-auto">
+			<div className="flex-1 min-w-0 flex flex-col relative z-10 h-dvh overflow-y-auto overflow-x-hidden">
 				{/* Mobile Top Navigation Header */}
 				<header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#07031a]/85 backdrop-blur-md border-b border-purple-500/15 sticky top-0 z-30 shrink-0">
 					<button
@@ -2034,11 +2053,11 @@ function FameLinkDashboardContent() {
 
 							{/* Stat pills + Membership Card */}
 							<div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 flex-wrap">
-								<div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors w-full sm:w-auto justify-center" onClick={() => setActiveSection("shows")}>
+								<div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors w-full sm:w-auto justify-center" onClick={() => selectSection("shows")}>
 									<Sparkles className="h-3.5 w-3.5 text-[#ff66e5]" />
 									<span className="text-[13px] text-white font-medium">{shows.length} Shows</span>
 								</div>
-								<div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors w-full sm:w-auto justify-center" onClick={() => setActiveSection("event-tasks")}>
+								<div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors w-full sm:w-auto justify-center" onClick={() => selectSection("event-tasks")}>
 									<Calendar className="h-3.5 w-3.5 text-[#9cbdf0]" />
 									<span className="text-[13px] text-white font-medium">{eventParticipations.filter((p) => p.status !== "declined").length} Events</span>
 								</div>
@@ -3791,7 +3810,7 @@ function FameLinkDashboardContent() {
 												</>
 											)}
 											<p className="text-xs text-purple-300/30 mt-1">
-												PNG, JPG up to 100MB
+												PNG, JPG, WebP up to 10MB
 											</p>
 										</div>
 									</Label>
