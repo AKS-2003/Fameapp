@@ -1586,7 +1586,7 @@ export default function LivePerformanceBoard() {
 
 	// Theme helpers — swap between dark (default) and light mode
 	const tm = {
-		page:    isLightMode ? "min-h-screen bg-gray-50 text-gray-900 overflow-hidden"           : "min-h-screen bg-[#0a0e1a] text-white overflow-hidden",
+		page:    isLightMode ? "live-board-light min-h-screen bg-gray-50 text-gray-900 overflow-hidden"           : "min-h-screen bg-[#0a0e1a] text-white overflow-hidden",
 		header:  isLightMode ? "sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm" : "sticky top-0 z-50 border-b border-[#2a1f4f] bg-[#0a0e1a]/95 backdrop-blur-md shadow-lg",
 		title:   isLightMode ? "text-2xl font-bold text-gray-900 tracking-wide"                  : "text-2xl font-bold text-white tracking-wide",
 		sub:     isLightMode ? "text-xs text-purple-600/70 uppercase tracking-widest"             : "text-xs text-purple-300/70 uppercase tracking-widest",

@@ -346,9 +346,9 @@ function BasicsTab({
 							<Camera className="w-6 h-6 text-purple-400" />
 						</div>
 					)}
-					<div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-						<Camera className="w-4 h-4 text-white" />
-					</div>
+					<div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 border-2 border-[#0a0618] flex items-center justify-center shadow-md pointer-events-none">
+	<Camera className="w-3.5 h-3.5 text-white" />
+</div>
 				</div>
 				<input
 					type="file"

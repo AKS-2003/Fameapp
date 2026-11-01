@@ -4540,22 +4540,22 @@ export default function PerformanceOrder({
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-3">
 						{/* Lighting Designer Dashboard Card */}
 						<Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white flex flex-col justify-between">
-							<CardContent className="p-3 flex items-center justify-between gap-2 pb-2">
+							<CardContent className="p-3 flex flex-col gap-3">
 								<div className="flex items-center gap-2 flex-1 min-w-0">
 									<div className="bg-amber-100 p-1.5 rounded-lg shrink-0">
 										<Lightbulb className="h-4 w-4 text-amber-500" />
 									</div>
 									<div className="min-w-0">
-										<CardTitle className="text-xs sm:text-sm text-gray-900 truncate font-bold">
-											Lighting...
+										<CardTitle className="text-xs sm:text-sm text-gray-900 font-bold leading-tight">
+											Lighting Designer
 										</CardTitle>
-										<CardDescription className="text-[10px] text-gray-500 truncate">
-											Live show cues...
+										<CardDescription className="text-[11px] text-gray-500 leading-snug">
+											Live show cues & lighting
 										</CardDescription>
 									</div>
 								</div>
 
-								<div className="flex items-center gap-1 shrink-0">
+								<div className="flex items-center gap-1 flex-wrap">
 									<Button
 										onClick={(e) => {
 											e.stopPropagation();
@@ -4608,22 +4608,22 @@ export default function PerformanceOrder({
 
 						{/* DJ Dashboard Card */}
 						<Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white flex flex-col justify-between">
-							<CardContent className="p-3 flex items-center justify-between gap-2 pb-2">
+							<CardContent className="p-3 flex flex-col gap-3">
 								<div className="flex items-center gap-2 flex-1 min-w-0">
 									<div className="bg-green-100 p-1.5 rounded-lg shrink-0">
 										<Music className="h-4 w-4 text-green-600" />
 									</div>
 									<div className="min-w-0">
-										<CardTitle className="text-xs sm:text-sm text-gray-900 truncate font-bold">
+										<CardTitle className="text-xs sm:text-sm text-gray-900 font-bold leading-tight">
 											DJ
 										</CardTitle>
-										<CardDescription className="text-[10px] text-gray-500 truncate">
-											Access tracks...
+										<CardDescription className="text-[11px] text-gray-500 leading-snug">
+											Access tracks & music cues
 										</CardDescription>
 									</div>
 								</div>
 
-								<div className="flex items-center gap-1 shrink-0">
+								<div className="flex items-center gap-1 flex-wrap">
 									<Button
 										onClick={(e) => {
 											e.stopPropagation();
@@ -4679,22 +4679,22 @@ export default function PerformanceOrder({
 
 						{/* MC Dashboard Card */}
 						<Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white flex flex-col justify-between">
-							<CardContent className="p-3 flex items-center justify-between gap-2 pb-2">
+							<CardContent className="p-3 flex flex-col gap-3">
 								<div className="flex items-center gap-2 flex-1 min-w-0">
 									<div className="bg-yellow-100 p-1.5 rounded-lg shrink-0">
 										<Mic className="h-4 w-4 text-yellow-600" />
 									</div>
 									<div className="min-w-0">
-										<CardTitle className="text-xs sm:text-sm text-gray-900 truncate font-bold">
+										<CardTitle className="text-xs sm:text-sm text-gray-900 font-bold leading-tight">
 											MC
 										</CardTitle>
-										<CardDescription className="text-[10px] text-gray-500 truncate">
-											View artist info...
+										<CardDescription className="text-[11px] text-gray-500 leading-snug">
+											View artist info & notes
 										</CardDescription>
 									</div>
 								</div>
 
-								<div className="flex items-center gap-1 shrink-0">
+								<div className="flex items-center gap-1 flex-wrap">
 									<Button
 										onClick={(e) => {
 											e.stopPropagation();
@@ -4750,22 +4750,22 @@ export default function PerformanceOrder({
 
 						{/* Live Performance Board Card */}
 						<Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white flex flex-col justify-between">
-							<CardContent className="p-3 flex items-center justify-between gap-2 pb-2">
+							<CardContent className="p-3 flex flex-col gap-3">
 								<div className="flex items-center gap-2 flex-1 min-w-0">
 									<div className="bg-red-100 p-1.5 rounded-lg shrink-0">
 										<ExternalLink className="h-4 w-4 text-red-600" />
 									</div>
 									<div className="min-w-0">
-										<CardTitle className="text-xs sm:text-sm text-gray-900 truncate font-bold">
-											Live...
+										<CardTitle className="text-xs sm:text-sm text-gray-900 font-bold leading-tight">
+											Live Board
 										</CardTitle>
-										<CardDescription className="text-[10px] text-gray-500 truncate">
-											Real-time tracking...
+										<CardDescription className="text-[11px] text-gray-500 leading-snug">
+											Real-time show tracking
 										</CardDescription>
 									</div>
 								</div>
 
-								<div className="flex items-center gap-1 shrink-0">
+								<div className="flex items-center gap-1 flex-wrap">
 									<Button
 										onClick={(e) => {
 											e.stopPropagation();
@@ -4821,22 +4821,22 @@ export default function PerformanceOrder({
 
 						{/* Organizer Card */}
 						<Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white flex flex-col justify-between">
-							<CardContent className="p-3 flex items-center justify-between gap-2 pb-2">
+							<CardContent className="p-3 flex flex-col gap-3">
 								<div className="flex items-center gap-2 flex-1 min-w-0">
 									<div className="bg-purple-100 p-1.5 rounded-lg shrink-0">
 										<ClipboardList className="h-4 w-4 text-purple-600" />
 									</div>
 									<div className="min-w-0">
-										<CardTitle className="text-xs sm:text-sm text-gray-900 truncate font-bold">
+										<CardTitle className="text-xs sm:text-sm text-gray-900 font-bold leading-tight">
 											Organizer
 										</CardTitle>
-										<CardDescription className="text-[10px] text-gray-500 truncate">
-											Organiser View...
+										<CardDescription className="text-[11px] text-gray-500 leading-snug">
+											Organiser view & schedule
 										</CardDescription>
 									</div>
 								</div>
 
-								<div className="flex items-center gap-1 shrink-0">
+								<div className="flex items-center gap-1 flex-wrap">
 									<Button
 										onClick={(e) => {
 											e.stopPropagation();

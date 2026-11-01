@@ -316,9 +316,9 @@ export function AccountSection({ artistId, profile, onUpdateProfile, onLogout }:
 									<span className="text-2xl font-bold text-white">{getInitials(profile?.realName || profile?.artistName)}</span>
 								</div>
 							)}
-							<div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-								<Camera className="w-4 h-4 text-white" />
-							</div>
+							<div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 border-2 border-[#0a0618] flex items-center justify-center shadow-md pointer-events-none">
+	<Camera className="w-3.5 h-3.5 text-white" />
+</div>
 						</div>
 						
 						<input 
@@ -543,9 +543,9 @@ export function AccountSection({ artistId, profile, onUpdateProfile, onLogout }:
 											alt="Preview" 
 											className="w-[100px] h-[100px] rounded-full object-cover border-2 border-purple-500/50 hover:opacity-85 transition-opacity"
 										/>
-										<div className="absolute inset-0 bg-black/45 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-											<Camera className="w-5 h-5 text-white" />
-										</div>
+										<div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 border-2 border-[#0a0618] flex items-center justify-center shadow-md pointer-events-none">
+	<Camera className="w-3.5 h-3.5 text-white" />
+</div>
 									</div>
 								) : (
 									<div className="w-[100px] h-[100px] rounded-full bg-purple-900/40 border-2 border-purple-500/30 flex items-center justify-center hover:bg-purple-900/50 transition-colors">

@@ -947,3 +947,41 @@ html {
 .text-status-missing {
 	color: hsl(var(--status-missing));
 }
+/* ── Live board: "Bright" appearance ─────────────────────────────────────────
+   The live board is styled for a dark background (white / light-purple / gold text).
+   In bright mode the page and cards turn white, so remap those text colours to dark
+   ones, except on elements that still have a solid dark or coloured background. */
+.live-board-light .text-white,
+.live-board-light .text-purple-100,
+.live-board-light .text-purple-200,
+.live-board-light .text-purple-300,
+.live-board-light .text-white\/90,
+.live-board-light .text-white\/80,
+.live-board-light .text-white\/70,
+.live-board-light .text-\[\#d4af37\] {
+	color: #1f2937;
+}
+.live-board-light .text-purple-400,
+.live-board-light .text-purple-300\/70,
+.live-board-light .text-purple-300\/60,
+.live-board-light .text-purple-300\/50 {
+	color: #6b21a8;
+}
+.live-board-light .bg-clip-text {
+	/* gradient headline text keeps its transparent fill */
+	color: transparent;
+}
+/* Keep light text where the background is solid dark / coloured (self or ancestor). */
+.live-board-light :is(
+	[class*="bg-gradient-to-r"], [class*="from-purple-"], [class*="from-\[\#1a1147\]"],
+	[class*="bg-green-"], [class*="bg-red-"], [class*="bg-cyan-"], [class*="bg-emerald-"],
+	[class*="bg-blue-"], [class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-pink-"],
+	[class*="bg-\[\#10b981\]"], [class*="bg-\[\#e91e8c\]"], [class*="bg-purple-6"], [class*="bg-purple-7"], [class*="bg-purple-8"], [class*="bg-purple-9"],
+	[class~="bg-\[\#0f0a2e\]"], [class~="bg-\[\#130d36\]"], [class~="bg-\[\#1a1147\]"], [style*="background"]
+) :is(.text-white, .text-purple-100, .text-purple-200, .text-purple-300, .text-white\/90, .text-white\/80, .text-white\/70),
+.live-board-light :is(
+	[class*="bg-gradient-to-r"], [class*="bg-green-"], [class*="bg-red-"], [class*="bg-cyan-"], [class*="bg-emerald-"],
+	[class*="bg-\[\#10b981\]"], [class*="bg-\[\#e91e8c\]"], [class~="bg-\[\#0f0a2e\]"], [class~="bg-\[\#130d36\]"], [class~="bg-\[\#1a1147\]"], [style*="background"]
+):is(.text-white, .text-purple-100, .text-purple-200, .text-purple-300) {
+	color: #ffffff;
+}
