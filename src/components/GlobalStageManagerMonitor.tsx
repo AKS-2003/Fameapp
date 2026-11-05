@@ -34,6 +34,8 @@ export function GlobalStageManagerMonitor() {
 		pathname?.startsWith("/join-event/") ||
 		pathname?.startsWith("/event-request/") ||
 		pathname?.startsWith("/show/") ||
+		pathname === "/privacy-policy" ||
+		pathname === "/terms" ||
 		pathname?.startsWith("/stagemanager-login") ||
 		pathname?.startsWith("/stagemanager-register");
 
