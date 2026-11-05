@@ -77,20 +77,19 @@ const parts: LegalPart[] = [
 			{
 				title: "Storage, security and international transfers",
 				paragraphs: [
-					"FAME uses encrypted transport, secure authentication, least-privilege access, protected storage, audit logging, backups and access revocation. No service can guarantee absolute security. Personal data may be stored or accessed in countries where FAME or its providers operate; any international transfer must comply with relevant legal requirements and contractual safeguards. Exact hosting regions and transfer mechanisms: [Confirm before publication].",
+					"FAME uses encrypted transport, secure authentication, least-privilege access, protected storage, audit logging, backups and access revocation. No service can guarantee absolute security. Personal data may be stored or accessed in countries where FAME or its providers operate; any international transfer must comply with relevant legal requirements and contractual safeguards.",
 				],
 			},
 			{
 				title: "Retention and deletion",
 				paragraphs: [
 					"We retain data only for as long as reasonably needed for agreed services, event administration, security, disputes or legal obligations. Organizer-owned performer records may remain after a performer disconnects their login, unless a valid deletion obligation applies. Uploaded performance media and sensitive documents have purpose-specific retention schedules.",
-					"Retention periods: account and event records [insert]; uploads [insert]; logs [insert]; backups [insert].",
 				],
 			},
 			{
 				title: "Your choices and rights",
 				paragraphs: [
-					"Depending on applicable law, individuals may request access, correction, deletion, restriction, portability or objection, or withdraw applicable consent. A request concerning an organizer-managed record may need to be directed to that organizer. Requests can be sent to [privacy contact]. We may verify identity before responding.",
+					"Depending on applicable law, individuals may request access, correction, deletion, restriction, portability or objection, or withdraw applicable consent. A request concerning an organizer-managed record may need to be directed to that organizer. Requests can be sent to mail@fantasiadxb.com. We may verify identity before responding.",
 				],
 			},
 			{

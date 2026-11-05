@@ -14,7 +14,7 @@ const parts: LegalPart[] = [
 			{
 				title: "How to request deletion",
 				paragraphs: [
-					"Accounts are not deleted automatically from within the app. To delete your FAME account, please contact the team and ask for your account to be deleted. Send your request to [Insert email], from the email address registered on the account where possible.",
+					"Accounts are not deleted automatically from within the app. To delete your FAME account, please contact the team and ask for your account to be deleted. Send your request to mail@fantasiadxb.com, from the email address registered on the account where possible.",
 				],
 			},
 			{
@@ -32,7 +32,7 @@ const parts: LegalPart[] = [
 			{
 				title: "What happens next",
 				paragraphs: [
-					"We will confirm your request and let you know when the deletion has been completed. We aim to respond within [Insert response time]. Once your account is deleted you will no longer be able to log in, and your login credentials and personal profile information held for the account will be removed or anonymized.",
+					"We will confirm your request and let you know when the deletion has been completed. Once your account is deleted you will no longer be able to log in, and your login credentials and personal profile information held for the account will be removed or anonymized.",
 				],
 			},
 			{
@@ -45,7 +45,7 @@ const parts: LegalPart[] = [
 			{
 				title: "Questions",
 				paragraphs: [
-					"For questions about your data or this process, contact [Insert email]. You can also read our Privacy Policy and Terms and Conditions for more detail.",
+					"For questions about your data or this process, contact mail@fantasiadxb.com. You can also read our Privacy Policy and Terms and Conditions for more detail.",
 				],
 			},
 		],

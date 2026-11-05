@@ -69,8 +69,7 @@ export function LegalDocument({ title, intro, parts, otherPage }: LegalDocumentP
 					{title}
 				</h1>
 				<p className="mt-2 text-sm text-purple-200/60">
-					Version {LEGAL_CONFIG.version} · Last updated {LEGAL_CONFIG.lastUpdated} · Effective{" "}
-					{withPlaceholders(LEGAL_CONFIG.effectiveDate)}
+					Version {LEGAL_CONFIG.version} · Last updated {LEGAL_CONFIG.lastUpdated}
 				</p>
 
 				{LEGAL_IS_DRAFT && (
@@ -88,9 +87,7 @@ export function LegalDocument({ title, intro, parts, otherPage }: LegalDocumentP
 				<dl className="mt-6 grid gap-x-6 gap-y-2 rounded-2xl border border-purple-500/15 bg-white/5 p-5 text-sm sm:grid-cols-[auto_1fr]">
 					<dt className="text-purple-300/70">Platform</dt>
 					<dd>{LEGAL_CONFIG.platformName}</dd>
-					<dt className="text-purple-300/70">Operator</dt>
-					<dd>{withPlaceholders(LEGAL_CONFIG.operator)}</dd>
-					<dt className="text-purple-300/70">Registered address</dt>
+					<dt className="text-purple-300/70">Location</dt>
 					<dd>{withPlaceholders(LEGAL_CONFIG.address)}</dd>
 					<dt className="text-purple-300/70">Privacy contact</dt>
 					<dd>{withPlaceholders(LEGAL_CONFIG.privacyEmail)}</dd>

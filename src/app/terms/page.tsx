@@ -60,7 +60,7 @@ const parts: LegalPart[] = [
 			{
 				title: "Fees, plans and cancellation",
 				paragraphs: [
-					"If subscription or service fees apply, pricing, billing period, taxes, renewal rules, cancellation process and any refund terms are disclosed at purchase and in a separate order form or plan description. [Insert actual FameManager commercial terms before publishing.]",
+					"If subscription or service fees apply, pricing, billing period, taxes, renewal rules, cancellation process and any refund terms are disclosed at purchase and in a separate order form or plan description.",
 				],
 			},
 			{
@@ -78,13 +78,13 @@ const parts: LegalPart[] = [
 			{
 				title: "Disclaimers and liability",
 				paragraphs: [
-					"Except where prohibited by applicable law, the service is offered subject to disclosed limitations, and FAME is not responsible for artist performance quality, organizer decisions, venue operations, third-party transport, accommodation or indirect loss caused by event disruption. Any liability cap, exclusions and mandatory consumer or data-protection rights are defined by local law. [Insert jurisdiction-specific limitation language.]",
+					"Except where prohibited by applicable law, the service is offered subject to disclosed limitations, and FAME is not responsible for artist performance quality, organizer decisions, venue operations, third-party transport, accommodation or indirect loss caused by event disruption. Any liability cap, exclusions and mandatory consumer or data-protection rights are defined by local law.",
 				],
 			},
 			{
-				title: "Governing law, disputes and contact",
+				title: "Contact and notices",
 				paragraphs: [
-					"Governing law and competent courts or dispute process: [Insert jurisdiction and venue]. Legal operator: [Insert legal entity]. Support: [Insert email]. Notices: [Insert address].",
+					"For support, questions about these Terms or legal notices, contact mail@fantasiadxb.com (Dubai).",
 				],
 			},
 		],
