@@ -41,6 +41,10 @@ export function FantasiaFooter({
 				<Link href="/delete-account" className="underline-offset-2 hover:underline">
 					Delete account
 				</Link>
+				<span aria-hidden="true">·</span>
+				<Link href="/support" className="underline-offset-2 hover:underline">
+					Support
+				</Link>
 			</div>
 		</div>
 	);

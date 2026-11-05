@@ -37,6 +37,7 @@ export function GlobalStageManagerMonitor() {
 		pathname === "/privacy-policy" ||
 		pathname === "/terms" ||
 		pathname === "/delete-account" ||
+		pathname === "/support" ||
 		pathname?.startsWith("/stagemanager-login") ||
 		pathname?.startsWith("/stagemanager-register");
 

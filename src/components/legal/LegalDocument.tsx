@@ -60,6 +60,9 @@ export function LegalDocument({ title, intro, parts, otherPage }: LegalDocumentP
 						<Link href="/delete-account" className="text-purple-200/70 hover:text-white">
 							Delete account
 						</Link>
+						<Link href="/support" className="text-purple-200/70 hover:text-white">
+							Support
+						</Link>
 					</nav>
 				</div>
 			</header>
