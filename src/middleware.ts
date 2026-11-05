@@ -61,6 +61,7 @@ const PUBLIC_ROUTES = [
 	"/contact",
 	"/privacy-policy", // Legal pages must be readable without an account
 	"/terms",
+	"/delete-account", // Public account-deletion instructions
 	"/events/register", // Artist registration pages
 	"/artist-register", // Artist registration welcome and form pages
 	"/famelink-auth", // Artist login page (updated from /artist-login)
