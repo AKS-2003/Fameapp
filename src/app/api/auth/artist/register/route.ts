@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 		if (existingArtist) {
 			return NextResponse.json({
 				success: false,
-				error: { code: "AUTH_002", message: "An account with this email already exists" }
+				error: { code: "AUTH_002", message: "An account with this email already exists. Please log in, or use Forgot password if you can't remember your password." }
 			}, { status: 409 });
 		}
 

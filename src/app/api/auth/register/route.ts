@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
 					success: false,
 					error: {
 						code: "EMAIL_EXISTS",
-						message: "An account with this email already exists",
+						message: "An account with this email already exists. Please log in, or use Forgot password if you can't remember your password.",
 					},
 				},
 				{ status: 409 }
